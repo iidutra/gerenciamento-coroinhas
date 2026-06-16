@@ -1,0 +1,9 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["waha/**"]
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+healthcheckPath = "/ping"
+healthcheckTimeout = 120

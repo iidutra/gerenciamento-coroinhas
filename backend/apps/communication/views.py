@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from apps.communication.models import Mensagem
 from apps.communication.serializers import EnviarMensagemSerializer, MensagemSerializer
 from apps.communication.services.comunicacao_service import ComunicacaoService
+from apps.communication.services.envio_service import EnvioService
 from apps.identity.permissions import IsGestorCoroinhas, IsStaffPastoral
 
 
@@ -31,3 +32,10 @@ class EnviarMensagemView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(MensagemSerializer(msg).data, status=status.HTTP_201_CREATED)
+
+
+class ConfigComunicacaoView(APIView):
+    permission_classes = [IsStaffPastoral]
+
+    def get(self, request):
+        return Response(EnvioService.status_comunicacao())

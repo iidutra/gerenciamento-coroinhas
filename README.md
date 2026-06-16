@@ -70,6 +70,7 @@ Hospedagem gerenciada com **PostgreSQL + Redis** como plugins. Custo típico **~
 | **API** | `/backend` | `backend/railway.toml` (auto) |
 | **Worker** (Celery) | `/backend` | `backend/railway.toml` + `SERVICE_ROLE=worker` |
 | **Frontend** | `/frontend` | `frontend/railway.toml` (auto) |
+| **WAHA** (WhatsApp) | `/waha` | `waha/railway.toml` + volume `/app/.sessions` |
 | **PostgreSQL** | plugin | linkar `DATABASE_URL` |
 | **Redis** | plugin | linkar `REDIS_URL` |
 
@@ -158,8 +159,21 @@ cp .env.prod.example .env && ./scripts/deploy-vps.sh --build
 ### Comunicação e filas
 
 - **Celery worker** processa envio de mensagens (e-mail/WhatsApp) de forma assíncrona.
-- Sem `EMAIL_HOST` ou `WHATSAPP_API_URL`, os envios ficam em **simulação** (registrados no histórico).
-- Configure SMTP e WhatsApp nas variables do Railway ou no `.env`.
+- Sem `EMAIL_HOST` ou credenciais WhatsApp, os envios ficam em **simulação** (registrados no histórico).
+- O painel **Comunicação** mostra se WhatsApp/e-mail estão configurados (`GET /api/v1/config/comunicacao`).
+
+**WhatsApp (WAHA recomendado)** — defina `WHATSAPP_PROVIDER=waha`:
+
+| Provedor | Variáveis |
+|----------|-----------|
+| **`waha`** (recomendado) | Serviço `/waha` no Railway; API: `WHATSAPP_API_URL`, `WHATSAPP_API_TOKEN`, `WHATSAPP_WAHA_SESSION=default` |
+| `http` | `WHATSAPP_API_URL` — webhook POST `{ "to", "message" }` |
+| `evolution` | URL `.../message/sendText/{instancia}` + token |
+| `meta` | `WHATSAPP_API_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` |
+
+Setup WAHA: `.\scripts\railway-setup-waha.ps1` — escaneie QR em `https://<waha>/dashboard`.
+
+Configure SMTP e WhatsApp nas variables do Railway ou no `.env`.
 
 ### Docker local (teste prod)
 
@@ -243,21 +257,27 @@ Variables CI/CD para deploy automático: `DEPLOY_HOST`, `DEPLOY_USER`, `SSH_PRIV
 
 ## Funcionalidades implementadas
 
+Documentação completa de regras e entregas: **[docs/REGRAS-E-ENTREGAS.md](docs/REGRAS-E-ENTREGAS.md)**
+
 - Portal família + preview staff (`/dashboard/portal`)
 - Gerenciamento de usuários staff (Coordenador)
 - Importação do calendário paroquial 2026 (PDF → notícias/formações)
-- Rate limit: login, recuperar senha, inscrição pública
-- Canal de notícias com busca, filtros e agrupamento por mês
-- Celery + envio assíncrono de mensagens (e-mail/WhatsApp configurável)
+- Rate limit: login (só falhas), recuperar senha, inscrição pública
+- Canal de notícias com busca, filtros, agrupamento por mês e **evento do mês**
+- Inscrições online controladas pelo coordenador + cadastro manual de coroinha
+- Aprovar/rejeitar inscrição com mensagem opcional + notificação WhatsApp/e-mail
+- Celery + envio assíncrono de mensagens (e-mail/WhatsApp — http, Evolution, Meta)
 - **Notificação automática** ao montar escala (+ reenvio manual por escala)
+- Storage persistente de fotos (volume Railway `/app/media`)
+- UX mobile: header com Sair, sidebar com logout
 - Audit log persistente (auth, presença, inscrição, mensagens) — Django Admin
-- MinIO opcional para mídia em produção
+- MinIO/R2 opcional para mídia em produção
 
 ---
 
 ## Próximos passos
 
-- [ ] Deploy no Railway (4 serviços + Postgres + Redis)
-- [x] Volume Railway em `/app/media` para fotos persistentes (R2 opcional)
+- [ ] Commit/push: WhatsApp multi-provedor + botão Sair mobile
+- [ ] Configurar WhatsApp e SMTP no Railway
 - [ ] Observabilidade (Sentry)
 - [ ] Cobertura backend meta 80% (CI exige 65%)

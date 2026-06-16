@@ -19,8 +19,10 @@ Responsavel (dados do pai/mãe — existe sem login; vinculado na inscrição)
 ```
 
 - Inscrição aprovada cria `Coroinha` + `Responsavel` + contas `Usuario` (CPF do responsável obrigatório; CPF do coroinha se informado na ficha)
-- Senha inicial família: últimos 4 dígitos do CPF → `must_change_password=True` no 1º login
+- Senha inicial família: **últimos 4 dígitos do CPF** → `must_change_password=True` no 1º login
 - Coroinha menor sem CPF na ficha: só o pai acessa o portal por ele
+- **Inscrições online** controladas por `ConfiguracaoParoquial.inscricoes_abertas` (padrão fechado); env `INSCRICOES_ABERTAS=True` força abertura
+- Cadastro manual de coroinha (dashboard) não passa pelo fluxo de inscrição pública
 
 ## Entidades principais
 
@@ -34,7 +36,8 @@ Responsavel (dados do pai/mãe — existe sem login; vinculado na inscrição)
 | `Escala` | N coroinhas por missa+data; modo SorteioAutomatico ou SelecaoManual |
 | `Presenca` | Presente/Ausente por EscalaItem; audit: quem registrou |
 | `Formacao` | M2M conclusões por coroinha |
-| `Mensagem` | canal WhatsApp/Email; template com `{nome}`, `{escala}` |
+| `Mensagem` | canal WhatsApp/Email; template com `{nome}`, `{escala}`, `{idade}`; simulação se canal não configurado |
+| `ConfiguracaoParoquial` | pk=1; `inscricoes_abertas` + audit de quem alterou |
 
 ## Sorteio equilibrado
 
@@ -44,6 +47,13 @@ Priorizar coroinhas com **menos escalas nos últimos 90 dias**. Não repetir que
 
 Pai seleciona o filho → mesma tela que o coroinha veria (`/portal`).
 Escopo: escalas, presenças, formações, notícias. Read-only.
+**Evento do mês:** notícia em destaque no portal — prioriza `destaque`, depois próximo evento com `data_evento`.
+
+## Comunicação WhatsApp
+
+Provedor via `WHATSAPP_PROVIDER`: **`waha`** (recomendado), `http`, `evolution`, `meta`.
+WAHA: POST `/api/sendText`, header `X-Api-Key`, `chatId` = `{E164}@c.us`.
+Telefone normalizado E.164 (`55` + DDD). Sem credenciais → simulação (histórico only).
 
 ## Relatórios
 

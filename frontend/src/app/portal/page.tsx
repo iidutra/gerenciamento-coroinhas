@@ -35,7 +35,7 @@ export default function PortalPage() {
   if (!usuario) return <LoadingScreen />;
 
   return (
-    <AppShell groups={portalNav} subtitle={usuario.nome}>
+    <AppShell groups={portalNav} subtitle={usuario.nome} onLogout={sair}>
       <PageHeader
         title="Portal dos Pais"
         description="Acompanhe a vida do seu filho na pastoral."

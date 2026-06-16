@@ -63,7 +63,7 @@ export function StaffLayout({
   if (!ready) return <LoadingScreen />;
 
   return (
-    <AppShell groups={dashboardNav} subtitle={usuario?.nome} tipoPerfil={usuario?.tipo_perfil}>
+    <AppShell groups={dashboardNav} subtitle={usuario?.nome} tipoPerfil={usuario?.tipo_perfil} onLogout={sair}>
       {loading ? <LoadingScreen /> : children}
     </AppShell>
   );

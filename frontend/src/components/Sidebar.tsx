@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Church, X } from "lucide-react";
+import { Church, LogOut, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { navIcons, type NavIconKey } from "@/lib/nav-icons";
 
@@ -26,6 +26,7 @@ interface SidebarProps {
   onNavigate?: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
+  onLogout?: () => void;
 }
 
 function NavLink({
@@ -69,7 +70,7 @@ function NavLink({
   );
 }
 
-export function Sidebar({ groups, subtitle, tipoPerfil, onNavigate, showCloseButton, onClose }: SidebarProps) {
+export function Sidebar({ groups, subtitle, tipoPerfil, onNavigate, showCloseButton, onClose, onLogout }: SidebarProps) {
   const pathname = usePathname();
 
   const gruposVisiveis = groups
@@ -134,6 +135,22 @@ export function Sidebar({ groups, subtitle, tipoPerfil, onNavigate, showCloseBut
           </div>
         ))}
       </nav>
+
+      {onLogout && (
+        <div className="relative p-4 border-t border-sidebar-border/60">
+          <button
+            type="button"
+            onClick={() => {
+              onLogout();
+              onNavigate?.();
+            }}
+            className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/90 hover:bg-sidebar-accent/80 transition-colors"
+          >
+            <LogOut className="size-4 shrink-0" aria-hidden />
+            Sair
+          </button>
+        </div>
+      )}
 
       <div className="relative p-4 border-t border-sidebar-border/60 text-xs text-sidebar-foreground/50 italic text-center">
         &ldquo;Servire Deo, regnare est.&rdquo;

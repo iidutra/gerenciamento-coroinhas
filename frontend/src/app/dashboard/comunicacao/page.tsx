@@ -1,11 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Cake, Send } from "lucide-react";
+import { AlertTriangle, Cake, CheckCircle2, Send } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
 import { StaffPage } from "@/components/StaffPage";
 import { apiFetch, asList } from "@/lib/api";
+import { fetchConfigComunicacao, type ConfigComunicacao } from "@/lib/config-comunicacao";
 import type { Aniversariante, Coroinha, Escala, Mensagem, ProximaEscala } from "@/types";
 
 const TEXTO_PARABENS =
@@ -20,14 +21,17 @@ export default function ComunicacaoPage() {
   const [canal, setCanal] = useState("WhatsApp");
   const [corpo, setCorpo] = useState("Olá {nome}, você está escalado para servir na missa {escala}.");
   const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<ConfigComunicacao | null>(null);
 
   function load() {
     Promise.all([
       apiFetch<{ results?: Coroinha[] } | Coroinha[]>("/coroinhas/"),
       apiFetch<{ results?: Mensagem[] } | Mensagem[]>("/mensagens/"),
-    ]).then(([c, m]) => {
+      fetchConfigComunicacao(),
+    ]).then(([c, m, cfg]) => {
       setCoroinhas(asList(c));
       setHistorico(asList(m));
+      setConfig(cfg);
     }).finally(() => setLoading(false));
   }
 
@@ -69,8 +73,38 @@ export default function ComunicacaoPage() {
 
   return (
     <StaffLayout loading={loading}>
-      <StaffPage title="Comunicação" description="Avisos por WhatsApp ou e-mail. Configure SMTP/WhatsApp no .env para envio real." onLogout={sair}>
+      <StaffPage title="Comunicação" description="Avisos por WhatsApp ou e-mail para coroinhas e responsáveis." onLogout={sair}>
         <ReadOnlyGestorBanner tipoPerfil={usuario?.tipo_perfil} />
+        {config && (
+          <div
+            className={`mb-6 flex gap-3 rounded-lg border p-4 text-sm ${
+              config.whatsapp_configurado || config.email_configurado
+                ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+                : "border-amber-200 bg-amber-50 text-amber-950"
+            }`}
+          >
+            {config.whatsapp_configurado || config.email_configurado ? (
+              <CheckCircle2 className="size-5 shrink-0 mt-0.5" aria-hidden />
+            ) : (
+              <AlertTriangle className="size-5 shrink-0 mt-0.5" aria-hidden />
+            )}
+            <div>
+              <p className="font-medium">
+                {config.whatsapp_configurado || config.email_configurado
+                  ? "Envio real ativo"
+                  : "Modo simulação"}
+              </p>
+              <p className="mt-1 opacity-90">
+                WhatsApp:{" "}
+                {config.whatsapp_configurado
+                  ? `configurado (${config.whatsapp_provider})`
+                  : "não configurado — mensagens registradas sem envio"}
+                {" · "}
+                E-mail: {config.email_configurado ? "SMTP configurado" : "não configurado"}
+              </p>
+            </div>
+          </div>
+        )}
         {podeEditar && (
         <form onSubmit={enviar} className="card-liturgical p-6 mb-8 space-y-4">
           <div className="flex flex-wrap gap-2">
