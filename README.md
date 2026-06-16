@@ -67,9 +67,9 @@ Hospedagem gerenciada com **PostgreSQL + Redis** como plugins. Custo típico **~
 
 | Serviço | Root directory | Config |
 |---------|----------------|--------|
-| **API** | `backend/` | `railway.toml` |
-| **Worker** (Celery) | `backend/` | `railway.worker.toml` |
-| **Frontend** | `frontend/` | `railway.toml` |
+| **API** | `/backend` | `backend/railway.toml` (auto) |
+| **Worker** (Celery) | `/backend` | `backend/railway.toml` + `SERVICE_ROLE=worker` |
+| **Frontend** | `/frontend` | `frontend/railway.toml` (auto) |
 | **PostgreSQL** | plugin | linkar `DATABASE_URL` |
 | **Redis** | plugin | linkar `REDIS_URL` |
 
@@ -78,7 +78,7 @@ Hospedagem gerenciada com **PostgreSQL + Redis** como plugins. Custo típico **~
 1. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub/GitLab**
 2. **Add PostgreSQL** e **Add Redis** no projeto
 3. Crie o serviço **API**:
-   - Root Directory: `backend`
+   - Root Directory: `/backend` (Settings → **não** preencha Config file manualmente)
    - Variables (ver `.env.railway.example`):
      - `SECRET_KEY`, `DEBUG=False`
      - `CORS_ALLOWED_ORIGINS=https://<frontend>.up.railway.app`
@@ -86,11 +86,11 @@ Hospedagem gerenciada com **PostgreSQL + Redis** como plugins. Custo típico **~
    - Reference variables: `${{Postgres.DATABASE_URL}}`, `${{Redis.REDIS_URL}}`
    - **Generate Domain** → anote a URL da API
 4. Crie o serviço **Worker**:
-   - Root Directory: `backend`
-   - Settings → Config file: `railway.worker.toml`
+   - Root Directory: `/backend`
+   - Variable: `SERVICE_ROLE=worker`
    - Mesmas variables da API (DATABASE_URL, REDIS_URL, SECRET_KEY)
 5. Crie o serviço **Frontend**:
-   - Root Directory: `frontend`
+   - Root Directory: `/frontend`
    - Variable **antes do build**: `NEXT_PUBLIC_API_URL=https://<api>.up.railway.app/api/v1`
    - Generate Domain
 6. Atualize `CORS_ALLOWED_ORIGINS` na API com a URL pública do frontend
@@ -117,12 +117,21 @@ Railway → serviço Frontend/API → **Custom Domain** → configure CNAME. Atu
 
 ### CLI (opcional)
 
-```bash
+```powershell
 npm i -g @railway/cli
 railway login
-railway link
-railway up
+.\scripts\railway-set-monorepo.ps1   # Root Directory /backend e /frontend
+.\scripts\railway-deploy.ps1         # deploy manual se o GitHub falhar
 ```
+
+### Erro "Railpack could not determine how to build"
+
+O deploy do GitHub usa a **raiz do repositório** por padrão. Em monorepo, configure **Root Directory** em cada serviço:
+
+- API e Worker → `/backend`
+- Frontend → `/frontend`
+
+**Não** defina "Config file" manualmente (deixe em branco). Rode `.\scripts\railway-set-monorepo.ps1` ou ajuste no dashboard.
 
 ---
 

@@ -1,6 +1,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+watchPatterns = ["backend/**"]
 
 [deploy]
 startCommand = "celery -A config worker -l info --concurrency=${CELERY_CONCURRENCY:-1}"
