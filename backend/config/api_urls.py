@@ -2,12 +2,14 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from config.health_views import HealthView
+from config.public_views import ConfigPublicaView
 
 from apps.attendance.views import PresencaEscalaView, PresencaResumoView
 from apps.identity.staff_views import UsuarioStaffViewSet
 from apps.communication.views import EnviarMensagemView, MensagemViewSet
 from apps.content.views import DocumentoViewSet, NoticiaViewSet
 from apps.membership.views import (
+    ConfigInscricoesView,
     CoroinhaViewSet,
     DashboardStatsView,
     InscricaoPublicaView,
@@ -33,6 +35,8 @@ router.register(r"documentos", DocumentoViewSet, basename="documento")
 
 urlpatterns = [
     path("health", HealthView.as_view(), name="health"),
+    path("config/publica", ConfigPublicaView.as_view(), name="config-publica"),
+    path("config/inscricoes", ConfigInscricoesView.as_view(), name="config-inscricoes"),
     path("auth/", include("apps.identity.urls")),
     path("inscricoes/publica", InscricaoPublicaView.as_view(), name="inscricao-publica"),
     path("portal/filhos", PortalFilhosView.as_view(), name="portal-filhos"),

@@ -1,4 +1,5 @@
 import pytest
+from django.test import override_settings
 
 from apps.identity.models import AuditAcao, AuditLog
 
@@ -26,6 +27,7 @@ def test_audit_login_falha(api_client):
 
 
 @pytest.mark.django_db
+@override_settings(INSCRICOES_ABERTAS=True)
 def test_audit_inscricao_publica(api_client):
     payload = {
         "coroinha": {

@@ -7,6 +7,8 @@ from django.db import transaction
 from apps.identity.models import AuditAcao, TipoPerfil, Usuario
 from apps.identity.services.audit_service import AuditService
 from apps.identity.utils.cpf import normalizar_cpf, senha_inicial_cpf, validar_cpf
+from apps.membership.services.configuracao_service import ConfiguracaoService
+from apps.membership.services.inscricao_notificacao_service import InscricaoNotificacaoService
 from apps.membership.models import (
     Coroinha,
     Inscricao,
@@ -34,6 +36,8 @@ class InscricaoService:
     @staticmethod
     @transaction.atomic
     def criar_publica(dados: dict, foto=None, ip: str | None = None) -> Inscricao:
+        if not ConfiguracaoService.inscricoes_abertas():
+            raise ValueError("As inscrições online não estão abertas no momento.")
         InscricaoService.verificar_rate_limit_publica(ip)
         coroinha_data = dados.get("coroinha", {})
         responsavel_data = dados.get("responsavel", {})
@@ -58,7 +62,7 @@ class InscricaoService:
 
     @staticmethod
     @transaction.atomic
-    def aprovar(inscricao: Inscricao, aprovador: Usuario) -> Coroinha:
+    def aprovar(inscricao: Inscricao, aprovador: Usuario, *, mensagem: str = "", notificar: bool = True) -> Coroinha:
         if inscricao.status != StatusInscricao.PENDENTE:
             raise ValueError("Inscrição já foi processada.")
 
@@ -140,10 +144,12 @@ class InscricaoService:
             usuario=aprovador,
             detalhes={"inscricao_id": inscricao.id, "coroinha_id": coroinha.id},
         )
+        if notificar:
+            InscricaoNotificacaoService.notificar_aprovacao(inscricao, coroinha, mensagem)
         return coroinha
 
     @staticmethod
-    def rejeitar(inscricao: Inscricao) -> None:
+    def rejeitar(inscricao: Inscricao, *, mensagem: str = "", notificar: bool = True) -> None:
         if inscricao.status != StatusInscricao.PENDENTE:
             raise ValueError("Inscrição já foi processada.")
         inscricao.status = StatusInscricao.REJEITADA
@@ -152,3 +158,5 @@ class InscricaoService:
             AuditAcao.INSCRICAO_REJEITADA,
             detalhes={"inscricao_id": inscricao.id},
         )
+        if notificar:
+            InscricaoNotificacaoService.notificar_rejeicao(inscricao, mensagem)

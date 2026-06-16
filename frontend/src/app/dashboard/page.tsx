@@ -73,7 +73,7 @@ export default function DashboardPage() {
 
               <div className="space-y-3">
                 <h2 className="font-display text-xl font-semibold px-1">Atalhos</h2>
-                <QuickAction href="/dashboard/inscricoes" title="Nova inscrição" description="Aprovar cadastros pendentes" icon={UserPlus} />
+                <QuickAction href="/dashboard/inscricoes" title="Inscrições pendentes" description="Avaliar e aprovar fichas online" icon={UserPlus} />
                 <QuickAction href="/dashboard/escalas" title="Montar escala" description="Sortear coroinhas" icon={Calendar} />
                 <QuickAction href="/dashboard/presenca" title="Marcar presença" description="Durante a missa" icon={CheckSquare} />
                 <QuickAction href="/dashboard/comunicacao" title="Enviar mensagem" description="Avisar o grupo" icon={MessageSquare} />

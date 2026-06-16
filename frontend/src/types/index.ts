@@ -80,9 +80,23 @@ export interface Inscricao {
   id: number;
   status: string;
   dados: {
-    coroinha?: { nome?: string; data_nascimento?: string };
-    responsavel?: { cpf?: string; nome_mae?: string };
+    coroinha?: {
+      nome?: string;
+      data_nascimento?: string;
+      telefone?: string;
+      escola?: string;
+      serie?: string;
+    };
+    responsavel?: {
+      cpf?: string;
+      nome_mae?: string;
+      nome_pai?: string;
+      telefone_principal?: string;
+      whatsapp?: string;
+      email?: string;
+    };
   };
+  foto_url?: string | null;
   criado_em: string;
 }
 

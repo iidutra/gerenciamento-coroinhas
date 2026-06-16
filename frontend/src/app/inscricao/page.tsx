@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -17,6 +17,7 @@ import {
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FormSection } from "@/components/FormField";
 import { apiFetchForm, normalizarCpf } from "@/lib/api";
+import { fetchConfigPublica } from "@/lib/config-publica";
 import { formatarCpf } from "@/lib/format";
 
 export default function InscricaoPage() {
@@ -27,6 +28,14 @@ export default function InscricaoPage() {
   const [cpfResponsavel, setCpfResponsavel] = useState("");
   const [nomeCoroinha, setNomeCoroinha] = useState("");
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [verificando, setVerificando] = useState(true);
+  const [inscricoesAbertas, setInscricoesAbertas] = useState(false);
+
+  useEffect(() => {
+    fetchConfigPublica()
+      .then((cfg) => setInscricoesAbertas(cfg.inscricoes_abertas))
+      .finally(() => setVerificando(false));
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -72,6 +81,33 @@ export default function InscricaoPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (verificando) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-4">
+        <Loader2 className="size-8 animate-spin text-burgundy" aria-label="Carregando" />
+      </main>
+    );
+  }
+
+  if (!inscricoesAbertas) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md text-center card-liturgical shadow-elegant p-8">
+          <Church className="size-14 text-gold mx-auto mb-4" aria-hidden />
+          <h1 className="font-display text-2xl font-semibold text-burgundy">Inscrições fechadas</h1>
+          <p className="text-muted-foreground mt-2">
+            As inscrições online ainda não estão abertas. Aguarde o comunicado da pastoral ou fale com a
+            coordenação.
+          </p>
+          <Link href="/" className="btn-outline mt-6 inline-flex gap-2">
+            <ArrowLeft className="size-4" aria-hidden />
+            Voltar ao início
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   if (sucesso) {

@@ -109,3 +109,30 @@ class Inscricao(models.Model):
     def __str__(self):
         nome = self.dados.get("coroinha", {}).get("nome", "Sem nome")
         return f"Inscrição {nome} ({self.status})"
+
+
+class ConfiguracaoParoquial(models.Model):
+    """Configurações gerais — registro único (pk=1)."""
+
+    inscricoes_abertas = models.BooleanField(default=False)
+    inscricoes_atualizado_em = models.DateTimeField(auto_now=True)
+    inscricoes_atualizado_por = models.ForeignKey(
+        "identity.Usuario",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="config_inscricoes_atualizadas",
+    )
+
+    class Meta:
+        verbose_name = "Configuração paroquial"
+        verbose_name_plural = "Configurações paroquiais"
+
+    def __str__(self):
+        status = "abertas" if self.inscricoes_abertas else "fechadas"
+        return f"Inscrições {status}"
+
+    @classmethod
+    def get(cls) -> "ConfiguracaoParoquial":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

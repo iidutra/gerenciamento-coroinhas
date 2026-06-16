@@ -18,6 +18,7 @@ from apps.membership.serializers import (
     InscricaoSerializer,
 )
 from apps.membership.services.coroinha_service import CoroinhaService
+from apps.membership.services.configuracao_service import ConfiguracaoService
 from apps.membership.services.inscricao_service import InscricaoService
 from apps.membership.services.portal_service import PortalService
 from apps.membership.services.relatorio_service import RelatorioService
@@ -81,8 +82,17 @@ class InscricaoViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"])
     def aprovar(self, request, pk=None):
         inscricao = self.get_object()
+        mensagem = request.data.get("mensagem", "")
+        notificar = request.data.get("notificar", True)
+        if isinstance(notificar, str):
+            notificar = notificar.lower() in ("true", "1", "yes")
         try:
-            coroinha = InscricaoService.aprovar(inscricao, request.user)
+            coroinha = InscricaoService.aprovar(
+                inscricao,
+                request.user,
+                mensagem=mensagem or "",
+                notificar=bool(notificar),
+            )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"coroinha_id": coroinha.id, "status": inscricao.status})
@@ -90,8 +100,16 @@ class InscricaoViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"])
     def rejeitar(self, request, pk=None):
         inscricao = self.get_object()
+        mensagem = request.data.get("mensagem", "")
+        notificar = request.data.get("notificar", True)
+        if isinstance(notificar, str):
+            notificar = notificar.lower() in ("true", "1", "yes")
         try:
-            InscricaoService.rejeitar(inscricao)
+            InscricaoService.rejeitar(
+                inscricao,
+                mensagem=mensagem or "",
+                notificar=bool(notificar),
+            )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": StatusInscricao.REJEITADA})
@@ -185,3 +203,28 @@ class RelatorioGeralView(APIView):
 
     def get(self, request):
         return Response(RelatorioService.relatorio_geral())
+
+
+class ConfigInscricoesView(APIView):
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsStaffPastoral()]
+        return [IsGestorCoroinhas()]
+
+    def get(self, request):
+        return Response(ConfiguracaoService.status_inscricoes())
+
+    def patch(self, request):
+        aberto = request.data.get("inscricoes_abertas")
+        if not isinstance(aberto, bool):
+            return Response(
+                {"detail": "Informe inscricoes_abertas como true ou false."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        config = ConfiguracaoService.definir_inscricoes_abertas(aberto, request.user)
+        return Response(
+            {
+                **ConfiguracaoService.status_inscricoes(),
+                "detail": "Inscrições abertas." if aberto else "Inscrições fechadas.",
+            }
+        )

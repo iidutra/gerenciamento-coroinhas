@@ -54,10 +54,24 @@ class InscricaoPublicaSerializer(serializers.Serializer):
 
 
 class InscricaoSerializer(serializers.ModelSerializer):
+    foto_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Inscricao
-        fields = ("id", "status", "dados", "criado_em", "aprovado_em", "coroinha", "responsavel")
+        fields = (
+            "id",
+            "status",
+            "dados",
+            "foto_url",
+            "criado_em",
+            "aprovado_em",
+            "coroinha",
+            "responsavel",
+        )
         read_only_fields = fields
+
+    def get_foto_url(self, obj):
+        return build_foto_url(obj.foto_pendente, self.context.get("request"))
 
 
 class CoroinhaResumoPortalSerializer(serializers.Serializer):

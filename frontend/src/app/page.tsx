@@ -2,12 +2,11 @@ import Link from "next/link";
 import {
   Calendar,
   Church,
-  ClipboardList,
   GraduationCap,
   Heart,
-  LogIn,
   Users,
 } from "lucide-react";
+import { HomeHeroActions } from "@/components/HomeHeroActions";
 
 const features = [
   { icon: Users, title: "Coroinhas", desc: "Cadastro e turmas" },
@@ -37,19 +36,7 @@ export default function HomePage() {
           <p className="text-white/75 text-lg max-w-lg mx-auto">
             Gestão de coroinhas, escalas, presenças, formações e portal das famílias.
           </p>
-          <div className="flex flex-wrap gap-3 justify-center pt-2">
-            <Link href="/login" className="btn-primary">
-              <LogIn className="size-4" aria-hidden />
-              Entrar
-            </Link>
-            <Link
-              href="/inscricao"
-              className="btn-outline border-white/25 bg-white/10 text-white hover:bg-white/15"
-            >
-              <ClipboardList className="size-4" aria-hidden />
-              Inscrição online
-            </Link>
-          </div>
+          <HomeHeroActions />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 max-w-3xl w-full">
