@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   Cake,
@@ -20,7 +20,7 @@ import { NoticiaCard } from "@/components/NoticiaCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch, asList, mediaUrl } from "@/lib/api";
 import { categoriaDocumentoLabel, turmaLabel } from "@/lib/format";
-import { ordenarNoticias } from "@/lib/noticias";
+import { eventoDoMes, ordenarNoticias } from "@/lib/noticias";
 import type { Aniversariante, Coroinha, CoroinhaResumo, Documento, Noticia, Usuario } from "@/types";
 
 interface PortalCorpoProps {
@@ -90,6 +90,15 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
       setLoading(false);
     }
   }
+
+  const principalDoMes = useMemo(() => eventoDoMes(noticias), [noticias]);
+  const demaisNoticias = useMemo(
+    () =>
+      ordenarNoticias(noticias)
+        .filter((n) => n.id !== principalDoMes?.id)
+        .slice(-5),
+    [noticias, principalDoMes],
+  );
 
   return (
     <>
@@ -253,21 +262,28 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
             </div>
           )}
 
-          {noticias.length > 0 && (
-            <div className="card-liturgical p-6">
-              <div className="flex items-center gap-2 mb-3">
+          {(principalDoMes || demaisNoticias.length > 0) && (
+            <div className="card-liturgical p-6 space-y-4">
+              <div className="flex items-center gap-2">
                 <Newspaper className="size-5 text-gold" aria-hidden />
                 <h3 className="font-display text-lg font-semibold">Notícias</h3>
               </div>
-              <ul className="space-y-3">
-                {ordenarNoticias(noticias)
-                  .slice(-5)
-                  .map((n) => (
+
+              {principalDoMes && (
+                <section aria-label="Evento do mês">
+                  <NoticiaCard noticia={principalDoMes} eventoDoMes />
+                </section>
+              )}
+
+              {demaisNoticias.length > 0 && (
+                <ul className="space-y-3">
+                  {demaisNoticias.map((n) => (
                     <li key={n.id}>
                       <NoticiaCard noticia={n} compact />
                     </li>
                   ))}
-              </ul>
+                </ul>
+              )}
             </div>
           )}
 

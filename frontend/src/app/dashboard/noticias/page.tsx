@@ -19,7 +19,7 @@ import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner
 import { StaffPage } from "@/components/StaffPage";
 import { apiFetch, asList } from "@/lib/api";
 import { turmaLabel } from "@/lib/format";
-import { agruparNoticiasPorMes, ordenarNoticias } from "@/lib/noticias";
+import { agruparNoticiasPorMes, eventoDoMes, ordenarNoticias } from "@/lib/noticias";
 import type { Aniversariante, Noticia } from "@/types";
 
 type FiltroNoticia = "todas" | "destaques" | "eventos";
@@ -82,16 +82,16 @@ export default function NoticiasPage() {
 
   const grupos = useMemo(() => agruparNoticiasPorMes(filtradas), [filtradas]);
 
-  const destaquePrincipal = filtro === "todas" && !busca ? filtradas.find((n) => n.destaque) : undefined;
+  const eventoMesAtual = filtro === "todas" && !busca ? eventoDoMes(filtradas) : undefined;
   const listaGrupos = useMemo(() => {
-    if (!destaquePrincipal) return grupos;
+    if (!eventoMesAtual) return grupos;
     return grupos
       .map((g) => ({
         ...g,
-        itens: g.itens.filter((n) => n.id !== destaquePrincipal.id),
+        itens: g.itens.filter((n) => n.id !== eventoMesAtual.id),
       }))
       .filter((g) => g.itens.length > 0);
-  }, [grupos, destaquePrincipal]);
+  }, [grupos, eventoMesAtual]);
 
   const stats = useMemo(
     () => ({
@@ -285,7 +285,7 @@ export default function NoticiasPage() {
                       className="size-4 accent-[var(--burgundy)] rounded"
                     />
                     <Star className="size-4 text-gold" aria-hidden />
-                    Destacar no topo do portal
+                    Destacar como evento do mês
                   </label>
                   <button type="submit" disabled={publicando} className="btn-primary w-fit gap-2">
                     {publicando ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
@@ -311,21 +311,21 @@ export default function NoticiasPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {destaquePrincipal && (
-              <section aria-label="Comunicado em destaque">
+            {eventoMesAtual && (
+              <section aria-label="Evento do mês">
                 <NoticiaCard
-                  noticia={destaquePrincipal}
-                  featured
+                  noticia={eventoMesAtual}
+                  eventoDoMes
                   actions={
                     podeEditar ? (
                       <button
                         type="button"
-                        onClick={() => remover(destaquePrincipal.id)}
-                        disabled={removendoId === destaquePrincipal.id}
+                        onClick={() => remover(eventoMesAtual.id)}
+                        disabled={removendoId === eventoMesAtual.id}
                         className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                         aria-label="Remover notícia"
                       >
-                        {removendoId === destaquePrincipal.id ? (
+                        {removendoId === eventoMesAtual.id ? (
                           <Loader2 className="size-4 animate-spin" aria-hidden />
                         ) : (
                           <Trash2 className="size-4" />

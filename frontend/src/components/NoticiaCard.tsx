@@ -10,12 +10,21 @@ interface NoticiaCardProps {
   compact?: boolean;
   actions?: React.ReactNode;
   featured?: boolean;
+  /** Destaque como principal evento do mês corrente. */
+  eventoDoMes?: boolean;
 }
 
 const LIMITE_COMPACTO = 140;
 const LIMITE_COMPLETO = 220;
 
-export function NoticiaCard({ noticia, compact = false, actions, featured = false }: NoticiaCardProps) {
+export function NoticiaCard({
+  noticia,
+  compact = false,
+  actions,
+  featured = false,
+  eventoDoMes = false,
+}: NoticiaCardProps) {
+  const emDestaque = featured || eventoDoMes || noticia.destaque;
   const [expandido, setExpandido] = useState(false);
   const conteudo = noticiaConteudoLegivel(noticia.conteudo);
   const limite = compact ? LIMITE_COMPACTO : LIMITE_COMPLETO;
@@ -28,12 +37,12 @@ export function NoticiaCard({ noticia, compact = false, actions, featured = fals
   return (
     <article
       className={`relative overflow-hidden rounded-xl transition-shadow ${
-        featured || noticia.destaque
+        emDestaque
           ? "ring-1 ring-gold/40 shadow-gold bg-gradient-to-br from-gold/8 via-card to-card"
           : "bg-card"
       }`}
     >
-      {(featured || noticia.destaque) && (
+      {emDestaque && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-gold" aria-hidden />
       )}
 
@@ -41,7 +50,13 @@ export function NoticiaCard({ noticia, compact = false, actions, featured = fals
         <div className="flex justify-between gap-4">
           <div className="flex-1 min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              {noticia.destaque && (
+              {eventoDoMes && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-burgundy">
+                  <Sparkles className="size-3 text-gold" aria-hidden />
+                  Evento do mês
+                </span>
+              )}
+              {!eventoDoMes && noticia.destaque && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-burgundy">
                   <Star className="size-3 text-gold" aria-hidden />
                   Destaque
@@ -53,7 +68,7 @@ export function NoticiaCard({ noticia, compact = false, actions, featured = fals
                   Evento
                 </span>
               )}
-              {featured && (
+              {featured && !eventoDoMes && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-burgundy/10 px-2.5 py-0.5 text-[11px] font-medium text-burgundy">
                   <Sparkles className="size-3" aria-hidden />
                   Em evidência
@@ -63,7 +78,7 @@ export function NoticiaCard({ noticia, compact = false, actions, featured = fals
 
             <h3
               className={`font-display font-semibold text-foreground leading-snug ${
-                featured ? "text-xl sm:text-2xl" : compact ? "text-base" : "text-lg"
+                emDestaque && !compact ? "text-xl sm:text-2xl" : compact ? "text-base" : "text-lg"
               }`}
             >
               {noticia.titulo}

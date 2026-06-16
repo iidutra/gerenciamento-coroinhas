@@ -39,3 +39,29 @@ export function agruparNoticiasPorMes(noticias: Noticia[]): { mes: string; itens
     }))
     .sort((a, b) => compararNoticiasCronologicamente(a.itens[0], b.itens[0]));
 }
+
+export function noticiaNoMes(noticia: Noticia, referencia: Date = new Date()): boolean {
+  const iso = noticia.data_evento ?? noticia.publicado_em.slice(0, 10);
+  const d = new Date(`${iso}T12:00:00`);
+  return d.getMonth() === referencia.getMonth() && d.getFullYear() === referencia.getFullYear();
+}
+
+/** Principal evento do mês: destaque do calendário ou próximo evento relevante. */
+export function eventoDoMes(noticias: Noticia[], referencia: Date = new Date()): Noticia | undefined {
+  const noMes = noticias.filter((n) => noticiaNoMes(n, referencia));
+  if (noMes.length === 0) return undefined;
+
+  const comDestaque = noMes.filter((n) => n.destaque);
+  const pool = comDestaque.length > 0 ? comDestaque : noMes.filter((n) => n.data_evento);
+  if (pool.length === 0) return undefined;
+
+  const inicioHoje = new Date(referencia);
+  inicioHoje.setHours(0, 0, 0, 0);
+  const hoje = inicioHoje.getTime();
+
+  const futuros = ordenarNoticias(pool.filter((n) => noticiaTimestamp(n) >= hoje));
+  if (futuros.length > 0) return futuros[0];
+
+  const passados = ordenarNoticias(pool);
+  return passados.at(-1);
+}
