@@ -288,8 +288,9 @@ Commits publicados em `main` (GitHub → deploy Railway):
 
 ## 12. Pendências conhecidas
 
-- [ ] Commit/push das alterações WhatsApp + botão Sair
-- [ ] Configurar credenciais WhatsApp no Railway (Meta, Evolution ou webhook)
+- [x] WAHA no Railway — sessão `default` conectada (jun/2026)
+- [x] Commit/push: WhatsApp WAHA + botão Sair mobile (`832c0bf`)
+- [ ] Copiar vars WhatsApp para Worker se deploy automático não aplicar
 - [ ] Configurar SMTP (opcional)
 - [ ] `INSCRICOES_ABERTAS=False` em produção (dashboard Railway se CLI falhar)
 - [ ] Trocar senha do coordenador de produção
