@@ -1,3 +1,4 @@
+from django.db.models.functions import Coalesce, TruncDate
 from rest_framework import viewsets
 
 from apps.content.models import Documento, Noticia
@@ -19,8 +20,10 @@ class NoticiaViewSet(viewsets.ModelViewSet):
         qs = Noticia.objects.all()
         user = self.request.user
         if user.is_authenticated and user.is_familia:
-            return qs.filter(ativo=True)
-        return qs
+            qs = qs.filter(ativo=True)
+        return qs.annotate(
+            _ordem_cronologica=Coalesce("data_evento", TruncDate("publicado_em")),
+        ).order_by("_ordem_cronologica", "publicado_em", "titulo")
 
     def perform_create(self, serializer):
         if serializer.validated_data.get("destaque"):

@@ -2,13 +2,13 @@ import csv
 import io
 from pathlib import Path
 
-from PIL import Image as PILImage, ImageDraw, ImageFont
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from apps.membership.utils.avatar_placeholder import avatar_placeholder_png
 from apps.scheduling.models import Escala, FUNCOES_ESCALA_ORDEM, FuncaoEscala
 
 MESES_PT = [
@@ -64,19 +64,7 @@ class RelatorioEscalaService:
                 except Exception:
                     pass
 
-        inicial = (coroinha.nome or "?")[0].upper()
-        img = PILImage.new("RGB", (128, 128), color=(181, 142, 74))
-        draw = ImageDraw.Draw(img)
-        try:
-            font = ImageFont.truetype("arial.ttf", 56)
-        except OSError:
-            font = ImageFont.load_default()
-        bbox = draw.textbbox((0, 0), inicial, font=font)
-        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        draw.text(((128 - tw) / 2, (128 - th) / 2 - 4), inicial, fill=(92, 28, 40), font=font)
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        buf.seek(0)
+        buf = avatar_placeholder_png(128)
         return RLImage(buf, width=FOTO_PT, height=FOTO_PT)
 
     @staticmethod

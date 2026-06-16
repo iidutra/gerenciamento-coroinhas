@@ -20,6 +20,7 @@ import { NoticiaCard } from "@/components/NoticiaCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch, asList, mediaUrl } from "@/lib/api";
 import { categoriaDocumentoLabel, turmaLabel } from "@/lib/format";
+import { ordenarNoticias } from "@/lib/noticias";
 import type { Aniversariante, Coroinha, CoroinhaResumo, Documento, Noticia, Usuario } from "@/types";
 
 interface PortalCorpoProps {
@@ -259,9 +260,8 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
                 <h3 className="font-display text-lg font-semibold">Notícias</h3>
               </div>
               <ul className="space-y-3">
-                {[...noticias]
-                  .sort((a, b) => Number(b.destaque) - Number(a.destaque))
-                  .slice(0, 5)
+                {ordenarNoticias(noticias)
+                  .slice(-5)
                   .map((n) => (
                     <li key={n.id}>
                       <NoticiaCard noticia={n} compact />

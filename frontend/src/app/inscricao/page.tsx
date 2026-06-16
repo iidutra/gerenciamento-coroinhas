@@ -14,6 +14,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FormSection } from "@/components/FormField";
 import { apiFetchForm, normalizarCpf } from "@/lib/api";
 import { formatarCpf } from "@/lib/format";
@@ -24,6 +25,8 @@ export default function InscricaoPage() {
   const [erro, setErro] = useState("");
   const [cpfCoroinha, setCpfCoroinha] = useState("");
   const [cpfResponsavel, setCpfResponsavel] = useState("");
+  const [nomeCoroinha, setNomeCoroinha] = useState("");
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -112,7 +115,14 @@ export default function InscricaoPage() {
           <form onSubmit={handleSubmit} className="space-y-8">
             <FormSection title="Dados do coroinha" icon={User}>
               <div className="grid gap-4">
-                <input name="nome_coroinha" placeholder="Nome completo *" required className="input-field" />
+                <input
+                  name="nome_coroinha"
+                  placeholder="Nome completo *"
+                  required
+                  className="input-field"
+                  value={nomeCoroinha}
+                  onChange={(e) => setNomeCoroinha(e.target.value)}
+                />
                 <input name="data_nascimento" type="date" required className="input-field" aria-label="Data de nascimento" />
                 <input
                   name="cpf_coroinha"
@@ -153,14 +163,30 @@ export default function InscricaoPage() {
             </FormSection>
 
             <FormSection title="Foto do coroinha" icon={Camera}>
-              <p className="text-sm text-muted-foreground mb-2">
-                Foto de rosto para identificação nas escalas (opcional, pode enviar depois).
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-3">
+                <CoroinhaAvatar
+                  nome={nomeCoroinha || "Coroinha"}
+                  fotoUrl={fotoPreview}
+                  size="lg"
+                />
+                <p className="text-sm text-muted-foreground flex-1">
+                  Foto de rosto para identificação nas escalas. Se não enviar agora, aparecerá o perfil
+                  padrão até a coordenação ou família anexar a foto.
+                </p>
+              </div>
               <input
                 name="foto"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 className="input-field file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) {
+                    setFotoPreview(null);
+                    return;
+                  }
+                  setFotoPreview(URL.createObjectURL(file));
+                }}
               />
             </FormSection>
 

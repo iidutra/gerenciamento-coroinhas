@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
+
+export const AVATAR_PLACEHOLDER_SRC = "/avatar-placeholder.svg";
 
 interface CoroinhaAvatarProps {
   nome: string;
@@ -18,28 +21,19 @@ const sizes = {
 const px = { sm: 32, md: 40, lg: 64 };
 
 export function CoroinhaAvatar({ nome, fotoUrl, size = "md", className = "" }: CoroinhaAvatarProps) {
-  const initial = nome?.charAt(0)?.toUpperCase() || "?";
   const dim = px[size];
-
-  if (fotoUrl) {
-    return (
-      <Image
-        src={fotoUrl}
-        alt={nome}
-        width={dim}
-        height={dim}
-        className={`rounded-full object-cover shrink-0 ${sizes[size]} ${className}`}
-        unoptimized
-      />
-    );
-  }
+  const [fotoIndisponivel, setFotoIndisponivel] = useState(false);
+  const src = fotoUrl && !fotoIndisponivel ? fotoUrl : AVATAR_PLACEHOLDER_SRC;
 
   return (
-    <div
-      className={`rounded-full bg-gradient-gold text-burgundy-deep font-display font-bold grid place-items-center shrink-0 shadow-gold ${sizes[size]} ${className}`}
-      aria-hidden
-    >
-      {initial}
-    </div>
+    <Image
+      src={src}
+      alt={fotoUrl && !fotoIndisponivel ? `Foto de ${nome}` : `Perfil de ${nome} (sem foto)`}
+      width={dim}
+      height={dim}
+      className={`rounded-full object-cover shrink-0 bg-gold-soft ${sizes[size]} ${className}`}
+      unoptimized
+      onError={() => setFotoIndisponivel(true)}
+    />
   );
 }

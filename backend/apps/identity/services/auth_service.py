@@ -29,7 +29,16 @@ class AuthService:
         if attempts >= settings.AUTH_RATE_LIMIT_ATTEMPTS:
             logger.warning("auth_rate_limit_exceeded", prefix=prefix)
             raise ValueError("Muitas tentativas. Tente novamente mais tarde.")
+
+    @classmethod
+    def _register_failed_attempt(cls, prefix: str, cpf: str, ip: str | None) -> None:
+        key = cls._rate_limit_key(prefix, cpf, ip)
+        attempts = cache.get(key, 0)
         cache.set(key, attempts + 1, settings.AUTH_RATE_LIMIT_WINDOW)
+
+    @classmethod
+    def _clear_rate_limit(cls, prefix: str, cpf: str, ip: str | None) -> None:
+        cache.delete(cls._rate_limit_key(prefix, cpf, ip))
 
     @classmethod
     def login(cls, identificador: str, senha: str, ip: str | None = None) -> Usuario:
@@ -49,14 +58,18 @@ class AuthService:
         try:
             usuario = Usuario.objects.get(cpf=cpf, is_active=True)
         except Usuario.DoesNotExist:
+            cls._register_failed_attempt("login", cpf, ip)
             raise ValueError(LOGIN_ERRO) from None
 
         if usuario.tipo_perfil not in (TipoPerfil.PAI, TipoPerfil.COROINHA):
+            cls._register_failed_attempt("login", cpf, ip)
             raise ValueError(LOGIN_ERRO)
 
         if not usuario.check_password(senha):
+            cls._register_failed_attempt("login", cpf, ip)
             raise ValueError(LOGIN_ERRO)
 
+        cls._clear_rate_limit("login", cpf, ip)
         logger.info("login_sucesso", usuario_id=usuario.id, tipo_perfil=usuario.tipo_perfil)
         AuditService.login_sucesso(usuario, ip=ip)
         return usuario
@@ -73,11 +86,14 @@ class AuthService:
                 tipo_perfil__in=(TipoPerfil.COORDENADOR, TipoPerfil.SECRETARIO, TipoPerfil.PADRE),
             )
         except Usuario.DoesNotExist:
+            cls._register_failed_attempt("login", email, ip)
             raise ValueError(LOGIN_ERRO) from None
 
         if not usuario.check_password(senha):
+            cls._register_failed_attempt("login", email, ip)
             raise ValueError(LOGIN_ERRO)
 
+        cls._clear_rate_limit("login", email, ip)
         logger.info("login_sucesso", usuario_id=usuario.id, tipo_perfil=usuario.tipo_perfil)
         AuditService.login_sucesso(usuario, ip=ip)
         return usuario
@@ -116,14 +132,18 @@ class AuthService:
                 tipo_perfil__in=(TipoPerfil.PAI, TipoPerfil.COROINHA),
             )
         except Usuario.DoesNotExist:
+            cls._register_failed_attempt("recuperar", cpf, ip)
             logger.info("recuperar_senha_falha", motivo="usuario_nao_encontrado")
             AuditService.recuperar_senha_falha(ip=ip, detalhes={"motivo": "usuario_nao_encontrado"})
             raise ValueError(RECUPERACAO_ERRO) from None
 
         if not cls._validar_data_nascimento_recuperacao(usuario, data_nascimento):
+            cls._register_failed_attempt("recuperar", cpf, ip)
             logger.info("recuperar_senha_falha", motivo="data_nascimento", usuario_id=usuario.id)
             AuditService.recuperar_senha_falha(ip=ip, detalhes={"motivo": "data_nascimento"})
             raise ValueError(RECUPERACAO_ERRO)
+
+        cls._clear_rate_limit("recuperar", cpf, ip)
 
         usuario.set_password(nova_senha)
         usuario.must_change_password = False

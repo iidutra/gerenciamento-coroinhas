@@ -13,26 +13,26 @@ function noticia(partial: Partial<Noticia> & Pick<Noticia, "id" | "titulo">): No
 }
 
 describe("ordenarNoticias", () => {
-  it("prioriza destaques e depois data do evento", () => {
+  it("ordena por cronologia crescente (data do evento)", () => {
     const lista = ordenarNoticias([
-      noticia({ id: 1, titulo: "Normal", data_evento: "2026-05-01" }),
-      noticia({ id: 2, titulo: "Destaque", destaque: true, data_evento: "2026-03-01" }),
-      noticia({ id: 3, titulo: "Recente", data_evento: "2026-06-01" }),
+      noticia({ id: 1, titulo: "Maio", data_evento: "2026-05-01" }),
+      noticia({ id: 2, titulo: "Março", destaque: true, data_evento: "2026-03-01" }),
+      noticia({ id: 3, titulo: "Junho", data_evento: "2026-06-01" }),
     ]);
-    expect(lista[0].id).toBe(2);
-    expect(lista[1].id).toBe(3);
+    expect(lista.map((n) => n.id)).toEqual([2, 1, 3]);
   });
 });
 
 describe("agruparNoticiasPorMes", () => {
-  it("agrupa por mês/ano", () => {
+  it("agrupa por mês/ano em ordem cronológica", () => {
     const grupos = agruparNoticiasPorMes([
-      noticia({ id: 1, titulo: "A", data_evento: "2026-03-13" }),
+      noticia({ id: 1, titulo: "A", data_evento: "2026-04-19" }),
       noticia({ id: 2, titulo: "B", data_evento: "2026-03-21" }),
-      noticia({ id: 3, titulo: "C", data_evento: "2026-04-19" }),
+      noticia({ id: 3, titulo: "C", data_evento: "2026-03-13" }),
     ]);
     expect(grupos).toHaveLength(2);
-    expect(grupos[0].itens).toHaveLength(2);
     expect(noticiaMesAnoLabel(grupos[0].itens[0])).toMatch(/março/i);
+    expect(grupos[0].itens.map((n) => n.id)).toEqual([3, 2]);
+    expect(grupos[1].itens[0].id).toBe(1);
   });
 });
