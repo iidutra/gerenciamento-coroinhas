@@ -106,10 +106,17 @@ railway run python manage.py criar_coordenador --email coord@paroquia.org --senh
 
 ### Fotos (mídia)
 
-Containers são efêmeros. Escolha uma opção:
+Containers são efêmeros. **Produção Railway:** volume em `/app/media` + `SERVE_MEDIA=True`.
 
-- **Volume Railway** montado em `/app/media` + `SERVE_MEDIA=True` (simples)
-- **Cloudflare R2** + `USE_S3=True` (persistente, recomendado longo prazo)
+```powershell
+.\scripts\railway-setup-media.ps1        # cria volume e variável
+.\scripts\railway-setup-media.ps1 -Redeploy
+```
+
+- Fotos ficam em `https://<api>.up.railway.app/media/coroinhas/fotos/...`
+- Documentos do portal usam URL externa (campo `url`), não arquivo uploadado
+
+**Alternativa (escala maior):** Cloudflare R2 + `USE_S3=True` — ver `.env.railway.example`
 
 ### Domínio customizado
 
@@ -251,6 +258,6 @@ Variables CI/CD para deploy automático: `DEPLOY_HOST`, `DEPLOY_USER`, `SSH_PRIV
 ## Próximos passos
 
 - [ ] Deploy no Railway (4 serviços + Postgres + Redis)
-- [ ] Volume ou R2 para fotos persistentes
+- [x] Volume Railway em `/app/media` para fotos persistentes (R2 opcional)
 - [ ] Observabilidade (Sentry)
 - [ ] Cobertura backend meta 80% (CI exige 65%)

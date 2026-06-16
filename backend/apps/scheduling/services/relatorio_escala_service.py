@@ -1,6 +1,5 @@
 import csv
 import io
-from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -57,12 +56,12 @@ class RelatorioEscalaService:
     @staticmethod
     def _foto_flowable(coroinha) -> RLImage:
         if coroinha.foto and coroinha.foto.name:
-            path = Path(coroinha.foto.path)
-            if path.is_file():
-                try:
-                    return RLImage(str(path), width=FOTO_PT, height=FOTO_PT, kind="proportional")
-                except Exception:
-                    pass
+            try:
+                with coroinha.foto.open("rb") as arquivo:
+                    buf = io.BytesIO(arquivo.read())
+                return RLImage(buf, width=FOTO_PT, height=FOTO_PT, kind="proportional")
+            except Exception:
+                pass
 
         buf = avatar_placeholder_png(128)
         return RLImage(buf, width=FOTO_PT, height=FOTO_PT)

@@ -224,10 +224,15 @@ if USE_S3:
     AWS_SECRET_ACCESS_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
     AWS_STORAGE_BUCKET_NAME = os.getenv("MINIO_BUCKET", "coroinhas")
     AWS_S3_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
+    AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "auto")
     AWS_S3_USE_SSL = os.getenv("MINIO_USE_SSL", "False").lower() in ("true", "1", "yes")
     AWS_S3_ADDRESSING_STYLE = "path"
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_AUTH = False
+    custom_domain = os.getenv("AWS_S3_CUSTOM_DOMAIN", "").strip()
+    if custom_domain:
+        AWS_S3_CUSTOM_DOMAIN = custom_domain
+        MEDIA_URL = f"https://{custom_domain}/"
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3.S3Storage",
