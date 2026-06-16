@@ -76,7 +76,11 @@ class WhatsAppService:
             with urllib.request.urlopen(req, timeout=20) as resp:
                 ok = 200 <= resp.status < 300
                 if ok:
-                    logger.info("whatsapp_enviado", url=url.split("?")[0])
+                    logger.info(
+                        "whatsapp_enviado",
+                        url=url.split("?")[0],
+                        destino=payload.get("to") or payload.get("chatId", "")[:8] + "***",
+                    )
                 return ok
         except (urllib.error.URLError, TimeoutError) as exc:
             logger.warning("whatsapp_falha", erro=str(exc))
@@ -106,14 +110,54 @@ class WhatsAppService:
         return getattr(settings, "WHATSAPP_API_URL", "").rstrip("/")
 
     @classmethod
+    def _waha_headers(cls) -> dict:
+        token = getattr(settings, "WHATSAPP_API_TOKEN", "")
+        headers = {"Accept": "application/json"}
+        if token:
+            headers["X-Api-Key"] = token
+        return headers
+
+    @classmethod
+    def _waha_get(cls, path: str, query: dict | None = None) -> dict | None:
+        from urllib.parse import urlencode
+
+        base = cls._waha_base_url()
+        qs = f"?{urlencode(query)}" if query else ""
+        req = urllib.request.Request(
+            f"{base}{path}{qs}",
+            headers=cls._waha_headers(),
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                if not (200 <= resp.status < 300):
+                    return None
+                return json.loads(resp.read().decode())
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            logger.warning("waha_get_falha", path=path, erro=str(exc))
+            return None
+
+    @classmethod
+    def _resolver_chat_id_waha(cls, numero: str, session: str) -> str:
+        """WhatsApp pode exigir @lid em vez de @c.us — consulta WAHA antes de enviar."""
+        data = cls._waha_get(
+            "/api/checkNumberStatus",
+            {"session": session, "phone": numero},
+        )
+        if data and data.get("numberExists") and data.get("chatId"):
+            return data["chatId"]
+        return f"{numero}@c.us"
+
+    @classmethod
     def _enviar_waha(cls, numero: str, corpo: str) -> bool:
         session = getattr(settings, "WHATSAPP_WAHA_SESSION", "default")
+        chat_id = cls._resolver_chat_id_waha(numero, session)
         url = f"{cls._waha_base_url()}/api/sendText"
         token = getattr(settings, "WHATSAPP_API_TOKEN", "")
         headers = {"X-Api-Key": token} if token else {}
         return cls._request_json(
             url,
-            {"session": session, "chatId": f"{numero}@c.us", "text": corpo},
+            {"session": session, "chatId": chat_id, "text": corpo},
             headers=headers,
         )
 
