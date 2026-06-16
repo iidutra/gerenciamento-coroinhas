@@ -115,6 +115,11 @@ def client_coordenador(api_client, coordenador):
 
 
 @pytest.fixture
+def client_secretario(api_client, secretario):
+    return _jwt_client(api_client, secretario)
+
+
+@pytest.fixture
 def client_padre(api_client, padre):
     return _jwt_client(api_client, padre)
 

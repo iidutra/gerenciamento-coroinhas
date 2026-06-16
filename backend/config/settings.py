@@ -14,6 +14,10 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-change-me")
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
+_railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_domain)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -35,6 +39,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -64,8 +69,19 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 USE_SQLITE = os.getenv("USE_SQLITE", "False").lower() in ("true", "1", "yes")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-if USE_SQLITE:
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=False,
+        )
+    }
+elif USE_SQLITE:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -110,6 +126,17 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if o.strip()
+]
+for origin in CORS_ALLOWED_ORIGINS:
+    if origin.startswith("http://") and origin.replace("http://", "https://", 1) not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin.replace("http://", "https://", 1))
+    elif origin.startswith("https://") and origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 USE_REDIS = os.getenv("USE_REDIS", "True").lower() in ("true", "1", "yes")
 
@@ -148,3 +175,64 @@ SIMPLE_JWT = {
 
 AUTH_RATE_LIMIT_ATTEMPTS = int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", "5"))
 AUTH_RATE_LIMIT_WINDOW = int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "3600"))
+INSCRICAO_RATE_LIMIT_ATTEMPTS = int(os.getenv("INSCRICAO_RATE_LIMIT_ATTEMPTS", "10"))
+INSCRICAO_RATE_LIMIT_WINDOW = int(os.getenv("INSCRICAO_RATE_LIMIT_WINDOW", "3600"))
+
+# Notificação automática ao montar escala
+NOTIFICACAO_ESCALA_AUTOMATICA = os.getenv("NOTIFICACAO_ESCALA_AUTOMATICA", "True").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+NOTIFICACAO_ESCALA_CANAL = os.getenv("NOTIFICACAO_ESCALA_CANAL", "WhatsApp")
+NOTIFICACAO_ESCALA_CORPO = os.getenv(
+    "NOTIFICACAO_ESCALA_CORPO",
+    "Olá {nome}, você está escalado para servir em {data} — {missa} ({horario}). Função: {funcao}.",
+)
+
+# Celery
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "False").lower() in ("true", "1", "yes")
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# E-mail
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "coroinhas@paroquia.org")
+
+# WhatsApp (HTTP genérico — POST JSON {to, message})
+WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "")
+WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN", "")
+
+# MinIO / S3-compatible storage (Cloudflare R2, AWS S3, MinIO)
+USE_S3 = os.getenv("USE_S3", os.getenv("USE_MINIO", "False")).lower() in ("true", "1", "yes")
+USE_MINIO = USE_S3
+SERVE_MEDIA = os.getenv("SERVE_MEDIA", "False").lower() in ("true", "1", "yes")
+
+if USE_S3:
+    INSTALLED_APPS = [*INSTALLED_APPS, "storages"]
+    AWS_ACCESS_KEY_ID = os.getenv("MINIO_ACCESS_KEY", "minio")
+    AWS_SECRET_ACCESS_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("MINIO_BUCKET", "coroinhas")
+    AWS_S3_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
+    AWS_S3_USE_SSL = os.getenv("MINIO_USE_SSL", "False").lower() in ("true", "1", "yes")
+    AWS_S3_ADDRESSING_STYLE = "path"
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }

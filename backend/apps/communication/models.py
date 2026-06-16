@@ -18,6 +18,13 @@ class Mensagem(models.Model):
         related_name="mensagens_enviadas",
     )
     simulacao = models.BooleanField(default=True)
+    escala = models.ForeignKey(
+        "scheduling.Escala",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mensagens_notificacao",
+    )
 
     class Meta:
         verbose_name = "Mensagem"

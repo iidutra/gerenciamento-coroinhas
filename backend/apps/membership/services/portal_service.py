@@ -12,6 +12,10 @@ from apps.membership.utils.media import build_foto_url
 class PortalService:
     @staticmethod
     def pode_ver_coroinha(usuario: Usuario, coroinha_id: int) -> bool:
+        if usuario.is_staff_pastoral:
+            from apps.membership.models import Coroinha
+
+            return Coroinha.objects.filter(id=coroinha_id).exists()
         if usuario.tipo_perfil == TipoPerfil.COROINHA:
             return usuario.coroinha_id == coroinha_id
         if usuario.tipo_perfil == TipoPerfil.PAI:
@@ -25,6 +29,8 @@ class PortalService:
     def coroinhas_acessiveis(usuario: Usuario):
         from apps.membership.models import Coroinha
 
+        if usuario.is_staff_pastoral:
+            return Coroinha.objects.all().order_by("nome")
         if usuario.tipo_perfil == TipoPerfil.COROINHA and usuario.coroinha_id:
             return Coroinha.objects.filter(id=usuario.coroinha_id)
         if usuario.tipo_perfil == TipoPerfil.PAI and usuario.responsavel_id:

@@ -23,6 +23,13 @@ from apps.membership.services.portal_service import PortalService
 from apps.membership.services.relatorio_service import RelatorioService
 
 
+def _client_ip(request) -> str | None:
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
 class InscricaoPublicaView(APIView):
     permission_classes = [AllowAny]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
@@ -42,7 +49,11 @@ class InscricaoPublicaView(APIView):
         serializer = InscricaoPublicaSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
         try:
-            inscricao = InscricaoService.criar_publica(serializer.validated_data, foto=foto)
+            inscricao = InscricaoService.criar_publica(
+                serializer.validated_data,
+                foto=foto,
+                ip=_client_ip(request),
+            )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
@@ -120,7 +131,7 @@ class CoroinhaViewSet(viewsets.ModelViewSet):
 
 
 class PortalCoroinhaView(APIView):
-    permission_classes = [IsFamilia]
+    permission_classes = [IsFamiliaOuStaff]
 
     def get(self, request, coroinha_id):
         try:
@@ -134,7 +145,7 @@ class PortalCoroinhaView(APIView):
 
 
 class PortalFilhosView(APIView):
-    permission_classes = [IsFamilia]
+    permission_classes = [IsFamiliaOuStaff]
 
     def get(self, request):
         coroinhas = PortalService.coroinhas_acessiveis(request.user)

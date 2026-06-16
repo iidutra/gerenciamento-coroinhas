@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.communication.models import CanalMensagem
 from apps.scheduling.models import Escala, EscalaItem, Missa, ModoEscala, FuncaoEscala
 
 
@@ -87,10 +88,14 @@ class EscalaItemSerializer(serializers.ModelSerializer):
 class EscalaSerializer(serializers.ModelSerializer):
     missa_nome = serializers.CharField(source="missa.nome", read_only=True)
     itens = EscalaItemSerializer(many=True, read_only=True)
+    notificacao_enviada = serializers.SerializerMethodField()
 
     class Meta:
         model = Escala
-        fields = ("id", "data", "missa", "missa_nome", "modo", "criado_em", "itens")
+        fields = ("id", "data", "missa", "missa_nome", "modo", "criado_em", "itens", "notificacao_enviada")
+
+    def get_notificacao_enviada(self, obj):
+        return obj.mensagens_notificacao.exists()
 
 
 class MontarEscalaSerializer(serializers.Serializer):
@@ -100,6 +105,7 @@ class MontarEscalaSerializer(serializers.Serializer):
     quantidade = serializers.IntegerField(min_value=1, max_value=20)
     coroinha_ids = serializers.ListField(child=serializers.IntegerField(), required=False)
     funcoes = serializers.DictField(child=serializers.IntegerField(), required=False, allow_empty=True)
+    notificar = serializers.BooleanField(required=False, default=None, allow_null=True)
 
     def validate_funcoes(self, value):
         validas = {c.value for c in FuncaoEscala}
@@ -112,6 +118,10 @@ class MontarEscalaSerializer(serializers.Serializer):
         if attrs["modo"] == ModoEscala.SELECAO_MANUAL and not attrs.get("coroinha_ids"):
             raise serializers.ValidationError({"coroinha_ids": "Obrigatório para seleção manual."})
         return attrs
+
+
+class NotificarEscalaSerializer(serializers.Serializer):
+    canal = serializers.ChoiceField(choices=CanalMensagem.choices, required=False)
 
 
 class AtribuirFuncoesSerializer(serializers.Serializer):

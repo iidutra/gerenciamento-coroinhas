@@ -99,6 +99,20 @@ class EscalaService:
 
         return escala
 
+    @classmethod
+    def montar_com_notificacao(
+        cls,
+        *,
+        notificar: bool | None,
+        usuario,
+        **kwargs,
+    ) -> tuple[Escala, object | None]:
+        from apps.scheduling.services.notificacao_escala_service import NotificacaoEscalaService
+
+        escala = cls.montar(usuario=usuario, **kwargs)
+        mensagem = NotificacaoEscalaService.notificar_se_habilitado(escala, usuario, notificar=notificar)
+        return escala, mensagem
+
     @staticmethod
     def atribuir_funcoes(escala: Escala, funcoes: dict[str, int | None]) -> Escala:
         validas = {c.value for c in FuncaoEscala}

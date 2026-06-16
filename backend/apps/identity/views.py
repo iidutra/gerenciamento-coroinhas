@@ -13,6 +13,7 @@ from apps.identity.serializers import (
     UsuarioSerializer,
 )
 from apps.identity.services.auth_service import AuthService
+from apps.identity.services.audit_service import AuditService
 
 
 def _client_ip(request) -> str | None:
@@ -44,6 +45,7 @@ class LoginView(APIView):
                 ip=_client_ip(request),
             )
         except ValueError as exc:
+            AuditService.login_falha(ip=_client_ip(request), detalhes={"endpoint": "login"})
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(_token_response(usuario))
 
@@ -61,6 +63,7 @@ class LoginFamiliaView(APIView):
                 ip=_client_ip(request),
             )
         except ValueError as exc:
+            AuditService.login_falha(ip=_client_ip(request), detalhes={"endpoint": "login_familia"})
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(_token_response(usuario))
 
@@ -78,6 +81,7 @@ class LoginStaffView(APIView):
                 ip=_client_ip(request),
             )
         except ValueError as exc:
+            AuditService.login_falha(ip=_client_ip(request), detalhes={"endpoint": "login_staff"})
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(_token_response(usuario))
 

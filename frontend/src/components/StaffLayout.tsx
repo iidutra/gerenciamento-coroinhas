@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar, dashboardNav } from "@/components/Sidebar";
+import { dashboardNav } from "@/components/Sidebar";
+import { AppShell } from "@/components/AppShell";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { clearTokens, getUsuario } from "@/lib/api";
 import type { Usuario } from "@/types";
@@ -62,12 +63,9 @@ export function StaffLayout({
   if (!ready) return <LoadingScreen />;
 
   return (
-    <div className="flex min-h-screen text-foreground">
-      <Sidebar groups={dashboardNav} subtitle={usuario?.nome} />
-      <main className="flex-1 p-6 md:p-8 overflow-auto">
-        {loading ? <LoadingScreen /> : children}
-      </main>
-    </div>
+    <AppShell groups={dashboardNav} subtitle={usuario?.nome} tipoPerfil={usuario?.tipo_perfil}>
+      {loading ? <LoadingScreen /> : children}
+    </AppShell>
   );
 }
 

@@ -1,6 +1,11 @@
+import hashlib
+
+from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 
-from apps.identity.models import TipoPerfil, Usuario
+from apps.identity.models import AuditAcao, TipoPerfil, Usuario
+from apps.identity.services.audit_service import AuditService
 from apps.identity.utils.cpf import normalizar_cpf, senha_inicial_cpf, validar_cpf
 from apps.membership.models import (
     Coroinha,
@@ -14,8 +19,22 @@ from apps.membership.models import (
 
 class InscricaoService:
     @staticmethod
+    def _rate_limit_key(ip: str | None) -> str:
+        ip_part = ip or "unknown"
+        return f"inscricao:publica:{hashlib.sha256(ip_part.encode()).hexdigest()[:16]}"
+
+    @classmethod
+    def verificar_rate_limit_publica(cls, ip: str | None) -> None:
+        key = cls._rate_limit_key(ip)
+        attempts = cache.get(key, 0)
+        if attempts >= settings.INSCRICAO_RATE_LIMIT_ATTEMPTS:
+            raise ValueError("Muitas inscrições enviadas. Tente novamente mais tarde.")
+        cache.set(key, attempts + 1, settings.INSCRICAO_RATE_LIMIT_WINDOW)
+
+    @staticmethod
     @transaction.atomic
-    def criar_publica(dados: dict, foto=None) -> Inscricao:
+    def criar_publica(dados: dict, foto=None, ip: str | None = None) -> Inscricao:
+        InscricaoService.verificar_rate_limit_publica(ip)
         coroinha_data = dados.get("coroinha", {})
         responsavel_data = dados.get("responsavel", {})
 
@@ -30,6 +49,11 @@ class InscricaoService:
         if foto:
             inscricao.foto_pendente = foto
             inscricao.save(update_fields=["foto_pendente"])
+        AuditService.registrar(
+            AuditAcao.INSCRICAO_CRIADA,
+            ip=ip,
+            detalhes={"inscricao_id": inscricao.id},
+        )
         return inscricao
 
     @staticmethod
@@ -111,6 +135,11 @@ class InscricaoService:
         inscricao.aprovado_por = aprovador
         inscricao.save()
 
+        AuditService.registrar(
+            AuditAcao.INSCRICAO_APROVADA,
+            usuario=aprovador,
+            detalhes={"inscricao_id": inscricao.id, "coroinha_id": coroinha.id},
+        )
         return coroinha
 
     @staticmethod
@@ -119,3 +148,7 @@ class InscricaoService:
             raise ValueError("Inscrição já foi processada.")
         inscricao.status = StatusInscricao.REJEITADA
         inscricao.save(update_fields=["status"])
+        AuditService.registrar(
+            AuditAcao.INSCRICAO_REJEITADA,
+            detalhes={"inscricao_id": inscricao.id},
+        )

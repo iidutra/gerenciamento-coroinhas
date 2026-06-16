@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, Fragment, useEffect, useState } from "react";
-import { Calendar, Pencil, Plus, Shuffle, Trash2, UserCog } from "lucide-react";
+import { Calendar, Pencil, Plus, Send, Shuffle, Trash2, UserCog } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
@@ -53,6 +53,8 @@ export default function EscalasPage() {
   const [funcoesMontar, setFuncoesMontar] = useState(funcoesVazias);
   const [editandoFuncoesId, setEditandoFuncoesId] = useState<number | null>(null);
   const [funcoesEdicao, setFuncoesEdicao] = useState(funcoesVazias);
+  const [notificarEscalados, setNotificarEscalados] = useState(true);
+  const [notificandoId, setNotificandoId] = useState<number | null>(null);
 
   function load() {
     Promise.all([
@@ -148,6 +150,7 @@ export default function EscalasPage() {
           quantidade,
           coroinha_ids: modo === "SelecaoManual" ? selecionados : undefined,
           funcoes: funcoesParaPayload(funcoesMontar),
+          notificar: notificarEscalados,
         }),
       });
       setFuncoesMontar(funcoesVazias());
@@ -179,6 +182,19 @@ export default function EscalasPage() {
       load();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar funções");
+    }
+  }
+
+  async function notificarEscala(escalaId: number) {
+    setErro("");
+    setNotificandoId(escalaId);
+    try {
+      await apiFetch(`/escalas/${escalaId}/notificar/`, { method: "POST", body: "{}" });
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao notificar escalados");
+    } finally {
+      setNotificandoId(null);
     }
   }
 
@@ -360,6 +376,14 @@ export default function EscalasPage() {
                 valores={funcoesMontar}
                 onChange={setFuncoesMontar}
               />
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notificarEscalados}
+                  onChange={(e) => setNotificarEscalados(e.target.checked)}
+                />
+                Notificar escalados automaticamente (WhatsApp/e-mail)
+              </label>
               <button type="submit" className="btn-primary w-full">Sortear coroinhas</button>
             </form>
           ) : (
@@ -380,7 +404,7 @@ export default function EscalasPage() {
                   <th>Data</th>
                   <th>Missa</th>
                   <th>Coroinhas e funções</th>
-                  {podeEditar && <th className="w-28" />}
+                  {podeEditar && <th className="w-40" />}
                 </tr>
               </thead>
               <tbody>
@@ -390,7 +414,13 @@ export default function EscalasPage() {
                       <td>{new Date(e.data + "T12:00:00").toLocaleDateString("pt-BR")}</td>
                       <td>{e.missa_nome}</td>
                       <td>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {e.notificacao_enviada && (
+                            <span className="text-xs rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5">
+                              Notificado
+                            </span>
+                          )}
+                          <div className="flex flex-wrap gap-2">
                           {e.itens.map((i) => (
                             <div
                               key={i.id}
@@ -414,22 +444,34 @@ export default function EscalasPage() {
                               </span>
                             </div>
                           ))}
+                          </div>
                         </div>
                       </td>
                       {podeEditar && (
                         <td>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              editandoFuncoesId === e.id
-                                ? setEditandoFuncoesId(null)
-                                : abrirEdicaoFuncoes(e)
-                            }
-                            className="btn-outline text-xs flex items-center gap-1 whitespace-nowrap"
-                          >
-                            <UserCog className="size-3.5" aria-hidden />
-                            Funções
-                          </button>
+                          <div className="flex flex-col gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                editandoFuncoesId === e.id
+                                  ? setEditandoFuncoesId(null)
+                                  : abrirEdicaoFuncoes(e)
+                              }
+                              className="btn-outline text-xs flex items-center gap-1 whitespace-nowrap"
+                            >
+                              <UserCog className="size-3.5" aria-hidden />
+                              Funções
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => notificarEscala(e.id)}
+                              disabled={notificandoId === e.id}
+                              className="btn-outline text-xs flex items-center gap-1 whitespace-nowrap"
+                            >
+                              <Send className="size-3.5" aria-hidden />
+                              {notificandoId === e.id ? "Enviando…" : "Notificar"}
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>

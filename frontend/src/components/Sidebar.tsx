@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Church } from "lucide-react";
+import { Church, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { navIcons, type NavIconKey } from "@/lib/nav-icons";
 
@@ -11,6 +11,7 @@ export interface NavItem {
   label: string;
   icon: NavIconKey;
   disabled?: boolean;
+  coordenadorOnly?: boolean;
 }
 
 export interface NavGroup {
@@ -21,9 +22,21 @@ export interface NavGroup {
 interface SidebarProps {
   groups: NavGroup[];
   subtitle?: string;
+  tipoPerfil?: string;
+  onNavigate?: () => void;
+  showCloseButton?: boolean;
+  onClose?: () => void;
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavLink({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
   const Icon: LucideIcon = navIcons[item.icon];
 
   if (item.disabled || item.href === "#") {
@@ -42,6 +55,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
         active
           ? "bg-sidebar-accent text-sidebar-primary font-medium shadow-soft border border-sidebar-primary/20"
@@ -55,8 +69,17 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function Sidebar({ groups, subtitle }: SidebarProps) {
+export function Sidebar({ groups, subtitle, tipoPerfil, onNavigate, showCloseButton, onClose }: SidebarProps) {
   const pathname = usePathname();
+
+  const gruposVisiveis = groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.coordenadorOnly || tipoPerfil === "Coordenador",
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   function isActive(href: string) {
     if (href === "#") return false;
@@ -65,10 +88,20 @@ export function Sidebar({ groups, subtitle }: SidebarProps) {
   }
 
   return (
-    <aside className="w-72 min-h-screen text-sidebar-foreground flex flex-col relative overflow-hidden bg-gradient-hero shrink-0">
+    <aside className="w-[min(100vw,18rem)] lg:w-72 h-full min-h-screen text-sidebar-foreground flex flex-col relative overflow-hidden bg-gradient-hero shrink-0">
       <div className="absolute inset-0 opacity-[0.07] pointer-events-none sidebar-glow" />
 
-      <div className="relative p-6 border-b border-sidebar-border/60 flex items-center gap-3">
+      <div className="relative p-5 sm:p-6 border-b border-sidebar-border/60 flex items-center gap-3">
+        {showCloseButton && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/80"
+            aria-label="Fechar menu"
+          >
+            <X className="size-5" aria-hidden />
+          </button>
+        )}
         <div
           className="size-12 rounded-full grid place-items-center shadow-lg ring-2 ring-white/10 bg-gradient-gold text-burgundy-deep"
         >
@@ -88,14 +121,14 @@ export function Sidebar({ groups, subtitle }: SidebarProps) {
       </div>
 
       <nav className="relative flex-1 p-4 space-y-5 overflow-y-auto">
-        {groups.map((group) => (
+        {gruposVisiveis.map((group) => (
           <div key={group.title}>
             <p className="px-3 mb-1.5 text-[10px] uppercase tracking-widest text-sidebar-foreground/50 font-medium">
               {group.title}
             </p>
             <div className="space-y-0.5">
               {group.items.map((item) => (
-                <NavLink key={item.href + item.label} item={item} active={isActive(item.href)} />
+                <NavLink key={item.href + item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
               ))}
             </div>
           </div>
@@ -114,6 +147,7 @@ export const dashboardNav: NavGroup[] = [
     title: "Geral",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+      { href: "/dashboard/usuarios", label: "Usuários", icon: "usuarios", coordenadorOnly: true },
       { href: "/dashboard/noticias", label: "Notícias", icon: "noticias" },
       { href: "/dashboard/documentos", label: "Documentos", icon: "documentos" },
     ],
@@ -131,7 +165,7 @@ export const dashboardNav: NavGroup[] = [
   {
     title: "Famílias",
     items: [
-      { href: "/portal", label: "Portal dos Pais", icon: "portal" },
+      { href: "/dashboard/portal", label: "Portal dos Pais", icon: "portal" },
       { href: "/dashboard/comunicacao", label: "Comunicação", icon: "comunicacao" },
       { href: "/dashboard/relatorios", label: "Relatórios", icon: "relatorios" },
     ],

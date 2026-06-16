@@ -1,0 +1,234 @@
+{
+  "ano": 2026,
+  "fonte": "PEPS - Calendário Paroquial 2026 (Santuário de Fátima — Porto Velho/RO)",
+  "eventos": [
+    {
+      "id": "inscricao-coroinhas-fev",
+      "tipo": "noticia",
+      "data": "2026-02-23",
+      "data_fim": "2026-02-28",
+      "titulo": "Inscrição de novos coroinhas",
+      "local": "WhatsApp",
+      "horario": null,
+      "destaque": true,
+      "descricao": "Período de inscrição para novos coroinhas. Primeira Comunhão. Contato pela pastoral de Coroinhas (Carla e Magno)."
+    },
+    {
+      "id": "missa-fatima-fev",
+      "tipo": "noticia",
+      "data": "2026-02-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Quatro celebrações eucarísticas no dia 13. Os coroinhas servem nas missas do Santuário conforme escala."
+    },
+    {
+      "id": "visita-insp-coroinhas-mar",
+      "tipo": "noticia",
+      "data": "2026-03-02",
+      "data_fim": "2026-03-05",
+      "titulo": "Visita inspetorial — novos coroinhas",
+      "local": "WhatsApp / Santuário",
+      "horario": null,
+      "destaque": false,
+      "descricao": "Visita da Inspetoria aos novos coroinhas. Critério: Primeira Comunhão."
+    },
+    {
+      "id": "espiritual-quaresma-coroinhas",
+      "tipo": "formacao",
+      "data": "2026-03-14",
+      "titulo": "Espiritualidade quaresmal dos coroinhas",
+      "local": "A definir",
+      "horario": "08h às 14h",
+      "descricao": "Momento de espiritualidade na Quaresma para coroinhas e grupo de Primeira Comunhão. Articulação: Liturgia, Catequese e Coroinhas."
+    },
+    {
+      "id": "missa-fatima-mar",
+      "tipo": "noticia",
+      "data": "2026-03-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana no Santuário. Escala dos coroinhas para as quatro missas."
+    },
+    {
+      "id": "retiro-formacao-coroinhas-mar",
+      "tipo": "formacao",
+      "data": "2026-03-21",
+      "titulo": "Retiro e formação dos coroinhas",
+      "local": "A definir / Capela Auxiliadora / Santa Teresinha",
+      "horario": "Manhã e 14h às 17h",
+      "descricao": "Retiro espiritual e formação para coroinhas. Coordenação pastoral e padres."
+    },
+    {
+      "id": "dom-ramos-retiro",
+      "tipo": "noticia",
+      "data": "2026-03-29",
+      "titulo": "Domingo de Ramos — Batismo e retiro",
+      "local": "Santuário / Seminário",
+      "horario": "08h, 09h e 12h",
+      "destaque": false,
+      "descricao": "Celebração do Domingo de Ramos com batismo e retiro. Pastoral de Batismo e Catequese; participação dos coroinhas."
+    },
+    {
+      "id": "sabado-santo-coroinhas",
+      "tipo": "noticia",
+      "data": "2026-04-04",
+      "titulo": "Sábado Santo — Vigília pascal e coroinhas",
+      "local": "Santuário",
+      "horario": "19h às 17h (vigília)",
+      "destaque": true,
+      "descricao": "Vigília pascal, batismo e serviço litúrgico dos coroinhas. Celebração solene da Páscoa."
+    },
+    {
+      "id": "formacao-coroinhas-pascoa",
+      "tipo": "formacao",
+      "data": "2026-04-19",
+      "titulo": "Formação dos coroinhas — Tempo pascal",
+      "local": "Santuário / A definir",
+      "horario": "08h e 19h / 10h às 17h",
+      "descricao": "Formação paroquial dos coroinhas no Tempo Pascal. Agentes de pastoral, catequese e coroinhas."
+    },
+    {
+      "id": "missa-fatima-abr",
+      "tipo": "noticia",
+      "data": "2026-04-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana. Os coroinhas servem nas celebrações do dia 13."
+    },
+    {
+      "id": "festa-padroeira-fatima",
+      "tipo": "noticia",
+      "data": "2026-05-13",
+      "titulo": "Festa da padroeira — Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": true,
+      "descricao": "Festa solene da padroeira do Santuário. Todos os coroinhas são convocados a servir nas celebrações do dia 13."
+    },
+    {
+      "id": "corpus-christi",
+      "tipo": "noticia",
+      "data": "2026-06-04",
+      "titulo": "Solenidade de Corpus Christi",
+      "local": "Paróquias",
+      "horario": "19h",
+      "destaque": false,
+      "descricao": "Solenidade do Corpo e Sangue de Cristo. Celebração paroquial com participação litúrgica dos coroinhas."
+    },
+    {
+      "id": "missa-fatima-jun",
+      "tipo": "noticia",
+      "data": "2026-06-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana com escala dos coroinhas."
+    },
+    {
+      "id": "missa-fatima-jul",
+      "tipo": "noticia",
+      "data": "2026-07-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana com escala dos coroinhas."
+    },
+    {
+      "id": "reuniao-pais-coroinhas",
+      "tipo": "noticia",
+      "data": "2026-08-08",
+      "titulo": "Reunião de pais dos coroinhas",
+      "local": "Capela Santa Teresinha",
+      "horario": "15h",
+      "destaque": false,
+      "descricao": "Encontro com os pais e responsáveis dos coroinhas. Pastoral de Coroinhas."
+    },
+    {
+      "id": "missa-fatima-ago",
+      "tipo": "noticia",
+      "data": "2026-08-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana com escala dos coroinhas."
+    },
+    {
+      "id": "festa-sao-tarcisio",
+      "tipo": "noticia",
+      "data": "2026-08-15",
+      "titulo": "Festa de São Tarcísio — padroeiro dos coroinhas",
+      "local": "Santuário",
+      "horario": "18h30",
+      "destaque": true,
+      "descricao": "Solenidade do padroeiro dos coroinhas. Celebração especial com toda a pastoral de coroinhas."
+    },
+    {
+      "id": "missa-fatima-set",
+      "tipo": "noticia",
+      "data": "2026-09-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana com escala dos coroinhas."
+    },
+    {
+      "id": "missa-fatima-out",
+      "tipo": "noticia",
+      "data": "2026-10-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário",
+      "horario": "09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana com escala dos coroinhas."
+    },
+    {
+      "id": "retiro-coroinhas-out",
+      "tipo": "formacao",
+      "data": "2026-10-25",
+      "titulo": "Retiro dos coroinhas",
+      "local": "Santuário / A definir",
+      "horario": "08h e 19h / 09h às 17h",
+      "descricao": "Retiro espiritual anual dos coroinhas. 30º Domingo do Tempo Comum."
+    },
+    {
+      "id": "missa-fatima-nov",
+      "tipo": "noticia",
+      "data": "2026-11-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima",
+      "local": "Santuário / Centro Arquidiocesano de Pastoral",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "Memória mensal mariana. Celebração com participação dos coroinhas."
+    },
+    {
+      "id": "confraternizacao-coroinhas",
+      "tipo": "noticia",
+      "data": "2026-11-22",
+      "titulo": "Cristo Rei — Confraternização dos coroinhas",
+      "local": "A definir",
+      "horario": "08h e 09h / 10h às 17h",
+      "destaque": false,
+      "descricao": "Soleneidade de Cristo Rei com confraternização da pastoral de coroinhas."
+    },
+    {
+      "id": "missa-fatima-dez",
+      "tipo": "noticia",
+      "data": "2026-12-13",
+      "titulo": "Memória mensal de Nossa Senhora de Fátima — Advento",
+      "local": "Santuário",
+      "horario": "06h, 09h, 12h e 18h",
+      "destaque": false,
+      "descricao": "3º Domingo do Advento e memória mensal de Fátima. Escala dos coroinhas."
+    }
+  ]
+}

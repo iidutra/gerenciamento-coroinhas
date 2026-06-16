@@ -6,6 +6,7 @@ from django.core.cache import cache
 from django.db.models import Q
 
 from apps.identity.models import TipoPerfil, Usuario
+from apps.identity.services.audit_service import AuditService
 from apps.identity.utils.cpf import normalizar_cpf, validar_cpf
 
 logger = structlog.get_logger(__name__)
@@ -57,6 +58,7 @@ class AuthService:
             raise ValueError(LOGIN_ERRO)
 
         logger.info("login_sucesso", usuario_id=usuario.id, tipo_perfil=usuario.tipo_perfil)
+        AuditService.login_sucesso(usuario, ip=ip)
         return usuario
 
     @classmethod
@@ -77,6 +79,7 @@ class AuthService:
             raise ValueError(LOGIN_ERRO)
 
         logger.info("login_sucesso", usuario_id=usuario.id, tipo_perfil=usuario.tipo_perfil)
+        AuditService.login_sucesso(usuario, ip=ip)
         return usuario
 
     @staticmethod
@@ -101,6 +104,7 @@ class AuthService:
         cpf = normalizar_cpf(cpf)
         if not validar_cpf(cpf):
             logger.info("recuperar_senha_falha", motivo="cpf_invalido")
+            AuditService.recuperar_senha_falha(ip=ip, detalhes={"motivo": "cpf_invalido"})
             raise ValueError(RECUPERACAO_ERRO)
 
         cls._check_rate_limit("recuperar", cpf, ip)
@@ -113,16 +117,19 @@ class AuthService:
             )
         except Usuario.DoesNotExist:
             logger.info("recuperar_senha_falha", motivo="usuario_nao_encontrado")
+            AuditService.recuperar_senha_falha(ip=ip, detalhes={"motivo": "usuario_nao_encontrado"})
             raise ValueError(RECUPERACAO_ERRO) from None
 
         if not cls._validar_data_nascimento_recuperacao(usuario, data_nascimento):
             logger.info("recuperar_senha_falha", motivo="data_nascimento", usuario_id=usuario.id)
+            AuditService.recuperar_senha_falha(ip=ip, detalhes={"motivo": "data_nascimento"})
             raise ValueError(RECUPERACAO_ERRO)
 
         usuario.set_password(nova_senha)
         usuario.must_change_password = False
         usuario.save(update_fields=["password", "must_change_password"])
         logger.info("recuperar_senha_sucesso", usuario_id=usuario.id)
+        AuditService.recuperar_senha_sucesso(usuario, ip=ip)
 
     @classmethod
     def trocar_senha(cls, usuario: Usuario, senha_atual: str, nova_senha: str) -> None:

@@ -36,6 +36,12 @@ class TestPortal:
         assert res.status_code == status.HTTP_200_OK
         assert len(res.data) >= 1
 
-    def test_coordenador_nao_acessa_portal_filhos(self, client_coordenador):
+    def test_coordenador_preview_portal_filhos(self, client_coordenador, coroinha):
         res = client_coordenador.get("/api/v1/portal/filhos")
-        assert res.status_code == status.HTTP_403_FORBIDDEN
+        assert res.status_code == status.HTTP_200_OK
+        assert len(res.data) >= 1
+
+    def test_coordenador_preview_resumo(self, client_coordenador, coroinha):
+        res = client_coordenador.get(f"/api/v1/portal/coroinhas/{coroinha.id}/resumo")
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["nome"] == coroinha.nome

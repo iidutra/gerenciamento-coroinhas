@@ -63,6 +63,7 @@ export interface Escala {
   modo: string;
   criado_em: string;
   itens: EscalaItem[];
+  notificacao_enviada?: boolean;
 }
 
 export interface Missa {
@@ -108,10 +109,22 @@ export interface Mensagem {
   simulacao: boolean;
 }
 
+export interface UsuarioStaff {
+  id: number;
+  nome: string;
+  email: string;
+  tipo_perfil: "Coordenador" | "Secretario" | "Padre";
+  is_active: boolean;
+}
+
 export interface Noticia {
   id: number;
   titulo: string;
   conteudo: string;
+  data_evento?: string | null;
+  data_evento_fim?: string | null;
+  local_evento?: string;
+  horario_evento?: string;
   destaque: boolean;
   publicado_em: string;
   ativo: boolean;

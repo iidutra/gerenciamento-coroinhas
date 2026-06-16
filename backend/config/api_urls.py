@@ -1,7 +1,10 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from config.health_views import HealthView
+
 from apps.attendance.views import PresencaEscalaView, PresencaResumoView
+from apps.identity.staff_views import UsuarioStaffViewSet
 from apps.communication.views import EnviarMensagemView, MensagemViewSet
 from apps.content.views import DocumentoViewSet, NoticiaViewSet
 from apps.membership.views import (
@@ -18,6 +21,7 @@ from apps.scheduling.views import EscalaViewSet, MissaViewSet, RelatorioEscalaMe
 from apps.training.views import FormacaoViewSet
 
 router = DefaultRouter()
+router.register(r"usuarios-staff", UsuarioStaffViewSet, basename="usuario-staff")
 router.register(r"coroinhas", CoroinhaViewSet, basename="coroinha")
 router.register(r"inscricoes", InscricaoViewSet, basename="inscricao")
 router.register(r"missas", MissaViewSet, basename="missa")
@@ -28,6 +32,7 @@ router.register(r"noticias", NoticiaViewSet, basename="noticia")
 router.register(r"documentos", DocumentoViewSet, basename="documento")
 
 urlpatterns = [
+    path("health", HealthView.as_view(), name="health"),
     path("auth/", include("apps.identity.urls")),
     path("inscricoes/publica", InscricaoPublicaView.as_view(), name="inscricao-publica"),
     path("portal/filhos", PortalFilhosView.as_view(), name="portal-filhos"),

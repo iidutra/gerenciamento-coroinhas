@@ -69,7 +69,7 @@ export default function ComunicacaoPage() {
 
   return (
     <StaffLayout loading={loading}>
-      <StaffPage title="Comunicação" description="Avisos por WhatsApp ou e-mail (simulação)." onLogout={sair}>
+      <StaffPage title="Comunicação" description="Avisos por WhatsApp ou e-mail. Configure SMTP/WhatsApp no .env para envio real." onLogout={sair}>
         <ReadOnlyGestorBanner tipoPerfil={usuario?.tipo_perfil} />
         {podeEditar && (
         <form onSubmit={enviar} className="card-liturgical p-6 mb-8 space-y-4">

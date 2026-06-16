@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TipoPerfil, Usuario
+from .models import AuditLog, TipoPerfil, Usuario
 
 
 @admin.register(Usuario)
@@ -21,3 +21,17 @@ class UsuarioAdmin(admin.ModelAdmin):
         if not change and obj.tipo_perfil == TipoPerfil.COORDENADOR:
             obj.is_staff = True
         super().save_model(request, obj, form, change)
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ("acao", "usuario", "ip", "criado_em")
+    list_filter = ("acao",)
+    search_fields = ("usuario__nome", "ip")
+    readonly_fields = ("acao", "usuario", "ip", "detalhes", "criado_em")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

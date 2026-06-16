@@ -1,15 +1,20 @@
 stages:
   - lint
   - test
+  - build
+  - deploy
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  NEXT_PUBLIC_API_URL: "http://localhost/api/v1"
+  DOCKER_TLS_CERTDIR: "/certs"
 
 cache:
   key: "${CI_COMMIT_REF_SLUG}"
   paths:
     - .cache/pip
     - frontend/node_modules/
+    - frontend/.next/cache/
 
 backend-lint:
   stage: lint
@@ -53,3 +58,98 @@ frontend-test:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
+
+backend-build:
+  stage: build
+  image: python:3.12-slim
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+    - python manage.py check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+frontend-build:
+  stage: build
+  image: node:20-alpine
+  script:
+    - cd frontend
+    - npm ci
+    - npm run build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+docker-build-api:
+  stage: deploy
+  image: docker:24-cli
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/api:$CI_COMMIT_SHA" -t "$CI_REGISTRY_IMAGE/api:latest" ./backend
+    - docker push "$CI_REGISTRY_IMAGE/api:$CI_COMMIT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/api:latest"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  allow_failure: true
+
+docker-build-frontend:
+  stage: deploy
+  image: docker:24-cli
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - |
+      docker build \
+        --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+        -t "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/frontend:latest" \
+        -f ./frontend/Dockerfile.prod \
+        ./frontend
+    - docker push "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/frontend:latest"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  allow_failure: true
+
+deploy-vps:
+  stage: deploy
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval "$(ssh-agent -s)"
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+  script:
+    - |
+      ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" \
+        "cd ${DEPLOY_PATH:-/opt/coroinhas} && \
+         export API_IMAGE=${CI_REGISTRY_IMAGE}/api:latest && \
+         export FRONTEND_IMAGE=${CI_REGISTRY_IMAGE}/frontend:latest && \
+         docker compose -f docker-compose.prod.yml pull api frontend worker && \
+         docker compose -f docker-compose.prod.yml up -d --remove-orphans"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - docker-build-api
+    - docker-build-frontend
+  allow_failure: true
+
+deploy-staging:
+  stage: deploy
+  image: alpine:3.20
+  script:
+    - echo "Deploy manual no VPS — use deploy-vps (SSH) ou ./scripts/deploy-vps.sh no servidor"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  allow_failure: true

@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.communication.serializers import MensagemSerializer
 from apps.identity.permissions import IsGestorCoroinhas, IsStaffPastoral
 from apps.scheduling.models import Escala, Missa
 from apps.scheduling.serializers import (
@@ -12,8 +13,10 @@ from apps.scheduling.serializers import (
     EscalaSerializer,
     MissaSerializer,
     MontarEscalaSerializer,
+    NotificarEscalaSerializer,
 )
 from apps.scheduling.services.escala_service import EscalaService
+from apps.scheduling.services.notificacao_escala_service import NotificacaoEscalaService
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
 
 
@@ -39,7 +42,7 @@ class EscalaViewSet(viewsets.ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         try:
-            escala = EscalaService.montar(
+            escala, mensagem = EscalaService.montar_com_notificacao(
                 data=data["data"],
                 missa_id=data["missa_id"],
                 modo=data["modo"],
@@ -47,11 +50,32 @@ class EscalaViewSet(viewsets.ReadOnlyModelViewSet):
                 usuario=request.user,
                 coroinha_ids=data.get("coroinha_ids"),
                 funcoes=data.get("funcoes"),
+                notificar=data.get("notificar"),
             )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         escala = Escala.objects.prefetch_related("itens__coroinha").get(pk=escala.pk)
-        return Response(EscalaSerializer(escala, context={"request": request}).data, status=status.HTTP_201_CREATED)
+        payload = EscalaSerializer(escala, context={"request": request}).data
+        if mensagem:
+            payload["notificacao"] = MensagemSerializer(mensagem).data
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsGestorCoroinhas])
+    def notificar(self, request, pk=None):
+        escala = self.get_object()
+        serializer = NotificarEscalaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            mensagem = NotificacaoEscalaService.notificar(
+                escala,
+                request.user,
+                canal=serializer.validated_data.get("canal"),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not mensagem:
+            return Response({"detail": "Nenhum coroinha na escala."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(MensagemSerializer(mensagem).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["patch"], url_path="funcoes", permission_classes=[IsGestorCoroinhas])
     def atribuir_funcoes(self, request, pk=None):

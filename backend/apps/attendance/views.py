@@ -3,7 +3,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.attendance.models import Presenca, StatusPresenca
+from apps.identity.models import AuditAcao
 from apps.identity.permissions import IsGestorCoroinhas, IsStaffPastoral
+from apps.identity.services.audit_service import AuditService
 from apps.scheduling.models import Escala, EscalaItem
 
 
@@ -57,7 +59,25 @@ class PresencaEscalaView(APIView):
             escala_item=item,
             defaults={"status": novo_status, "registrado_por": request.user},
         )
+        AuditService.registrar(
+            AuditAcao.PRESENCA_REGISTRADA,
+            usuario=request.user,
+            ip=_client_ip(request),
+            detalhes={
+                "escala_id": escala_id,
+                "item_id": item.id,
+                "coroinha_id": item.coroinha_id,
+                "status": novo_status,
+            },
+        )
         return Response({"item_id": item.id, "status": pres.status})
+
+
+def _client_ip(request) -> str | None:
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
 
 
 class PresencaResumoView(APIView):

@@ -86,3 +86,37 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
             TipoPerfil.SECRETARIO,
             TipoPerfil.PADRE,
         )
+
+
+class AuditAcao(models.TextChoices):
+    LOGIN_SUCESSO = "login_sucesso", "Login bem-sucedido"
+    LOGIN_FALHA = "login_falha", "Tentativa de login falhou"
+    RECUPERAR_SENHA = "recuperar_senha", "Recuperação de senha"
+    RECUPERAR_SENHA_FALHA = "recuperar_senha_falha", "Recuperação de senha falhou"
+    PRESENCA_REGISTRADA = "presenca_registrada", "Presença registrada"
+    INSCRICAO_CRIADA = "inscricao_criada", "Inscrição pública criada"
+    INSCRICAO_APROVADA = "inscricao_aprovada", "Inscrição aprovada"
+    INSCRICAO_REJEITADA = "inscricao_rejeitada", "Inscrição rejeitada"
+    MENSAGEM_ENVIADA = "mensagem_enviada", "Mensagem enviada"
+
+
+class AuditLog(models.Model):
+    acao = models.CharField(max_length=40, choices=AuditAcao.choices, db_index=True)
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+    )
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    detalhes = models.JSONField(default=dict, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Registro de auditoria"
+        verbose_name_plural = "Registros de auditoria"
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.acao} — {self.criado_em:%d/%m/%Y %H:%M}"

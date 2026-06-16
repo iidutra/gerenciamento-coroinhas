@@ -29,3 +29,41 @@ export function categoriaDocumentoLabel(categoria: string): string {
   };
   return map[categoria] || categoria;
 }
+
+function formatarDataIso(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR");
+}
+
+/** Texto legível da data do evento (ou publicação). */
+export function noticiaDataLabel(noticia: {
+  data_evento?: string | null;
+  data_evento_fim?: string | null;
+  publicado_em: string;
+}): string {
+  if (noticia.data_evento) {
+    const inicio = formatarDataIso(noticia.data_evento);
+    if (noticia.data_evento_fim && noticia.data_evento_fim !== noticia.data_evento) {
+      return `${inicio} a ${formatarDataIso(noticia.data_evento_fim)}`;
+    }
+    return inicio;
+  }
+  return new Date(noticia.publicado_em).toLocaleDateString("pt-BR");
+}
+
+/** Remove metadados legados da importação do calendário. */
+export function noticiaConteudoLegivel(conteudo: string): string {
+  return conteudo
+    .split("\n")
+    .filter((linha) => {
+      const t = linha.trim();
+      if (!t) return true;
+      if (t.startsWith("[calendario-paroquial]")) return false;
+      if (t.startsWith("Fonte:")) return false;
+      if (t.startsWith("Data:")) return false;
+      if (t.startsWith("Local:")) return false;
+      if (t.startsWith("Horário:")) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+}

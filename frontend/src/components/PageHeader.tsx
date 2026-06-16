@@ -10,12 +10,12 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, onLogout, actions }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-burgundy">{title}</h1>
-        {description && <p className="text-muted-foreground mt-1">{description}</p>}
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">
+      <div className="min-w-0">
+        <h1 className="font-display text-2xl sm:text-3xl font-semibold text-burgundy">{title}</h1>
+        {description && <p className="text-sm sm:text-base text-muted-foreground mt-1">{description}</p>}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
         {actions}
         {onLogout && (
           <button
