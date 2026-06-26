@@ -2,6 +2,7 @@ from django.utils import timezone
 
 from apps.communication.models import CanalMensagem
 from apps.communication.services.envio_service import EnvioService
+from apps.communication.utils.nome import primeiro_nome
 from apps.scheduling.models import Escala, EscalaItem
 
 
@@ -124,7 +125,7 @@ class ComunicacaoService:
             horario = escala.missa.horario.strftime("%H:%M")
             return MensagemTemplate.render(
                 corpo,
-                nome=coroinha.nome,
+                nome=primeiro_nome(coroinha.nome),
                 escala=f"{data_fmt} — {escala.missa.nome}",
                 idade=str(coroinha.idade),
                 funcao=funcao,
@@ -134,7 +135,7 @@ class ComunicacaoService:
             )
         return MensagemTemplate.render(
             corpo,
-            nome=coroinha.nome,
+            nome=primeiro_nome(coroinha.nome),
             escala=cls._texto_escala(coroinha),
             idade=str(coroinha.idade),
         )
