@@ -228,7 +228,9 @@ WHATSAPP_WAHA_SESSION = os.getenv("WHATSAPP_WAHA_SESSION", "default")
 # MinIO / S3-compatible storage (Cloudflare R2, AWS S3, MinIO)
 USE_S3 = os.getenv("USE_S3", os.getenv("USE_MINIO", "False")).lower() in ("true", "1", "yes")
 USE_MINIO = USE_S3
-SERVE_MEDIA = os.getenv("SERVE_MEDIA", "False").lower() in ("true", "1", "yes")
+# Serve /media/ pela própria API por padrão (armazenamento local em volume
+# persistente). Desligue (SERVE_MEDIA=false) apenas se usar storage S3/R2.
+SERVE_MEDIA = os.getenv("SERVE_MEDIA", "True").lower() in ("true", "1", "yes")
 
 if USE_S3:
     INSTALLED_APPS = [*INSTALLED_APPS, "storages"]
