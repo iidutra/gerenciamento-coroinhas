@@ -1,3 +1,5 @@
+import re
+
 from django.utils import timezone
 
 from apps.communication.models import CanalMensagem
@@ -120,11 +122,16 @@ class ComunicacaoService:
     def _render_para_coroinha(cls, corpo: str, coroinha, escala: Escala | None = None) -> str:
         if escala:
             item = escala.itens.filter(coroinha=coroinha).first()
-            funcao = item.get_funcao_display() if item and item.funcao else "A definir"
+            funcao = item.get_funcao_display() if item and item.funcao else ""
             data_fmt = escala.data.strftime("%d/%m/%Y")
             horario = escala.missa.horario.strftime("%H:%M")
+            # Sem função atribuída: remove a frase "Função: {funcao}" do texto,
+            # em vez de mostrar algo vazio ou "A definir".
+            corpo_render = corpo
+            if not funcao:
+                corpo_render = re.sub(r"\s*Fun[çc][ãa]o:\s*\{funcao\}\.?", "", corpo)
             return MensagemTemplate.render(
-                corpo,
+                corpo_render,
                 nome=primeiro_nome(coroinha.nome),
                 escala=f"{data_fmt} — {escala.missa.nome}",
                 idade=str(coroinha.idade),

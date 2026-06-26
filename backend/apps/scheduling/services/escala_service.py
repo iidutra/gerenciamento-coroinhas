@@ -114,6 +114,38 @@ class EscalaService:
         return escala, mensagem
 
     @staticmethod
+    def definir_membros(escala: Escala, coroinha_ids: list[int]) -> Escala:
+        """Reconcilia os coroinhas da escala: adiciona os novos e remove os
+        que saíram, preservando as funções de quem permanece."""
+        novos = list(dict.fromkeys(coroinha_ids))  # remove duplicados mantendo ordem
+
+        validos = set(
+            Coroinha.objects.filter(id__in=novos).values_list("id", flat=True)
+        )
+        desconhecidos = [cid for cid in novos if cid not in validos]
+        if desconhecidos:
+            raise ValueError("Coroinha(s) inexistente(s) na seleção.")
+
+        atuais = {item.coroinha_id: item for item in escala.itens.all()}
+
+        remover = [cid for cid in atuais if cid not in novos]
+        if remover:
+            escala.itens.filter(coroinha_id__in=remover).delete()
+
+        ordem = 0
+        for cid in novos:
+            ordem += 1
+            item = atuais.get(cid)
+            if item:
+                if item.ordem != ordem:
+                    item.ordem = ordem
+                    item.save(update_fields=["ordem"])
+            else:
+                EscalaItem.objects.create(escala=escala, coroinha_id=cid, ordem=ordem)
+
+        return escala
+
+    @staticmethod
     def atribuir_funcoes(escala: Escala, funcoes: dict[str, int | None]) -> Escala:
         validas = {c.value for c in FuncaoEscala}
         escala.itens.update(funcao=None)

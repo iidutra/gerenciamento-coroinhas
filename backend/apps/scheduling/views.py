@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +10,7 @@ from apps.identity.permissions import IsGestorCoroinhas, IsStaffPastoral
 from apps.scheduling.models import Escala, Missa
 from apps.scheduling.serializers import (
     AtribuirFuncoesSerializer,
+    DefinirMembrosSerializer,
     EscalaSerializer,
     MissaSerializer,
     MontarEscalaSerializer,
@@ -31,10 +32,27 @@ class MissaViewSet(viewsets.ModelViewSet):
         return [IsGestorCoroinhas()]
 
 
-class EscalaViewSet(viewsets.ReadOnlyModelViewSet):
+class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Escala.objects.select_related("missa").prefetch_related("itens__coroinha")
     serializer_class = EscalaSerializer
     permission_classes = [IsStaffPastoral]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsStaffPastoral()]
+        return [IsGestorCoroinhas()]
+
+    @action(detail=True, methods=["patch"], url_path="membros", permission_classes=[IsGestorCoroinhas])
+    def membros(self, request, pk=None):
+        escala = self.get_object()
+        serializer = DefinirMembrosSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            EscalaService.definir_membros(escala, serializer.validated_data["coroinha_ids"])
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        escala = Escala.objects.prefetch_related("itens__coroinha").get(pk=escala.pk)
+        return Response(EscalaSerializer(escala, context={"request": request}).data)
 
     @action(detail=False, methods=["post"], permission_classes=[IsGestorCoroinhas])
     def montar(self, request):

@@ -133,3 +133,7 @@ class AtribuirFuncoesSerializer(serializers.Serializer):
             if chave not in validas:
                 raise serializers.ValidationError(f"Função inválida: {chave}")
         return value
+
+
+class DefinirMembrosSerializer(serializers.Serializer):
+    coroinha_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=True)

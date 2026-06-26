@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, Fragment, useEffect, useState } from "react";
-import { Calendar, Pencil, Plus, Send, Shuffle, Trash2, UserCog } from "lucide-react";
+import { Calendar, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
@@ -53,8 +53,11 @@ export default function EscalasPage() {
   const [funcoesMontar, setFuncoesMontar] = useState(funcoesVazias);
   const [editandoFuncoesId, setEditandoFuncoesId] = useState<number | null>(null);
   const [funcoesEdicao, setFuncoesEdicao] = useState(funcoesVazias);
+  const [editandoMembrosId, setEditandoMembrosId] = useState<number | null>(null);
+  const [membrosEdicao, setMembrosEdicao] = useState<number[]>([]);
   const [notificarEscalados, setNotificarEscalados] = useState(true);
   const [notificandoId, setNotificandoId] = useState<number | null>(null);
+  const [excluindoEscalaId, setExcluindoEscalaId] = useState<number | null>(null);
 
   function load() {
     Promise.all([
@@ -167,6 +170,7 @@ export default function EscalasPage() {
   }
 
   function abrirEdicaoFuncoes(escala: Escala) {
+    setEditandoMembrosId(null);
     setEditandoFuncoesId(escala.id);
     setFuncoesEdicao(funcoesFromItens(escala.itens));
   }
@@ -195,6 +199,48 @@ export default function EscalasPage() {
       setErro(e instanceof Error ? e.message : "Erro ao notificar escalados");
     } finally {
       setNotificandoId(null);
+    }
+  }
+
+  function abrirEdicaoMembros(escala: Escala) {
+    setEditandoFuncoesId(null);
+    setEditandoMembrosId(escala.id);
+    setMembrosEdicao(escala.itens.map((i) => i.coroinha_id));
+  }
+
+  function toggleMembro(id: number) {
+    setMembrosEdicao((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  async function salvarMembros(escalaId: number) {
+    setErro("");
+    try {
+      await apiFetch(`/escalas/${escalaId}/membros/`, {
+        method: "PATCH",
+        body: JSON.stringify({ coroinha_ids: membrosEdicao }),
+      });
+      setEditandoMembrosId(null);
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao salvar coroinhas");
+    }
+  }
+
+  async function excluirEscala(escalaId: number) {
+    if (!confirm("Excluir esta escala? Esta ação não pode ser desfeita.")) return;
+    setErro("");
+    setExcluindoEscalaId(escalaId);
+    try {
+      await apiFetch(`/escalas/${escalaId}/`, { method: "DELETE" });
+      if (editandoFuncoesId === escalaId) setEditandoFuncoesId(null);
+      if (editandoMembrosId === escalaId) setEditandoMembrosId(null);
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao excluir escala");
+    } finally {
+      setExcluindoEscalaId(null);
     }
   }
 
@@ -453,6 +499,18 @@ export default function EscalasPage() {
                             <button
                               type="button"
                               onClick={() =>
+                                editandoMembrosId === e.id
+                                  ? setEditandoMembrosId(null)
+                                  : abrirEdicaoMembros(e)
+                              }
+                              className="btn-outline text-xs flex items-center gap-1 whitespace-nowrap"
+                            >
+                              <Users className="size-3.5" aria-hidden />
+                              Coroinhas
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
                                 editandoFuncoesId === e.id
                                   ? setEditandoFuncoesId(null)
                                   : abrirEdicaoFuncoes(e)
@@ -471,10 +529,59 @@ export default function EscalasPage() {
                               <Send className="size-3.5" aria-hidden />
                               {notificandoId === e.id ? "Enviando…" : "Notificar"}
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => excluirEscala(e.id)}
+                              disabled={excluindoEscalaId === e.id}
+                              className="btn-outline text-xs flex items-center gap-1 whitespace-nowrap text-destructive border-destructive/30 hover:bg-destructive/10"
+                            >
+                              <Trash2 className="size-3.5" aria-hidden />
+                              {excluindoEscalaId === e.id ? "Excluindo…" : "Excluir"}
+                            </button>
                           </div>
                         </td>
                       )}
                     </tr>
+                    {editandoMembrosId === e.id && (
+                      <tr key={`${e.id}-membros`}>
+                        <td colSpan={podeEditar ? 4 : 3} className="bg-muted/20 p-4">
+                          <p className="text-sm font-medium mb-2">
+                            Selecione os coroinhas desta escala
+                          </p>
+                          <div className="max-h-56 overflow-y-auto border border-border rounded-lg p-2 grid sm:grid-cols-2 gap-1">
+                            {coroinhas.map((c) => (
+                              <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer px-1 py-0.5">
+                                <input
+                                  type="checkbox"
+                                  checked={membrosEdicao.includes(c.id)}
+                                  onChange={() => toggleMembro(c.id)}
+                                />
+                                {c.nome}
+                              </label>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Remover um coroinha também remove a função dele nesta escala.
+                          </p>
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              type="button"
+                              onClick={() => salvarMembros(e.id)}
+                              className="btn-primary text-sm"
+                            >
+                              Salvar coroinhas
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditandoMembrosId(null)}
+                              className="btn-outline text-sm"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {editandoFuncoesId === e.id && (
                       <tr key={`${e.id}-funcoes`}>
                         <td colSpan={podeEditar ? 4 : 3} className="bg-muted/20 p-4">

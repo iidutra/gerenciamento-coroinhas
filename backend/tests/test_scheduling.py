@@ -106,6 +106,91 @@ class TestEscalaAPI:
         )
         assert res.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_excluir_escala(self, client_coordenador, coordenador, missa_domingo, coroinha):
+        from apps.scheduling.models import Escala
+
+        escala = EscalaService.montar(
+            data=date(2026, 8, 3),
+            missa_id=missa_domingo.id,
+            modo="SorteioAutomatico",
+            quantidade=1,
+            usuario=coordenador,
+        )
+        res = client_coordenador.delete(f"/api/v1/escalas/{escala.id}/")
+        assert res.status_code == status.HTTP_204_NO_CONTENT
+        assert not Escala.objects.filter(id=escala.id).exists()
+
+    def test_padre_nao_exclui_escala(self, client_padre, coordenador, missa_domingo, coroinha):
+        escala = EscalaService.montar(
+            data=date(2026, 8, 4),
+            missa_id=missa_domingo.id,
+            modo="SorteioAutomatico",
+            quantidade=1,
+            usuario=coordenador,
+        )
+        res = client_padre.delete(f"/api/v1/escalas/{escala.id}/")
+        assert res.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_definir_membros_add_remove(self, client_coordenador, coordenador, missa_domingo, coroinha):
+        coroinha2 = coroinha.__class__.objects.create(
+            nome="Maria Teste",
+            data_nascimento=date(2013, 5, 10),
+            status=coroinha.status,
+        )
+        escala = EscalaService.montar(
+            data=date(2026, 8, 5),
+            missa_id=missa_domingo.id,
+            modo="SelecaoManual",
+            quantidade=1,
+            usuario=coordenador,
+            coroinha_ids=[coroinha.id],
+        )
+        # troca: remove coroinha, adiciona coroinha2
+        res = client_coordenador.patch(
+            f"/api/v1/escalas/{escala.id}/membros/",
+            {"coroinha_ids": [coroinha2.id]},
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK
+        ids = {i["coroinha_id"] for i in res.data["itens"]}
+        assert ids == {coroinha2.id}
+
+
+class TestNotificacaoFuncao:
+    CORPO = "Olá {nome}, você está escalado para servir em {data} — {missa} ({horario}). Função: {funcao}."
+
+    def test_sem_funcao_remove_frase(self, coordenador, missa_domingo, coroinha):
+        from apps.communication.services.comunicacao_service import ComunicacaoService
+        from apps.scheduling.models import Escala
+
+        escala = EscalaService.montar(
+            data=date(2026, 9, 1),
+            missa_id=missa_domingo.id,
+            modo="SorteioAutomatico",
+            quantidade=1,
+            usuario=coordenador,
+        )
+        escala = Escala.objects.prefetch_related("itens__coroinha", "missa").get(pk=escala.pk)
+        texto = ComunicacaoService._render_para_coroinha(self.CORPO, coroinha, escala)
+        assert "Função" not in texto
+        assert texto.rstrip().endswith(").")
+
+    def test_com_funcao_inclui_frase(self, coordenador, missa_domingo, coroinha):
+        from apps.communication.services.comunicacao_service import ComunicacaoService
+        from apps.scheduling.models import Escala
+
+        escala = EscalaService.montar(
+            data=date(2026, 9, 2),
+            missa_id=missa_domingo.id,
+            modo="SorteioAutomatico",
+            quantidade=1,
+            usuario=coordenador,
+        )
+        EscalaService.atribuir_funcoes(escala, {FuncaoEscala.CRUZ.value: coroinha.id})
+        escala = Escala.objects.prefetch_related("itens__coroinha", "missa").get(pk=escala.pk)
+        texto = ComunicacaoService._render_para_coroinha(self.CORPO, coroinha, escala)
+        assert "Função: Cruz." in texto
+
 
 class TestRelatorioPDF:
     def test_exportar_pdf_mes(self, coordenador, missa_domingo, coroinha):
