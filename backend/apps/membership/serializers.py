@@ -6,6 +6,7 @@ from apps.membership.utils.media import build_foto_url
 
 class CoroinhaSerializer(serializers.ModelSerializer):
     idade = serializers.IntegerField(read_only=True)
+    foto = serializers.ImageField(write_only=True, required=False, allow_null=True)
     foto_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -32,6 +33,7 @@ class CoroinhaSerializer(serializers.ModelSerializer):
             "batizado",
             "primeira_eucaristia",
             "crisma",
+            "foto",
             "foto_url",
             "criado_em",
         )

@@ -1,4 +1,5 @@
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from rest_framework import status
 
@@ -123,6 +124,27 @@ class TestInscricaoAprovacao:
 
         res = client_coordenador.delete(f"/api/v1/coroinhas/{coroinha.id}/")
         assert res.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_patch_salva_foto_multipart(self, client_coordenador, coroinha):
+        import io
+
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (4, 4), (200, 0, 0)).save(buffer, format="JPEG")
+        buffer.seek(0)
+        foto = SimpleUploadedFile("isabel.jpg", buffer.read(), content_type="image/jpeg")
+
+        res = client_coordenador.patch(
+            f"/api/v1/coroinhas/{coroinha.id}/",
+            {"nome": coroinha.nome, "foto": foto},
+            format="multipart",
+        )
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["foto_url"]
+
+        coroinha.refresh_from_db()
+        assert bool(coroinha.foto) is True
 
 
 class TestInscricaoSemCpf:
