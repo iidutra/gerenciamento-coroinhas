@@ -67,6 +67,7 @@ class Coroinha(models.Model):
         max_length=30, choices=EtapaCatequese.choices, blank=True
     )
     faz_iam = models.BooleanField(default=False)
+    antigo = models.BooleanField(default=False)
     batizado = models.BooleanField(default=False)
     primeira_eucaristia = models.BooleanField(default=False)
     crisma = models.BooleanField(default=False)

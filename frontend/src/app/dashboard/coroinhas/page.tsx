@@ -34,6 +34,7 @@ type FormState = {
   fazCatequese: boolean;
   etapaCatequese: EtapaCatequese;
   fazIam: boolean;
+  antigo: boolean;
   status: string;
 };
 
@@ -48,6 +49,7 @@ const FORM_VAZIO: FormState = {
   fazCatequese: false,
   etapaCatequese: "",
   fazIam: false,
+  antigo: false,
   status: "EmFormacao",
 };
 
@@ -136,6 +138,7 @@ export default function CoroinhasPage() {
       fazCatequese: Boolean(c.faz_catequese),
       etapaCatequese: (c.etapa_catequese as EtapaCatequese) ?? "",
       fazIam: Boolean(c.faz_iam),
+      antigo: Boolean(c.antigo),
       status: c.status || "EmFormacao",
     });
     limparFoto();
@@ -177,6 +180,7 @@ export default function CoroinhasPage() {
       faz_catequese: form.fazCatequese,
       etapa_catequese: form.fazCatequese ? form.etapaCatequese : "",
       faz_iam: form.fazIam,
+      antigo: form.antigo,
     };
     if (editId) {
       dados.status = form.status;
@@ -469,6 +473,33 @@ export default function CoroinhasPage() {
                   </div>
                 </fieldset>
 
+                {/* Antigo (opcional) */}
+                <fieldset className="rounded-lg border border-border p-4">
+                  <legend className="px-1 text-sm font-medium">É coroinha antigo? (opcional)</legend>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="antigo"
+                        checked={form.antigo}
+                        onChange={() => setCampo("antigo", true)}
+                        className="accent-[var(--burgundy)] size-4"
+                      />
+                      Sim
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="antigo"
+                        checked={!form.antigo}
+                        onChange={() => setCampo("antigo", false)}
+                        className="accent-[var(--burgundy)] size-4"
+                      />
+                      Não
+                    </label>
+                  </div>
+                </fieldset>
+
                 {/* status (apenas na edição) */}
                 {editId && (
                   <div className="sm:max-w-xs">
@@ -555,6 +586,7 @@ export default function CoroinhasPage() {
                   <th>Idade</th>
                   <th>Catequese</th>
                   <th>IAM</th>
+                  <th>Antigo</th>
                   <th>Status</th>
                   {podeEditar && <th className="text-right">Ações</th>}
                 </tr>
@@ -575,6 +607,7 @@ export default function CoroinhasPage() {
                         : "—"}
                     </td>
                     <td>{c.faz_iam ? "Sim" : "—"}</td>
+                    <td>{c.antigo ? "Sim" : "—"}</td>
                     <td>
                       <StatusBadge status={c.status} />
                     </td>

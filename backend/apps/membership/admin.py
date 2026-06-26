@@ -11,8 +11,8 @@ class ResponsavelAdmin(admin.ModelAdmin):
 
 @admin.register(Coroinha)
 class CoroinhaAdmin(admin.ModelAdmin):
-    list_display = ("nome", "idade", "turma", "status", "faz_catequese", "faz_iam", "data_nascimento")
-    list_filter = ("turma", "status", "faz_catequese", "etapa_catequese", "faz_iam")
+    list_display = ("nome", "idade", "turma", "status", "faz_catequese", "faz_iam", "antigo", "data_nascimento")
+    list_filter = ("turma", "status", "faz_catequese", "etapa_catequese", "faz_iam", "antigo")
     search_fields = ("nome", "cpf", "nome_pai", "nome_mae")
     filter_horizontal = ("responsaveis",)
 

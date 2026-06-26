@@ -114,13 +114,14 @@ class TestInscricaoAprovacao:
     def test_coordenador_edita_e_exclui_coroinha(self, client_coordenador, coroinha):
         res = client_coordenador.patch(
             f"/api/v1/coroinhas/{coroinha.id}/",
-            {"status": "Inativo", "faz_iam": True, "nome_pai": "Novo Pai"},
+            {"status": "Inativo", "faz_iam": True, "nome_pai": "Novo Pai", "antigo": True},
             format="json",
         )
         assert res.status_code == status.HTTP_200_OK
         assert res.data["status"] == "Inativo"
         assert res.data["faz_iam"] is True
         assert res.data["nome_pai"] == "Novo Pai"
+        assert res.data["antigo"] is True
 
         res = client_coordenador.delete(f"/api/v1/coroinhas/{coroinha.id}/")
         assert res.status_code == status.HTTP_204_NO_CONTENT

@@ -30,6 +30,7 @@ class CoroinhaSerializer(serializers.ModelSerializer):
             "faz_catequese",
             "etapa_catequese",
             "faz_iam",
+            "antigo",
             "batizado",
             "primeira_eucaristia",
             "crisma",
