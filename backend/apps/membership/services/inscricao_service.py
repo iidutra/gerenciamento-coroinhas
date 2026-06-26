@@ -42,8 +42,10 @@ class InscricaoService:
         coroinha_data = dados.get("coroinha", {})
         responsavel_data = dados.get("responsavel", {})
 
+        # CPF do responsável é opcional. Quando informado precisa ser válido,
+        # pois habilita o login da família no portal.
         cpf_responsavel = normalizar_cpf(responsavel_data.get("cpf", ""))
-        if not validar_cpf(cpf_responsavel):
+        if cpf_responsavel and not validar_cpf(cpf_responsavel):
             raise ValueError("CPF do responsável inválido.")
 
         if not coroinha_data.get("nome") or not coroinha_data.get("data_nascimento"):
@@ -73,33 +75,45 @@ class InscricaoService:
         cpf_responsavel = normalizar_cpf(responsavel_data.get("cpf", ""))
         cpf_coroinha = normalizar_cpf(coroinha_data.get("cpf", ""))
 
-        responsavel, _ = Responsavel.objects.update_or_create(
-            cpf=cpf_responsavel,
-            defaults={
-                "nome": responsavel_data.get("nome_mae") or responsavel_data.get("nome_pai") or "Responsável",
-                "telefone": responsavel_data.get("telefone_principal", ""),
-                "whatsapp": responsavel_data.get("whatsapp", ""),
-                "email": responsavel_data.get("email", ""),
-                "nome_mae": responsavel_data.get("nome_mae", ""),
-                "nome_pai": responsavel_data.get("nome_pai", ""),
-            },
-        )
-
         coroinha = Coroinha.objects.create(
             nome=coroinha_data["nome"],
             data_nascimento=coroinha_data["data_nascimento"],
             cpf=cpf_coroinha,
             telefone=coroinha_data.get("telefone", ""),
             endereco=coroinha_data.get("endereco", ""),
+            nome_pai=responsavel_data.get("nome_pai", ""),
+            telefone_pai=responsavel_data.get("telefone_pai", ""),
+            nome_mae=responsavel_data.get("nome_mae", ""),
+            telefone_mae=responsavel_data.get("telefone_mae", ""),
             escola=coroinha_data.get("escola", ""),
             serie=coroinha_data.get("serie", ""),
             turma=coroinha_data.get("turma", Turma.INICIANTE),
             status=StatusCoroinha.EM_FORMACAO,
+            faz_catequese=coroinha_data.get("faz_catequese", False),
+            etapa_catequese=coroinha_data.get("etapa_catequese", ""),
+            faz_iam=coroinha_data.get("faz_iam", False),
             batizado=coroinha_data.get("batizado", False),
             primeira_eucaristia=coroinha_data.get("primeira_eucaristia", False),
             crisma=coroinha_data.get("crisma", False),
         )
-        coroinha.responsaveis.add(responsavel)
+
+        # Responsável/login da família só quando há CPF válido informado.
+        responsavel = None
+        if cpf_responsavel and validar_cpf(cpf_responsavel):
+            responsavel, _ = Responsavel.objects.update_or_create(
+                cpf=cpf_responsavel,
+                defaults={
+                    "nome": responsavel_data.get("nome_mae") or responsavel_data.get("nome_pai") or "Responsável",
+                    "telefone": responsavel_data.get("telefone_principal")
+                    or responsavel_data.get("telefone_mae")
+                    or responsavel_data.get("telefone_pai", ""),
+                    "whatsapp": responsavel_data.get("whatsapp", ""),
+                    "email": responsavel_data.get("email", ""),
+                    "nome_mae": responsavel_data.get("nome_mae", ""),
+                    "nome_pai": responsavel_data.get("nome_pai", ""),
+                },
+            )
+            coroinha.responsaveis.add(responsavel)
 
         if inscricao.foto_pendente:
             from django.core.files.base import ContentFile
@@ -110,7 +124,7 @@ class InscricaoService:
                 save=True,
             )
 
-        if not Usuario.objects.filter(cpf=cpf_responsavel).exists():
+        if responsavel and not Usuario.objects.filter(cpf=cpf_responsavel).exists():
             Usuario.objects.create_user(
                 cpf=cpf_responsavel,
                 nome=responsavel.nome,

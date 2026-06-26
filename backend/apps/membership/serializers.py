@@ -18,10 +18,17 @@ class CoroinhaSerializer(serializers.ModelSerializer):
             "cpf",
             "telefone",
             "endereco",
+            "nome_pai",
+            "telefone_pai",
+            "nome_mae",
+            "telefone_mae",
             "escola",
             "serie",
             "turma",
             "status",
+            "faz_catequese",
+            "etapa_catequese",
+            "faz_iam",
             "batizado",
             "primeira_eucaristia",
             "crisma",
@@ -48,8 +55,9 @@ class InscricaoPublicaSerializer(serializers.Serializer):
         return value
 
     def validate_responsavel(self, value):
-        if not value.get("cpf"):
-            raise serializers.ValidationError("CPF do responsável é obrigatório.")
+        # CPF do responsável é opcional: quando informado, habilita o acesso
+        # da família ao portal; quando ausente, os dados dos pais ficam
+        # registrados apenas no coroinha.
         return value
 
 

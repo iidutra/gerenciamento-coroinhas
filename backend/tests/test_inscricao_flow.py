@@ -92,13 +92,79 @@ class TestInscricaoAprovacao:
             {
                 "nome": "Lucas Manual",
                 "data_nascimento": "2013-01-15",
-                "turma": "Iniciante",
-                "status": "EmFormacao",
-                "batizado": True,
-                "primeira_eucaristia": False,
-                "crisma": False,
+                "nome_pai": "Pai Lucas",
+                "telefone_pai": "69999990000",
+                "nome_mae": "Mãe Lucas",
+                "telefone_mae": "69999991111",
+                "endereco": "Rua A, 100",
+                "faz_catequese": True,
+                "etapa_catequese": "Crisma",
+                "faz_iam": True,
             },
             format="json",
         )
         assert res.status_code == status.HTTP_201_CREATED
         assert res.data["nome"] == "Lucas Manual"
+        assert res.data["faz_catequese"] is True
+        assert res.data["etapa_catequese"] == "Crisma"
+        assert res.data["faz_iam"] is True
+        assert res.data["nome_mae"] == "Mãe Lucas"
+
+    def test_coordenador_edita_e_exclui_coroinha(self, client_coordenador, coroinha):
+        res = client_coordenador.patch(
+            f"/api/v1/coroinhas/{coroinha.id}/",
+            {"status": "Inativo", "faz_iam": True, "nome_pai": "Novo Pai"},
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["status"] == "Inativo"
+        assert res.data["faz_iam"] is True
+        assert res.data["nome_pai"] == "Novo Pai"
+
+        res = client_coordenador.delete(f"/api/v1/coroinhas/{coroinha.id}/")
+        assert res.status_code == status.HTTP_204_NO_CONTENT
+
+
+class TestInscricaoSemCpf:
+    def _abrir_inscricoes(self):
+        from apps.membership.models import ConfiguracaoParoquial
+
+        ConfiguracaoParoquial.get()
+        ConfiguracaoParoquial.objects.filter(pk=1).update(inscricoes_abertas=True)
+
+    def test_inscricao_publica_sem_cpf(self, api_client, client_coordenador):
+        self._abrir_inscricoes()
+        payload = {
+            "coroinha": {
+                "nome": "Ana Sem CPF",
+                "data_nascimento": "2014-02-10",
+                "endereco": "Rua B, 200",
+                "faz_catequese": True,
+                "etapa_catequese": "PrimeiraEucaristia",
+                "faz_iam": False,
+            },
+            "responsavel": {
+                "nome_mae": "Mãe Ana",
+                "telefone_mae": "69988887777",
+                "nome_pai": "Pai Ana",
+            },
+        }
+        criada = api_client.post("/api/v1/inscricoes/publica", payload, format="json")
+        assert criada.status_code == status.HTTP_201_CREATED
+
+        res = client_coordenador.post(
+            f"/api/v1/inscricoes/{criada.data['id']}/aprovar/",
+            {"notificar": False},
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK
+
+        from apps.membership.models import Coroinha
+
+        coro = Coroinha.objects.get(id=res.data["coroinha_id"])
+        assert coro.nome == "Ana Sem CPF"
+        assert coro.nome_mae == "Mãe Ana"
+        assert coro.telefone_mae == "69988887777"
+        assert coro.faz_catequese is True
+        assert coro.etapa_catequese == "PrimeiraEucaristia"
+        assert coro.responsaveis.count() == 0

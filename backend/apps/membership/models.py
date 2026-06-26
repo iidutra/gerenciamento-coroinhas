@@ -19,6 +19,12 @@ class StatusInscricao(models.TextChoices):
     REJEITADA = "Rejeitada", "Rejeitada"
 
 
+class EtapaCatequese(models.TextChoices):
+    PRE_EUCARISTIA = "PreEucaristia", "Pré-Eucaristia"
+    PRIMEIRA_EUCARISTIA = "PrimeiraEucaristia", "Primeira Eucaristia"
+    CRISMA = "Crisma", "Crisma"
+
+
 class Responsavel(models.Model):
     nome = models.CharField(max_length=200)
     cpf = models.CharField(max_length=11, unique=True, db_index=True)
@@ -46,12 +52,21 @@ class Coroinha(models.Model):
     cpf = models.CharField(max_length=11, blank=True, db_index=True)
     telefone = models.CharField(max_length=20, blank=True)
     endereco = models.TextField(blank=True)
+    nome_pai = models.CharField(max_length=200, blank=True)
+    telefone_pai = models.CharField(max_length=20, blank=True)
+    nome_mae = models.CharField(max_length=200, blank=True)
+    telefone_mae = models.CharField(max_length=20, blank=True)
     escola = models.CharField(max_length=200, blank=True)
     serie = models.CharField(max_length=50, blank=True)
     turma = models.CharField(max_length=20, choices=Turma.choices, default=Turma.INICIANTE)
     status = models.CharField(
         max_length=20, choices=StatusCoroinha.choices, default=StatusCoroinha.EM_FORMACAO
     )
+    faz_catequese = models.BooleanField(default=False)
+    etapa_catequese = models.CharField(
+        max_length=30, choices=EtapaCatequese.choices, blank=True
+    )
+    faz_iam = models.BooleanField(default=False)
     batizado = models.BooleanField(default=False)
     primeira_eucaristia = models.BooleanField(default=False)
     crisma = models.BooleanField(default=False)

@@ -8,7 +8,6 @@ import {
   Church,
   Camera,
   Cross,
-  FileText,
   Loader2,
   Send,
   User,
@@ -16,18 +15,37 @@ import {
 } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FormSection } from "@/components/FormField";
-import { apiFetchForm, normalizarCpf } from "@/lib/api";
+import { apiFetchForm } from "@/lib/api";
 import { fetchConfigPublica } from "@/lib/config-publica";
-import { formatarCpf } from "@/lib/format";
+import type { EtapaCatequese } from "@/types";
+
+const ETAPAS_CATEQUESE: { value: Exclude<EtapaCatequese, "">; label: string }[] = [
+  { value: "PreEucaristia", label: "Pré-Eucaristia" },
+  { value: "PrimeiraEucaristia", label: "Primeira Eucaristia" },
+  { value: "Crisma", label: "Crisma" },
+];
+
+function calcularIdade(iso: string): number | null {
+  if (!iso) return null;
+  const nasc = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(nasc.getTime())) return null;
+  const hoje = new Date();
+  let anos = hoje.getFullYear() - nasc.getFullYear();
+  const m = hoje.getMonth() - nasc.getMonth();
+  if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) anos -= 1;
+  return anos >= 0 ? anos : null;
+}
 
 export default function InscricaoPage() {
   const [loading, setLoading] = useState(false);
   const [sucesso, setSucesso] = useState(false);
   const [erro, setErro] = useState("");
-  const [cpfCoroinha, setCpfCoroinha] = useState("");
-  const [cpfResponsavel, setCpfResponsavel] = useState("");
   const [nomeCoroinha, setNomeCoroinha] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fazCatequese, setFazCatequese] = useState(false);
+  const [etapaCatequese, setEtapaCatequese] = useState<EtapaCatequese>("");
+  const [fazIam, setFazIam] = useState(false);
   const [verificando, setVerificando] = useState(true);
   const [inscricoesAbertas, setInscricoesAbertas] = useState(false);
 
@@ -42,33 +60,31 @@ export default function InscricaoPage() {
     setErro("");
     setLoading(true);
 
-    const form = new FormData(e.currentTarget);
+    const formEl = new FormData(e.currentTarget);
+    const telMae = String(formEl.get("telefone_mae") || "").trim();
+    const telPai = String(formEl.get("telefone_pai") || "").trim();
     const payload = {
       coroinha: {
-        nome: form.get("nome_coroinha"),
-        data_nascimento: form.get("data_nascimento"),
-        cpf: normalizarCpf(String(form.get("cpf_coroinha") || "")),
-        telefone: form.get("telefone_coroinha"),
-        endereco: form.get("endereco"),
-        escola: form.get("escola"),
-        serie: form.get("serie"),
-        batizado: form.get("batizado") === "on",
-        primeira_eucaristia: form.get("primeira_eucaristia") === "on",
-        crisma: form.get("crisma") === "on",
+        nome: formEl.get("nome_coroinha"),
+        data_nascimento: dataNascimento,
+        endereco: formEl.get("endereco"),
+        faz_catequese: fazCatequese,
+        etapa_catequese: fazCatequese ? etapaCatequese : "",
+        faz_iam: fazIam,
       },
       responsavel: {
-        cpf: normalizarCpf(String(form.get("cpf_responsavel") || "")),
-        nome_mae: form.get("nome_mae"),
-        nome_pai: form.get("nome_pai"),
-        telefone_principal: form.get("telefone_principal"),
-        whatsapp: form.get("whatsapp"),
-        email: form.get("email"),
+        nome_pai: formEl.get("nome_pai"),
+        telefone_pai: telPai,
+        nome_mae: formEl.get("nome_mae"),
+        telefone_mae: telMae,
+        // usado para notificação opcional na aprovação
+        telefone_principal: telMae || telPai,
       },
     };
 
     const body = new FormData();
     body.append("dados", JSON.stringify(payload));
-    const foto = form.get("foto") as File | null;
+    const foto = formEl.get("foto") as File | null;
     if (foto && foto.size > 0) {
       body.append("foto", foto);
     }
@@ -126,6 +142,8 @@ export default function InscricaoPage() {
     );
   }
 
+  const idade = calcularIdade(dataNascimento);
+
   return (
     <main className="min-h-screen py-8 px-4">
       <div className="max-w-2xl mx-auto">
@@ -159,55 +177,135 @@ export default function InscricaoPage() {
                   value={nomeCoroinha}
                   onChange={(e) => setNomeCoroinha(e.target.value)}
                 />
-                <input name="data_nascimento" type="date" required className="input-field" aria-label="Data de nascimento" />
-                <input
-                  name="cpf_coroinha"
-                  placeholder="CPF (opcional)"
-                  className="input-field"
-                  value={cpfCoroinha}
-                  onChange={(e) => setCpfCoroinha(formatarCpf(e.target.value))}
-                />
-                <input name="telefone_coroinha" placeholder="Telefone" className="input-field" />
-                <input name="endereco" placeholder="Endereço" className="input-field" />
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <input name="escola" placeholder="Escola" className="input-field" />
-                  <input name="serie" placeholder="Série" className="input-field" />
+                  <div>
+                    <label htmlFor="insc-nasc" className="block text-sm font-medium mb-1.5">
+                      Data de nascimento *
+                    </label>
+                    <input
+                      id="insc-nasc"
+                      name="data_nascimento"
+                      type="date"
+                      required
+                      className="input-field w-full"
+                      value={dataNascimento}
+                      onChange={(e) => setDataNascimento(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="insc-idade" className="block text-sm font-medium mb-1.5">
+                      Idade
+                    </label>
+                    <input
+                      id="insc-idade"
+                      readOnly
+                      value={idade != null ? `${idade} anos` : ""}
+                      placeholder="Calculada pela data"
+                      className="input-field w-full bg-muted/40 text-muted-foreground"
+                    />
+                  </div>
                 </div>
+                <input name="endereco" placeholder="Endereço" className="input-field" />
               </div>
             </FormSection>
 
             <FormSection title="Responsáveis" icon={Users}>
               <div className="grid gap-4">
-                <input
-                  name="cpf_responsavel"
-                  placeholder="CPF do responsável *"
-                  required
-                  className="input-field"
-                  value={cpfResponsavel}
-                  onChange={(e) => setCpfResponsavel(formatarCpf(e.target.value))}
-                />
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <input name="nome_pai" placeholder="Nome do pai" className="input-field" />
+                  <input name="telefone_pai" placeholder="Telefone do pai" className="input-field" />
+                </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <input name="nome_mae" placeholder="Nome da mãe" className="input-field" />
-                  <input name="nome_pai" placeholder="Nome do pai" className="input-field" />
+                  <input name="telefone_mae" placeholder="Telefone da mãe" className="input-field" />
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <input name="telefone_principal" placeholder="Telefone principal" className="input-field" />
-                  <input name="whatsapp" placeholder="WhatsApp" className="input-field" />
-                </div>
-                <input name="email" type="email" placeholder="E-mail" className="input-field" />
+              </div>
+            </FormSection>
+
+            <FormSection title="Catequese e IAM" icon={Cross}>
+              <div className="space-y-4">
+                <fieldset className="rounded-lg border border-border p-4">
+                  <legend className="px-1 text-sm font-medium">Está fazendo catequese?</legend>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="faz_catequese"
+                        checked={fazCatequese}
+                        onChange={() => setFazCatequese(true)}
+                        className="accent-[var(--burgundy)] size-4"
+                      />
+                      Sim
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="faz_catequese"
+                        checked={!fazCatequese}
+                        onChange={() => {
+                          setFazCatequese(false);
+                          setEtapaCatequese("");
+                        }}
+                        className="accent-[var(--burgundy)] size-4"
+                      />
+                      Não
+                    </label>
+                  </div>
+                  {fazCatequese && (
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                      {ETAPAS_CATEQUESE.map((etapa) => (
+                        <label
+                          key={etapa.value}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-secondary cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="radio"
+                            name="etapa_catequese"
+                            checked={etapaCatequese === etapa.value}
+                            onChange={() => setEtapaCatequese(etapa.value)}
+                            className="accent-[var(--burgundy)] size-4"
+                          />
+                          {etapa.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </fieldset>
+
+                <fieldset className="rounded-lg border border-border p-4">
+                  <legend className="px-1 text-sm font-medium">Faz parte da IAM?</legend>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="faz_iam"
+                        checked={fazIam}
+                        onChange={() => setFazIam(true)}
+                        className="accent-[var(--burgundy)] size-4"
+                      />
+                      Sim
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="faz_iam"
+                        checked={!fazIam}
+                        onChange={() => setFazIam(false)}
+                        className="accent-[var(--burgundy)] size-4"
+                      />
+                      Não
+                    </label>
+                  </div>
+                </fieldset>
               </div>
             </FormSection>
 
             <FormSection title="Foto do coroinha" icon={Camera}>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-3">
-                <CoroinhaAvatar
-                  nome={nomeCoroinha || "Coroinha"}
-                  fotoUrl={fotoPreview}
-                  size="lg"
-                />
+                <CoroinhaAvatar nome={nomeCoroinha || "Coroinha"} fotoUrl={fotoPreview} size="lg" />
                 <p className="text-sm text-muted-foreground flex-1">
-                  Foto de rosto para identificação nas escalas. Se não enviar agora, aparecerá o perfil
-                  padrão até a coordenação ou família anexar a foto.
+                  Foto de rosto para identificação nas escalas (opcional). Se não enviar, aparecerá o
+                  avatar padrão até a coordenação ou família anexar a foto.
                 </p>
               </div>
               <input
@@ -224,30 +322,6 @@ export default function InscricaoPage() {
                   setFotoPreview(URL.createObjectURL(file));
                 }}
               />
-            </FormSection>
-
-            <FormSection title="Documentos" icon={FileText}>
-              <p className="text-sm text-muted-foreground">
-                Foto, certidão de nascimento e termo de autorização podem ser anexados após a inscrição (recurso futuro).
-              </p>
-            </FormSection>
-
-            <FormSection title="Dados religiosos" icon={Cross}>
-              <div className="flex flex-wrap gap-4 text-sm">
-                {[
-                  { name: "batizado", label: "Batizado" },
-                  { name: "primeira_eucaristia", label: "Primeira Eucaristia" },
-                  { name: "crisma", label: "Crisma" },
-                ].map((item) => (
-                  <label
-                    key={item.name}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-secondary cursor-pointer transition-colors"
-                  >
-                    <input name={item.name} type="checkbox" className="accent-[var(--burgundy)] size-4" />
-                    {item.label}
-                  </label>
-                ))}
-              </div>
             </FormSection>
 
             {erro && (

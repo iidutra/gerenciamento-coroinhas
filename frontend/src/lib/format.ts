@@ -20,6 +20,15 @@ export function turmaLabel(turma: string): string {
   return map[turma] || turma;
 }
 
+export function etapaCatequeseLabel(etapa: string): string {
+  const map: Record<string, string> = {
+    PreEucaristia: "Pré-Eucaristia",
+    PrimeiraEucaristia: "Primeira Eucaristia",
+    Crisma: "Crisma",
+  };
+  return map[etapa] || etapa;
+}
+
 export function categoriaDocumentoLabel(categoria: string): string {
   const map: Record<string, string> = {
     Liturgia: "Liturgia",

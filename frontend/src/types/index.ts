@@ -22,6 +22,8 @@ export interface AuthResponse {
   usuario: Usuario;
 }
 
+export type EtapaCatequese = "" | "PreEucaristia" | "PrimeiraEucaristia" | "Crisma";
+
 export interface Coroinha {
   id: number;
   nome: string;
@@ -31,6 +33,14 @@ export interface Coroinha {
   status: string;
   escola: string;
   serie: string;
+  endereco?: string;
+  nome_pai?: string;
+  telefone_pai?: string;
+  nome_mae?: string;
+  telefone_mae?: string;
+  faz_catequese?: boolean;
+  etapa_catequese?: EtapaCatequese;
+  faz_iam?: boolean;
   foto_url?: string | null;
 }
 
