@@ -18,6 +18,12 @@ _railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
 if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(_railway_domain)
 
+# Atrás do proxy do Railway (HTTPS terminado no edge): faz o Django
+# reconhecer o esquema https, para que build_absolute_uri (ex.: foto_url)
+# gere URLs https e não cause mixed content no frontend.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
