@@ -8,14 +8,8 @@ import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner
 import { StaffPage } from "@/components/StaffPage";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch, apiFetchForm, asList, mediaUrl } from "@/lib/api";
-import { etapaCatequeseLabel, turmaLabel } from "@/lib/format";
+import { etapaCatequeseLabel } from "@/lib/format";
 import type { Coroinha, EtapaCatequese } from "@/types";
-
-const TURMAS = [
-  { value: "Iniciante", label: "Iniciante" },
-  { value: "Intermediario", label: "Intermediário" },
-  { value: "Avancado", label: "Avançado" },
-];
 
 const STATUS_OPCOES = [
   { value: "EmFormacao", label: "Em formação" },
@@ -40,7 +34,6 @@ type FormState = {
   fazCatequese: boolean;
   etapaCatequese: EtapaCatequese;
   fazIam: boolean;
-  turma: string;
   status: string;
 };
 
@@ -55,7 +48,6 @@ const FORM_VAZIO: FormState = {
   fazCatequese: false,
   etapaCatequese: "",
   fazIam: false,
-  turma: "Iniciante",
   status: "EmFormacao",
 };
 
@@ -144,7 +136,6 @@ export default function CoroinhasPage() {
       fazCatequese: Boolean(c.faz_catequese),
       etapaCatequese: (c.etapa_catequese as EtapaCatequese) ?? "",
       fazIam: Boolean(c.faz_iam),
-      turma: c.turma || "Iniciante",
       status: c.status || "EmFormacao",
     });
     limparFoto();
@@ -188,7 +179,6 @@ export default function CoroinhasPage() {
       faz_iam: form.fazIam,
     };
     if (editId) {
-      dados.turma = form.turma;
       dados.status = form.status;
     }
 
@@ -479,43 +469,24 @@ export default function CoroinhasPage() {
                   </div>
                 </fieldset>
 
-                {/* turma / status (apenas na edição) */}
+                {/* status (apenas na edição) */}
                 {editId && (
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="cad-turma" className="block text-sm font-medium mb-1.5">
-                        Turma
-                      </label>
-                      <select
-                        id="cad-turma"
-                        value={form.turma}
-                        onChange={(e) => setCampo("turma", e.target.value)}
-                        className="input-field w-full"
-                      >
-                        {TURMAS.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="cad-status" className="block text-sm font-medium mb-1.5">
-                        Status
-                      </label>
-                      <select
-                        id="cad-status"
-                        value={form.status}
-                        onChange={(e) => setCampo("status", e.target.value)}
-                        className="input-field w-full"
-                      >
-                        {STATUS_OPCOES.map((s) => (
-                          <option key={s.value} value={s.value}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div className="sm:max-w-xs">
+                    <label htmlFor="cad-status" className="block text-sm font-medium mb-1.5">
+                      Status
+                    </label>
+                    <select
+                      id="cad-status"
+                      value={form.status}
+                      onChange={(e) => setCampo("status", e.target.value)}
+                      className="input-field w-full"
+                    >
+                      {STATUS_OPCOES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
@@ -584,7 +555,6 @@ export default function CoroinhasPage() {
                   <th>Idade</th>
                   <th>Catequese</th>
                   <th>IAM</th>
-                  <th>Turma</th>
                   <th>Status</th>
                   {podeEditar && <th className="text-right">Ações</th>}
                 </tr>
@@ -605,7 +575,6 @@ export default function CoroinhasPage() {
                         : "—"}
                     </td>
                     <td>{c.faz_iam ? "Sim" : "—"}</td>
-                    <td>{turmaLabel(c.turma)}</td>
                     <td>
                       <StatusBadge status={c.status} />
                     </td>
