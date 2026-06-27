@@ -481,9 +481,13 @@ export default function EscalasPage() {
                   <div className="flex flex-col gap-4 p-4 sm:p-5 sm:flex-row sm:items-start sm:justify-between">
                     {/* Data + missa */}
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="shrink-0 grid place-items-center size-14 rounded-xl bg-gradient-gold text-burgundy-deep">
-                        <span className="text-[10px] font-semibold leading-none tracking-wide">{mes}</span>
-                        <span className="text-xl font-display font-bold leading-tight">{dia}</span>
+                      <div className="shrink-0 w-14 overflow-hidden rounded-xl border border-border bg-card text-center">
+                        <div className="bg-card text-burgundy text-[10px] font-semibold leading-none tracking-wide py-1 border-b border-border">
+                          {mes}
+                        </div>
+                        <div className="bg-gradient-gold text-burgundy-deep font-display text-xl font-bold leading-none py-1.5">
+                          {dia}
+                        </div>
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
