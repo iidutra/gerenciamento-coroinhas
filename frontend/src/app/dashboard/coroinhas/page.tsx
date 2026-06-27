@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ChevronDown, Filter, Pencil, Plus, Search, Trash2, Users, X } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { EmptyState } from "@/components/EmptyState";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
@@ -78,6 +79,8 @@ export default function CoroinhasPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<number | null>(null);
+  const [coroinhaParaExcluir, setCoroinhaParaExcluir] = useState<Coroinha | null>(null);
+  const [removerFoto, setRemoverFoto] = useState(false);
   const [form, setForm] = useState<FormState>(FORM_VAZIO);
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
@@ -113,6 +116,7 @@ export default function CoroinhasPage() {
     setFoto(null);
     if (fotoPreview) URL.revokeObjectURL(fotoPreview);
     setFotoPreview(null);
+    setRemoverFoto(false);
   }
 
   function abrirNovo() {
@@ -160,6 +164,7 @@ export default function CoroinhasPage() {
     if (fotoPreview) URL.revokeObjectURL(fotoPreview);
     setFoto(file);
     setFotoPreview(URL.createObjectURL(file));
+    setRemoverFoto(false);
   }
 
   async function salvar(ev: FormEvent) {
@@ -194,6 +199,7 @@ export default function CoroinhasPage() {
         fd.append("foto", foto);
         await apiFetchForm(path, fd, { method });
       } else {
+        if (editId && removerFoto) dados.foto = null;
         await apiFetch(path, { method, body: JSON.stringify(dados) });
       }
       setFeedback(editId ? "Coroinha atualizado com sucesso." : "Coroinha cadastrado com sucesso.");
@@ -206,14 +212,16 @@ export default function CoroinhasPage() {
     }
   }
 
-  async function excluir(c: Coroinha) {
-    if (!window.confirm(`Excluir ${c.nome}? Esta ação não pode ser desfeita.`)) return;
+  async function confirmarExclusao() {
+    const c = coroinhaParaExcluir;
+    if (!c) return;
     setErro("");
     setExcluindoId(c.id);
     try {
       await apiFetch(`/coroinhas/${c.id}/`, { method: "DELETE" });
       if (editId === c.id) fecharForm();
       setFeedback("Coroinha excluído.");
+      setCoroinhaParaExcluir(null);
       await load();
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Não foi possível excluir.");
@@ -223,6 +231,9 @@ export default function CoroinhasPage() {
   }
 
   const idadePreview = calcularIdade(form.dataNascimento);
+  const temFotoAtual = Boolean(
+    editId ? coroinhas.find((c) => c.id === editId)?.foto_url : false,
+  );
 
   return (
     <StaffLayout loading={loading}>
@@ -279,13 +290,19 @@ export default function CoroinhasPage() {
                     nome={form.nome || "Coroinha"}
                     fotoUrl={
                       fotoPreview ??
-                      (editId ? mediaUrl(coroinhas.find((c) => c.id === editId)?.foto_url) : null)
+                      (editId && !removerFoto
+                        ? mediaUrl(coroinhas.find((c) => c.id === editId)?.foto_url)
+                        : null)
                     }
                     size="lg"
                   />
                   <div className="flex-1">
                     <label htmlFor="cad-foto" className="block text-sm font-medium mb-1.5">
-                      Foto do coroinha (opcional)
+                      {foto
+                        ? "Nova foto selecionada"
+                        : temFotoAtual
+                          ? "Trocar foto do coroinha"
+                          : "Foto do coroinha (opcional)"}
                     </label>
                     <input
                       id="cad-foto"
@@ -294,6 +311,30 @@ export default function CoroinhasPage() {
                       onChange={(e) => selecionarFoto(e.target.files?.[0])}
                       className="input-field file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
                     />
+                    {removerFoto ? (
+                      <p className="text-xs text-destructive mt-1.5 flex flex-wrap items-center gap-2">
+                        A foto será removida ao salvar.
+                        <button
+                          type="button"
+                          onClick={() => setRemoverFoto(false)}
+                          className="underline hover:no-underline"
+                        >
+                          Desfazer
+                        </button>
+                      </p>
+                    ) : (
+                      temFotoAtual &&
+                      !foto && (
+                        <button
+                          type="button"
+                          onClick={() => setRemoverFoto(true)}
+                          className="text-xs text-destructive hover:underline mt-1.5 inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                          Remover foto
+                        </button>
+                      )
+                    )}
                     <p className="text-xs text-muted-foreground mt-1">
                       Usada como avatar nas escalas. Sem foto, mostramos um avatar padrão.
                     </p>
@@ -623,7 +664,7 @@ export default function CoroinhasPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => excluir(c)}
+                            onClick={() => setCoroinhaParaExcluir(c)}
                             disabled={excluindoId === c.id}
                             className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                             title="Excluir"
@@ -640,6 +681,21 @@ export default function CoroinhasPage() {
             </table>
           )}
         </div>
+
+        <ConfirmDialog
+          open={coroinhaParaExcluir !== null}
+          destructive
+          title="Excluir coroinha"
+          description={
+            coroinhaParaExcluir
+              ? `Excluir ${coroinhaParaExcluir.nome}? Esta ação não pode ser desfeita.`
+              : ""
+          }
+          confirmLabel="Excluir"
+          loading={excluindoId !== null}
+          onConfirm={confirmarExclusao}
+          onCancel={() => setCoroinhaParaExcluir(null)}
+        />
       </StaffPage>
     </StaffLayout>
   );

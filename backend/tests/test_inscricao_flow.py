@@ -147,6 +147,29 @@ class TestInscricaoAprovacao:
         coroinha.refresh_from_db()
         assert bool(coroinha.foto) is True
 
+    def test_patch_remove_foto(self, client_coordenador, coroinha):
+        import io
+
+        from django.core.files.base import ContentFile
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (4, 4), (0, 120, 0)).save(buffer, format="JPEG")
+        buffer.seek(0)
+        coroinha.foto.save("antes.jpg", ContentFile(buffer.read()), save=True)
+        assert bool(coroinha.foto) is True
+
+        res = client_coordenador.patch(
+            f"/api/v1/coroinhas/{coroinha.id}/",
+            {"foto": None},
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["foto_url"] is None
+
+        coroinha.refresh_from_db()
+        assert bool(coroinha.foto) is False
+
 
 class TestInscricaoSemCpf:
     def _abrir_inscricoes(self):
