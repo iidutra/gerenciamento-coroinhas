@@ -39,6 +39,11 @@ class LoginStaffSerializer(serializers.Serializer):
     senha = serializers.CharField(write_only=True)
 
 
+class LoginCoroinhaNomeSerializer(serializers.Serializer):
+    nome = serializers.CharField(max_length=200)
+    data_nascimento = serializers.DateField()
+
+
 class RecuperarSenhaSerializer(serializers.Serializer):
     cpf = serializers.CharField(max_length=14)
     data_nascimento = serializers.DateField()

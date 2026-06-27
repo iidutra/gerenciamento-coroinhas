@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.identity.serializers import (
+    LoginCoroinhaNomeSerializer,
     LoginFamiliaSerializer,
     LoginSerializer,
     LoginStaffSerializer,
@@ -64,6 +65,24 @@ class LoginFamiliaView(APIView):
             )
         except ValueError as exc:
             AuditService.login_falha(ip=_client_ip(request), detalhes={"endpoint": "login_familia"})
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_token_response(usuario))
+
+
+class LoginCoroinhaNomeView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginCoroinhaNomeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            usuario = AuthService.login_coroinha_nome_data(
+                nome=serializer.validated_data["nome"],
+                data_nascimento=serializer.validated_data["data_nascimento"],
+                ip=_client_ip(request),
+            )
+        except ValueError as exc:
+            AuditService.login_falha(ip=_client_ip(request), detalhes={"endpoint": "login_coroinha_nome"})
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(_token_response(usuario))
 

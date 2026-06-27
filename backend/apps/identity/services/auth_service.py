@@ -1,4 +1,5 @@
 import hashlib
+import unicodedata
 
 import structlog
 from django.conf import settings
@@ -13,6 +14,14 @@ logger = structlog.get_logger(__name__)
 
 RECUPERACAO_ERRO = "CPF ou data de nascimento incorretos."
 LOGIN_ERRO = "Credenciais inválidas."
+LOGIN_NOME_ERRO = "Nome ou data de nascimento incorretos."
+LOGIN_NOME_AMBIGUO = "Há mais de um coroinha com esse nome e data. Procure a coordenação."
+
+
+def _normalizar_nome(valor: str) -> str:
+    texto = unicodedata.normalize("NFD", valor or "")
+    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    return " ".join(texto.split()).lower()
 
 
 class AuthService:
@@ -70,6 +79,53 @@ class AuthService:
             raise ValueError(LOGIN_ERRO)
 
         cls._clear_rate_limit("login", cpf, ip)
+        logger.info("login_sucesso", usuario_id=usuario.id, tipo_perfil=usuario.tipo_perfil)
+        AuditService.login_sucesso(usuario, ip=ip)
+        return usuario
+
+    @classmethod
+    def login_coroinha_nome_data(cls, nome: str, data_nascimento, ip: str | None = None) -> Usuario:
+        """Acesso da família: primeiro nome do coroinha + data de nascimento.
+
+        Sem senha — destinado às famílias que não têm CPF cadastrado.
+        """
+        from apps.membership.models import Coroinha
+
+        termo = _normalizar_nome(nome)
+        if not termo or data_nascimento is None:
+            raise ValueError(LOGIN_NOME_ERRO)
+
+        cls._check_rate_limit("login_nome", termo, ip)
+
+        candidatos = [
+            c
+            for c in Coroinha.objects.filter(data_nascimento=data_nascimento)
+            if _normalizar_nome(c.nome).startswith(termo)
+        ]
+
+        if not candidatos:
+            cls._register_failed_attempt("login_nome", termo, ip)
+            raise ValueError(LOGIN_NOME_ERRO)
+        if len(candidatos) > 1:
+            raise ValueError(LOGIN_NOME_AMBIGUO)
+
+        coroinha = candidatos[0]
+        usuario = Usuario.objects.filter(coroinha=coroinha).first()
+        if usuario is None:
+            usuario = Usuario(
+                nome=coroinha.nome,
+                tipo_perfil=TipoPerfil.COROINHA,
+                coroinha=coroinha,
+                email=f"coroinha{coroinha.id}@portal.local",
+                is_active=True,
+            )
+            usuario.set_unusable_password()
+            usuario.save()
+        elif not usuario.is_active:
+            cls._register_failed_attempt("login_nome", termo, ip)
+            raise ValueError(LOGIN_NOME_ERRO)
+
+        cls._clear_rate_limit("login_nome", termo, ip)
         logger.info("login_sucesso", usuario_id=usuario.id, tipo_perfil=usuario.tipo_perfil)
         AuditService.login_sucesso(usuario, ip=ip)
         return usuario
