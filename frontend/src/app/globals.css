@@ -287,6 +287,12 @@ body {
   .app-main {
     padding-top: 2rem;
   }
+  /* Em telas grandes a sidebar é fixa; o header mobile não deve aparecer.
+     Regra explícita porque .app-mobile-header (sem @layer) venceria o
+     utilitário lg:hidden na cascata do Tailwind v4. */
+  .app-mobile-header {
+    display: none;
+  }
 }
 
 .scrollbar-none {

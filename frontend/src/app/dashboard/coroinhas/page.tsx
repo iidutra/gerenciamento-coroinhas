@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
 import { StaffPage } from "@/components/StaffPage";
 import { StatusBadge } from "@/components/StatusBadge";
-import { apiFetch, apiFetchForm, asList, mediaUrl } from "@/lib/api";
+import { apiFetch, apiFetchAll, apiFetchForm, mediaUrl } from "@/lib/api";
 import { etapaCatequeseLabel } from "@/lib/format";
 import type { Coroinha, EtapaCatequese } from "@/types";
 
@@ -87,9 +87,7 @@ export default function CoroinhasPage() {
   }
 
   function load() {
-    return apiFetch<{ results?: Coroinha[] } | Coroinha[]>("/coroinhas/").then((c) =>
-      setCoroinhas(asList(c)),
-    );
+    return apiFetchAll<Coroinha>("/coroinhas/").then(setCoroinhas);
   }
 
   useEffect(() => {

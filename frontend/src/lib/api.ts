@@ -168,6 +168,28 @@ export function asList<T>(data: T[] | { results?: T[] }): T[] {
   return data.results ?? [];
 }
 
+/** Busca todas as páginas de um endpoint paginado (DRF) e concatena os resultados. */
+export async function apiFetchAll<T>(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<T[]> {
+  const sep = path.includes("?") ? "&" : "?";
+  const todos: T[] = [];
+  for (let page = 1; page <= 100; page += 1) {
+    const data = await apiFetch<{ results?: T[]; next?: string | null } | T[]>(
+      `${path}${sep}page=${page}`,
+      options,
+    );
+    if (Array.isArray(data)) {
+      todos.push(...data);
+      break;
+    }
+    todos.push(...(data.results ?? []));
+    if (!data.next) break;
+  }
+  return todos;
+}
+
 export async function apiDownload(
   path: string,
   filename: string,

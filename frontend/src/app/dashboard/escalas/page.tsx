@@ -6,7 +6,7 @@ import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
 import { StaffPage } from "@/components/StaffPage";
-import { apiFetch, asList, mediaUrl } from "@/lib/api";
+import { apiFetch, apiFetchAll, mediaUrl } from "@/lib/api";
 import {
   funcoesFromItens,
   funcoesParaPayload,
@@ -70,14 +70,14 @@ export default function EscalasPage() {
 
   function load() {
     Promise.all([
-      apiFetch<Missa[] | { results?: Missa[] }>("/missas/"),
-      apiFetch<{ results?: Escala[] } | Escala[]>("/escalas/"),
-      apiFetch<{ results?: Coroinha[] } | Coroinha[]>("/coroinhas/"),
+      apiFetchAll<Missa>("/missas/"),
+      apiFetchAll<Escala>("/escalas/"),
+      apiFetchAll<Coroinha>("/coroinhas/"),
     ])
       .then(([m, e, c]) => {
-        setMissas(asList(m));
-        setEscalas(asList(e));
-        setCoroinhas(asList(c));
+        setMissas(m);
+        setEscalas(e);
+        setCoroinhas(c);
       })
       .finally(() => setLoading(false));
   }

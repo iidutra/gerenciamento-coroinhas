@@ -5,7 +5,7 @@ import { AlertTriangle, Cake, CheckCircle2, Send } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
 import { StaffPage } from "@/components/StaffPage";
-import { apiFetch, asList } from "@/lib/api";
+import { apiFetch, apiFetchAll, asList } from "@/lib/api";
 import { fetchConfigComunicacao, type ConfigComunicacao } from "@/lib/config-comunicacao";
 import type { Aniversariante, Coroinha, Escala, Mensagem, ProximaEscala } from "@/types";
 
@@ -25,11 +25,11 @@ export default function ComunicacaoPage() {
 
   function load() {
     Promise.all([
-      apiFetch<{ results?: Coroinha[] } | Coroinha[]>("/coroinhas/"),
+      apiFetchAll<Coroinha>("/coroinhas/"),
       apiFetch<{ results?: Mensagem[] } | Mensagem[]>("/mensagens/"),
       fetchConfigComunicacao(),
     ]).then(([c, m, cfg]) => {
-      setCoroinhas(asList(c));
+      setCoroinhas(c);
       setHistorico(asList(m));
       setConfig(cfg);
     }).finally(() => setLoading(false));
