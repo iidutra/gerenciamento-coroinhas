@@ -6,6 +6,34 @@ export function formatarCpf(value: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
+/**
+ * Máscara de telefone para exibição/digitação no formato 99 9 9999 9999.
+ * Apenas visual — sempre envie os dígitos puros (telefoneDigits) ao backend.
+ */
+export function formatarTelefone(value: string): string {
+  const d = value.replace(/\D/g, "").slice(0, 11);
+  const partes: string[] = [];
+  if (d.length > 0) partes.push(d.slice(0, 2)); // DDD
+  if (d.length > 2) partes.push(d.slice(2, 3)); // 9
+  if (d.length > 3) partes.push(d.slice(3, 7)); // 9999
+  if (d.length > 7) partes.push(d.slice(7, 11)); // 9999
+  return partes.join(" ");
+}
+
+/** Só os dígitos do telefone — o que deve ser persistido/enviado. */
+export function telefoneDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 11);
+}
+
+/** Normaliza texto para busca: minúsculas e sem acentos (Júlia == Julia). */
+export function normalizarBusca(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 /** Detecta digitação de e-mail antes do @ (evita máscara de CPF comer as letras). */
 export function pareceEmail(value: string): boolean {
   return /[a-zA-Z@]/.test(value);

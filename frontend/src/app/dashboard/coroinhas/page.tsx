@@ -9,7 +9,7 @@ import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner
 import { StaffPage } from "@/components/StaffPage";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch, apiFetchAll, apiFetchForm, mediaUrl } from "@/lib/api";
-import { etapaCatequeseLabel } from "@/lib/format";
+import { etapaCatequeseLabel, formatarTelefone, normalizarBusca, telefoneDigits } from "@/lib/format";
 import type { Coroinha, EtapaCatequese } from "@/types";
 
 const STATUS_OPCOES = [
@@ -105,8 +105,9 @@ export default function CoroinhasPage() {
   }, [feedback]);
 
   const filtrados = useMemo(() => {
+    const termo = normalizarBusca(busca);
     return coroinhas.filter((c) => {
-      const matchBusca = c.nome.toLowerCase().includes(busca.toLowerCase());
+      const matchBusca = normalizarBusca(c.nome).includes(termo);
       const matchStatus = !statusFiltro || c.status === statusFiltro;
       return matchBusca && matchStatus;
     });
@@ -134,9 +135,9 @@ export default function CoroinhasPage() {
       dataNascimento: c.data_nascimento,
       enderecoTxt: c.endereco ?? "",
       nomePai: c.nome_pai ?? "",
-      telefonePai: c.telefone_pai ?? "",
+      telefonePai: telefoneDigits(c.telefone_pai ?? ""),
       nomeMae: c.nome_mae ?? "",
-      telefoneMae: c.telefone_mae ?? "",
+      telefoneMae: telefoneDigits(c.telefone_mae ?? ""),
       fazCatequese: Boolean(c.faz_catequese),
       etapaCatequese: (c.etapa_catequese as EtapaCatequese) ?? "",
       fazIam: Boolean(c.faz_iam),
@@ -407,8 +408,11 @@ export default function CoroinhasPage() {
                     </label>
                     <input
                       id="cad-tel-pai"
-                      value={form.telefonePai}
-                      onChange={(e) => setCampo("telefonePai", e.target.value)}
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="99 9 9999 9999"
+                      value={formatarTelefone(form.telefonePai)}
+                      onChange={(e) => setCampo("telefonePai", telefoneDigits(e.target.value))}
                       className="input-field w-full"
                     />
                   </div>
@@ -429,8 +433,11 @@ export default function CoroinhasPage() {
                     </label>
                     <input
                       id="cad-tel-mae"
-                      value={form.telefoneMae}
-                      onChange={(e) => setCampo("telefoneMae", e.target.value)}
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="99 9 9999 9999"
+                      value={formatarTelefone(form.telefoneMae)}
+                      onChange={(e) => setCampo("telefoneMae", telefoneDigits(e.target.value))}
                       className="input-field w-full"
                     />
                   </div>

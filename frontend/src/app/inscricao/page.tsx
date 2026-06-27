@@ -17,6 +17,7 @@ import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FormSection } from "@/components/FormField";
 import { apiFetchForm } from "@/lib/api";
 import { fetchConfigPublica } from "@/lib/config-publica";
+import { formatarTelefone, telefoneDigits } from "@/lib/format";
 import type { EtapaCatequese } from "@/types";
 
 const ETAPAS_CATEQUESE: { value: Exclude<EtapaCatequese, "">; label: string }[] = [
@@ -61,8 +62,8 @@ export default function InscricaoPage() {
     setLoading(true);
 
     const formEl = new FormData(e.currentTarget);
-    const telMae = String(formEl.get("telefone_mae") || "").trim();
-    const telPai = String(formEl.get("telefone_pai") || "").trim();
+    const telMae = telefoneDigits(String(formEl.get("telefone_mae") || ""));
+    const telPai = telefoneDigits(String(formEl.get("telefone_pai") || ""));
     const payload = {
       coroinha: {
         nome: formEl.get("nome_coroinha"),
@@ -213,11 +214,29 @@ export default function InscricaoPage() {
               <div className="grid gap-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <input name="nome_pai" placeholder="Nome do pai" className="input-field" />
-                  <input name="telefone_pai" placeholder="Telefone do pai" className="input-field" />
+                  <input
+                    name="telefone_pai"
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="Telefone do pai (99 9 9999 9999)"
+                    className="input-field"
+                    onChange={(e) => {
+                      e.target.value = formatarTelefone(e.target.value);
+                    }}
+                  />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <input name="nome_mae" placeholder="Nome da mãe" className="input-field" />
-                  <input name="telefone_mae" placeholder="Telefone da mãe" className="input-field" />
+                  <input
+                    name="telefone_mae"
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="Telefone da mãe (99 9 9999 9999)"
+                    className="input-field"
+                    onChange={(e) => {
+                      e.target.value = formatarTelefone(e.target.value);
+                    }}
+                  />
                 </div>
               </div>
             </FormSection>
