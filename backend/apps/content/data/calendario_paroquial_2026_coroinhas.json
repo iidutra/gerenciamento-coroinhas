@@ -59,7 +59,7 @@
       "data": "2026-03-21",
       "titulo": "Retiro e formação dos coroinhas",
       "local": "A definir / Capela Auxiliadora / Santa Teresinha",
-      "horario": "Manhã e 14h às 17h",
+      "horario": "Manhã e 14h às 15h",
       "descricao": "Retiro espiritual e formação para coroinhas. Coordenação pastoral e padres."
     },
     {
@@ -78,7 +78,7 @@
       "data": "2026-04-04",
       "titulo": "Sábado Santo — Vigília pascal e coroinhas",
       "local": "Santuário",
-      "horario": "19h às 17h (vigília)",
+      "horario": "19h (vigília) / 14h às 15h",
       "destaque": true,
       "descricao": "Vigília pascal, batismo e serviço litúrgico dos coroinhas. Celebração solene da Páscoa."
     },
@@ -187,7 +187,7 @@
       "data": "2026-10-13",
       "titulo": "Memória mensal de Nossa Senhora de Fátima",
       "local": "Santuário",
-      "horario": "09h, 12h e 18h",
+      "horario": "06h, 09h, 12h e 18h",
       "destaque": false,
       "descricao": "Memória mensal mariana com escala dos coroinhas."
     },
@@ -216,9 +216,9 @@
       "data": "2026-11-22",
       "titulo": "Cristo Rei — Confraternização dos coroinhas",
       "local": "A definir",
-      "horario": "08h e 09h / 10h às 17h",
+      "horario": "08h e 19h / 10h às 17h",
       "destaque": false,
-      "descricao": "Soleneidade de Cristo Rei com confraternização da pastoral de coroinhas."
+      "descricao": "Solenidade de Cristo Rei com confraternização da pastoral de coroinhas."
     },
     {
       "id": "missa-fatima-dez",
