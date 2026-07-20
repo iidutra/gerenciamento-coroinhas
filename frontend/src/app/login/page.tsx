@@ -11,6 +11,7 @@ import {
   KeyRound,
   Loader2,
   LogIn,
+  UserPlus,
   UserRound,
 } from "lucide-react";
 import { InputField } from "@/components/FormField";
@@ -146,6 +147,17 @@ export default function LoginPage() {
             Esqueci minha senha
           </Link>
         </p>
+
+        <div className="mt-5 pt-4 border-t border-border text-center">
+          <p className="text-sm text-muted-foreground mb-1">É pai ou mãe e ainda não tem acesso?</p>
+          <Link
+            href="/acesso"
+            className="inline-flex items-center gap-1 text-burgundy font-medium hover:underline"
+          >
+            <UserPlus className="size-4" aria-hidden />
+            Solicitar acesso ao portal
+          </Link>
+        </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           <Link href="/" className="inline-flex items-center gap-1 hover:text-foreground">

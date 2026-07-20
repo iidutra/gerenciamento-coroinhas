@@ -9,19 +9,30 @@ from rest_framework.views import APIView
 
 from apps.content.permissions import IsFamiliaOuStaff
 from apps.identity.permissions import IsFamilia, IsGestorCoroinhas, IsStaffPastoral
-from apps.membership.models import Coroinha, Inscricao, StatusInscricao
+from apps.membership.models import (
+    Coroinha,
+    Inscricao,
+    SolicitacaoAcesso,
+    StatusInscricao,
+    StatusSolicitacao,
+)
 from apps.membership.serializers import (
     AniversarianteSerializer,
     CoroinhaResumoPortalSerializer,
     CoroinhaSerializer,
+    CoroinhaVerificadaSerializer,
     InscricaoPublicaSerializer,
     InscricaoSerializer,
+    SolicitacaoAcessoSerializer,
+    SolicitarAcessoSerializer,
+    VerificarAcessoSerializer,
 )
 from apps.membership.services.coroinha_service import CoroinhaService
 from apps.membership.services.configuracao_service import ConfiguracaoService
 from apps.membership.services.inscricao_service import InscricaoService
 from apps.membership.services.portal_service import PortalService
 from apps.membership.services.relatorio_service import RelatorioService
+from apps.membership.services.solicitacao_acesso_service import SolicitacaoAcessoService
 
 
 def _client_ip(request) -> str | None:
@@ -169,6 +180,99 @@ class PortalFilhosView(APIView):
         coroinhas = PortalService.coroinhas_acessiveis(request.user)
         data = CoroinhaSerializer(coroinhas, many=True, context={"request": request}).data
         return Response(data)
+
+
+class AcessoVerificarView(APIView):
+    """Passo 1 do auto-acesso do pai: identifica o coroinha por nome + data nasc."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = VerificarAcessoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            coroinhas = SolicitacaoAcessoService.verificar(
+                serializer.validated_data["nome"],
+                serializer.validated_data["data_nascimento"],
+                ip=_client_ip(request),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        data = CoroinhaVerificadaSerializer(coroinhas, many=True).data
+        return Response({"coroinhas": data})
+
+
+class AcessoSolicitarView(APIView):
+    """Passo 2 do auto-acesso: CPF + senha; cria pedido pendente de aprovação."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = SolicitarAcessoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        v = serializer.validated_data
+        try:
+            SolicitacaoAcessoService.solicitar(
+                coroinha_id=v["coroinha_id"],
+                nome_coroinha=v["nome"],
+                data_nascimento=v["data_nascimento"],
+                nome_responsavel=v["nome_responsavel"],
+                cpf=v["cpf"],
+                senha=v["senha"],
+                whatsapp=v.get("whatsapp", ""),
+                ip=_client_ip(request),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": (
+                    "Pedido enviado! Assim que a coordenação aprovar, "
+                    "você poderá entrar com seu CPF e senha."
+                )
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SolicitacaoAcessoViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SolicitacaoAcesso.objects.select_related("coroinha").all()
+    serializer_class = SolicitacaoAcessoSerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve", "pendentes_count"):
+            return [IsStaffPastoral()]
+        return [IsGestorCoroinhas()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(status=status_param)
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="pendentes-count")
+    def pendentes_count(self, request):
+        total = SolicitacaoAcesso.objects.filter(status=StatusSolicitacao.PENDENTE).count()
+        return Response({"pendentes": total})
+
+    @action(detail=True, methods=["post"])
+    def aprovar(self, request, pk=None):
+        solicitacao = self.get_object()
+        try:
+            usuario = SolicitacaoAcessoService.aprovar(solicitacao, request.user)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": solicitacao.status, "usuario_id": usuario.id})
+
+    @action(detail=True, methods=["post"])
+    def rejeitar(self, request, pk=None):
+        solicitacao = self.get_object()
+        try:
+            SolicitacaoAcessoService.rejeitar(solicitacao, request.user)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": solicitacao.status})
 
 
 class DashboardStatsView(APIView):

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { LogOut } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface PageHeaderProps {
   title: string;
@@ -16,6 +17,7 @@ export function PageHeader({ title, description, onLogout, actions }: PageHeader
         {description && <p className="text-sm sm:text-base text-muted-foreground mt-1">{description}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+        <NotificationBell />
         {actions}
         {onLogout && (
           <button

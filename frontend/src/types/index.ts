@@ -100,6 +100,25 @@ export interface Inscricao {
   criado_em: string;
 }
 
+export interface CoroinhaVerificada {
+  id: number;
+  nome: string;
+  idade: number;
+}
+
+export interface SolicitacaoAcesso {
+  id: number;
+  coroinha: number;
+  coroinha_nome: string;
+  coroinha_data_nascimento: string;
+  nome_responsavel: string;
+  cpf_mascarado: string | null;
+  whatsapp: string;
+  status: string;
+  criado_em: string;
+  processado_em: string | null;
+}
+
 export interface Formacao {
   id: number;
   titulo: string;

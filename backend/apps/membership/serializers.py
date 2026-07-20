@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
-from apps.membership.models import Coroinha, Inscricao, StatusCoroinha, Turma
+from apps.identity.utils.cpf import mascarar_cpf
+from apps.membership.models import (
+    Coroinha,
+    Inscricao,
+    SolicitacaoAcesso,
+    StatusCoroinha,
+    Turma,
+)
 from apps.membership.utils.media import build_foto_url
 
 
@@ -91,6 +98,60 @@ class CoroinhaResumoPortalSerializer(serializers.Serializer):
     proxima_escala = serializers.JSONField(allow_null=True)
     escalas = serializers.ListField()
     formacoes = serializers.ListField()
+
+
+class VerificarAcessoSerializer(serializers.Serializer):
+    nome = serializers.CharField(max_length=200)
+    data_nascimento = serializers.DateField()
+
+
+class CoroinhaVerificadaSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nome = serializers.CharField()
+    idade = serializers.IntegerField()
+
+
+class SolicitarAcessoSerializer(serializers.Serializer):
+    coroinha_id = serializers.IntegerField()
+    nome = serializers.CharField(max_length=200)  # nome do coroinha (reconfirmação)
+    data_nascimento = serializers.DateField()
+    nome_responsavel = serializers.CharField(max_length=200)
+    cpf = serializers.CharField(max_length=14)
+    whatsapp = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    senha = serializers.CharField(min_length=6, write_only=True)
+    confirmar_senha = serializers.CharField(min_length=6, write_only=True)
+
+    def validate(self, attrs):
+        if attrs["senha"] != attrs["confirmar_senha"]:
+            raise serializers.ValidationError({"confirmar_senha": "As senhas não coincidem."})
+        return attrs
+
+
+class SolicitacaoAcessoSerializer(serializers.ModelSerializer):
+    coroinha_nome = serializers.CharField(source="coroinha.nome", read_only=True)
+    coroinha_data_nascimento = serializers.DateField(
+        source="coroinha.data_nascimento", read_only=True
+    )
+    cpf_mascarado = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SolicitacaoAcesso
+        fields = (
+            "id",
+            "coroinha",
+            "coroinha_nome",
+            "coroinha_data_nascimento",
+            "nome_responsavel",
+            "cpf_mascarado",
+            "whatsapp",
+            "status",
+            "criado_em",
+            "processado_em",
+        )
+        read_only_fields = fields
+
+    def get_cpf_mascarado(self, obj):
+        return mascarar_cpf(obj.cpf)
 
 
 class AniversarianteSerializer(serializers.ModelSerializer):

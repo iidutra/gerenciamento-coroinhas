@@ -97,6 +97,9 @@ class AuditAcao(models.TextChoices):
     INSCRICAO_CRIADA = "inscricao_criada", "Inscrição pública criada"
     INSCRICAO_APROVADA = "inscricao_aprovada", "Inscrição aprovada"
     INSCRICAO_REJEITADA = "inscricao_rejeitada", "Inscrição rejeitada"
+    SOLICITACAO_ACESSO_CRIADA = "solic_acesso_criada", "Solicitação de acesso criada"
+    SOLICITACAO_ACESSO_APROVADA = "solic_acesso_aprovada", "Solicitação de acesso aprovada"
+    SOLICITACAO_ACESSO_REJEITADA = "solic_acesso_rejeitada", "Solicitação de acesso rejeitada"
     MENSAGEM_ENVIADA = "mensagem_enviada", "Mensagem enviada"
 
 

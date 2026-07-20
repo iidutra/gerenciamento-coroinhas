@@ -19,6 +19,12 @@ class StatusInscricao(models.TextChoices):
     REJEITADA = "Rejeitada", "Rejeitada"
 
 
+class StatusSolicitacao(models.TextChoices):
+    PENDENTE = "Pendente", "Pendente"
+    APROVADA = "Aprovada", "Aprovada"
+    REJEITADA = "Rejeitada", "Rejeitada"
+
+
 class Responsavel(models.Model):
     nome = models.CharField(max_length=200)
     cpf = models.CharField(max_length=11, unique=True, db_index=True)
@@ -109,6 +115,46 @@ class Inscricao(models.Model):
     def __str__(self):
         nome = self.dados.get("coroinha", {}).get("nome", "Sem nome")
         return f"Inscrição {nome} ({self.status})"
+
+
+class SolicitacaoAcesso(models.Model):
+    """Pedido de acesso ao Portal dos Pais feito pelo próprio responsável.
+
+    O responsável identifica o coroinha por nome + data de nascimento, informa o
+    próprio CPF e cria uma senha. O coordenador aprova; só então a conta é criada
+    (ou o coroinha é vinculado a uma conta de pai já existente).
+    """
+
+    coroinha = models.ForeignKey(
+        Coroinha, on_delete=models.CASCADE, related_name="solicitacoes_acesso"
+    )
+    nome_responsavel = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=11, db_index=True)
+    whatsapp = models.CharField(max_length=20, blank=True)
+    senha_hash = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        choices=StatusSolicitacao.choices,
+        default=StatusSolicitacao.PENDENTE,
+        db_index=True,
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    processado_em = models.DateTimeField(null=True, blank=True)
+    processado_por = models.ForeignKey(
+        "identity.Usuario",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="solicitacoes_acesso_processadas",
+    )
+
+    class Meta:
+        verbose_name = "Solicitação de acesso"
+        verbose_name_plural = "Solicitações de acesso"
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"Acesso {self.nome_responsavel} → {self.coroinha.nome} ({self.status})"
 
 
 class ConfiguracaoParoquial(models.Model):

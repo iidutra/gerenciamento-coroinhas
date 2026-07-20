@@ -13,6 +13,7 @@ import {
   Newspaper,
   Users,
   UserCog,
+  UserPlus,
 } from "lucide-react";
 
 export const navIcons = {
@@ -26,6 +27,7 @@ export const navIcons = {
   presenca: CheckSquare,
   formacao: GraduationCap,
   portal: Home,
+  acesso: UserPlus,
   comunicacao: MessageSquare,
   relatorios: BarChart3,
   logout: LogOut,

@@ -183,6 +183,7 @@ export const dashboardNav: NavGroup[] = [
     title: "Famílias",
     items: [
       { href: "/dashboard/portal", label: "Portal dos Pais", icon: "portal" },
+      { href: "/dashboard/acesso-pais", label: "Acesso dos pais", icon: "acesso" },
       { href: "/dashboard/comunicacao", label: "Comunicação", icon: "comunicacao" },
       { href: "/dashboard/relatorios", label: "Relatórios", icon: "relatorios" },
     ],

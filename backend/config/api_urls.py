@@ -9,6 +9,8 @@ from apps.identity.staff_views import UsuarioStaffViewSet
 from apps.communication.views import ConfigComunicacaoView, EnviarMensagemView, MensagemViewSet
 from apps.content.views import DocumentoViewSet, NoticiaViewSet
 from apps.membership.views import (
+    AcessoSolicitarView,
+    AcessoVerificarView,
     ConfigInscricoesView,
     CoroinhaViewSet,
     DashboardStatsView,
@@ -18,6 +20,7 @@ from apps.membership.views import (
     PortalFilhosView,
     ProximasEscalasView,
     RelatorioGeralView,
+    SolicitacaoAcessoViewSet,
 )
 from apps.scheduling.views import EscalaViewSet, MissaViewSet, RelatorioEscalaMesView
 from apps.training.views import FormacaoViewSet
@@ -32,6 +35,7 @@ router.register(r"formacoes", FormacaoViewSet, basename="formacao")
 router.register(r"mensagens", MensagemViewSet, basename="mensagem")
 router.register(r"noticias", NoticiaViewSet, basename="noticia")
 router.register(r"documentos", DocumentoViewSet, basename="documento")
+router.register(r"solicitacoes-acesso", SolicitacaoAcessoViewSet, basename="solicitacao-acesso")
 
 urlpatterns = [
     path("health", HealthView.as_view(), name="health"),
@@ -40,6 +44,8 @@ urlpatterns = [
     path("config/comunicacao", ConfigComunicacaoView.as_view(), name="config-comunicacao"),
     path("auth/", include("apps.identity.urls")),
     path("inscricoes/publica", InscricaoPublicaView.as_view(), name="inscricao-publica"),
+    path("portal/acesso/verificar", AcessoVerificarView.as_view(), name="acesso-verificar"),
+    path("portal/acesso/solicitar", AcessoSolicitarView.as_view(), name="acesso-solicitar"),
     path("portal/filhos", PortalFilhosView.as_view(), name="portal-filhos"),
     path("portal/coroinhas/<int:coroinha_id>/resumo", PortalCoroinhaView.as_view(), name="portal-resumo"),
     path("dashboard/stats", DashboardStatsView.as_view(), name="dashboard-stats"),
