@@ -571,7 +571,7 @@ export default function CoroinhasPage() {
                       ))}
                   </select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Gêmeos ficam sempre na mesma escala (grupo ou missa).
+                    Irmãos com mesmo sobrenome e mesmos pais ficam automaticamente na mesma escala.
                   </p>
                 </div>
 

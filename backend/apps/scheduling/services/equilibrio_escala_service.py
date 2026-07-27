@@ -43,22 +43,12 @@ class ControleEquilibrioMensal:
             indisponivel |= self.grupo_fim_semana.get(sabado, set())
         return GemeosService.expandir_ids(indisponivel)
 
-    def _tentar_par_gemeos(self, pool: list[Coroinha], quantidade: int) -> list[Coroinha] | None:
-        if quantidade < 2 or len(pool) < 2:
-            return None
-        vistos: set[int] = set()
-        for coroinha in pool:
-            if coroinha.id in vistos:
-                continue
-            par = GemeosService.par_efetivo(coroinha, self.candidatos)
-            if not par or par not in pool:
-                continue
-            vistos.add(coroinha.id)
-            vistos.add(par.id)
-            if quantidade == 2 and coroinha.antigo != par.antigo:
-                return [coroinha, par] if coroinha.antigo else [par, coroinha]
-            return [coroinha, par]
-        return None
+    def _tentar_unidade_familiar(self, pool: list[Coroinha], quantidade: int) -> list[Coroinha] | None:
+        return GemeosService.selecionar_da_familia(
+            pool,
+            quantidade,
+            candidatos=self.candidatos,
+        )
 
     def _pontuacao(self, coroinha: Coroinha) -> tuple:
         return (self.mes.get(coroinha.id, 0), self.historico.get(coroinha.id, 0), coroinha.nome)
@@ -82,7 +72,7 @@ class ControleEquilibrioMensal:
         """Sexta: rotativo com 1 antigo + 1 novo (quando quantidade=2)."""
         if quantidade == 2:
             pool_completo = self._pool_elegivel(data)
-            par_gemeos = self._tentar_par_gemeos(pool_completo, quantidade)
+            par_gemeos = self._tentar_unidade_familiar(pool_completo, quantidade)
             if par_gemeos:
                 return par_gemeos
 
@@ -113,7 +103,7 @@ class ControleEquilibrioMensal:
     def escolher_comunidade(self, data: date, quantidade: int) -> list[Coroinha]:
         pool = self._pool_elegivel(data)
         if quantidade >= 2:
-            par_gemeos = self._tentar_par_gemeos(pool, min(2, quantidade))
+            par_gemeos = self._tentar_unidade_familiar(pool, min(2, quantidade))
             if par_gemeos and quantidade == 2:
                 return par_gemeos
         selecionados = pool[:quantidade]

@@ -133,7 +133,7 @@ class GrupoMontagemService:
             def pontuacao_grupo(g: int) -> tuple:
                 membros = len(grupos[g])
                 vagas = tamanho_grupo - membros
-                limite = tamanho_grupo + (1 if tamanho_unidade == 2 else 0)
+                limite = tamanho_grupo + max(0, tamanho_unidade - 1)
                 if membros + tamanho_unidade > limite:
                     return (999, 0, 0, 0)
                 bairro_bonus = 0 if bairro in bairros_por_grupo[g] or bairro == "outros" else 1

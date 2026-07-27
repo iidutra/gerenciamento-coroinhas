@@ -67,7 +67,7 @@ class TestGemeosService:
 
     def test_validar_conjunto_rejeita_split(self, gemeos):
         a, _ = gemeos
-        with pytest.raises(ValueError, match="Gêmeos"):
+        with pytest.raises(ValueError, match="Gêmeos e irmãos"):
             GemeosService.validar_conjunto([a.id])
 
     def test_validar_conjunto_aceita_par(self, gemeos):
@@ -135,5 +135,64 @@ class TestDefinirMembrosGemeos:
             missa=missa,
             modo=ModoEscala.SELECAO_MANUAL,
         )
-        with pytest.raises(ValueError, match="Gêmeos"):
+        with pytest.raises(ValueError, match="Gêmeos e irmãos"):
             EscalaService.definir_membros(escala, [a.id])
+
+
+class TestIrmaosService:
+    @pytest.fixture
+    def irmaos(self, db):
+        pai = "João Silva"
+        mae = "Maria Silva"
+        a = Coroinha.objects.create(
+            nome="Pedro Silva Santos",
+            data_nascimento=date(2012, 1, 10),
+            nome_pai=pai,
+            nome_mae=mae,
+            status=StatusCoroinha.ATIVO,
+        )
+        b = Coroinha.objects.create(
+            nome="Ana Silva Santos",
+            data_nascimento=date(2014, 6, 20),
+            nome_pai=pai,
+            nome_mae=mae,
+            status=StatusCoroinha.ATIVO,
+        )
+        c = Coroinha.objects.create(
+            nome="Lucas Silva Santos",
+            data_nascimento=date(2016, 3, 5),
+            nome_pai=pai,
+            nome_mae=mae,
+            status=StatusCoroinha.ATIVO,
+        )
+        return a, b, c
+
+    def test_detecta_irmaos_por_sobrenome_e_pais(self, irmaos):
+        a, b, c = irmaos
+        familia = GemeosService.familia_ids(a.id, list(irmaos))
+        assert familia == {a.id, b.id, c.id}
+
+    def test_nao_agrupa_sobrenome_diferente(self, db):
+        pai = "João Silva"
+        mae = "Maria Silva"
+        a = Coroinha.objects.create(
+            nome="Pedro Silva Santos",
+            data_nascimento=date(2012, 1, 10),
+            nome_pai=pai,
+            nome_mae=mae,
+            status=StatusCoroinha.ATIVO,
+        )
+        b = Coroinha.objects.create(
+            nome="Ana Oliveira Santos",
+            data_nascimento=date(2014, 6, 20),
+            nome_pai=pai,
+            nome_mae=mae,
+            status=StatusCoroinha.ATIVO,
+        )
+        familia = GemeosService.familia_ids(a.id, [a, b])
+        assert familia == {a.id}
+
+    def test_unidades_agrupa_tres_irmaos(self, irmaos):
+        unidades = GemeosService.unidades(list(irmaos))
+        assert len(unidades) == 1
+        assert len(unidades[0]) == 3
