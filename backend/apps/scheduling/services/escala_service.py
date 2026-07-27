@@ -5,6 +5,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from apps.membership.models import Coroinha, StatusCoroinha
+from apps.membership.services.gemeos_service import GemeosService
 from apps.scheduling.models import Escala, EscalaItem, FuncaoEscala, ModoEscala
 
 
@@ -38,7 +39,8 @@ class SorteioEquilibradoStrategy(EscalaStrategy):
         )
         scores = {row["coroinha_id"]: row["total"] for row in contagem}
         ordenados = sorted(candidatos, key=lambda c: scores.get(c.id, 0))
-        return ordenados[:quantidade]
+        selecionados = ordenados[:quantidade]
+        return GemeosService.completar_selecao(selecionados, candidatos)
 
 
 class SelecaoManualStrategy(EscalaStrategy):
@@ -47,7 +49,9 @@ class SelecaoManualStrategy(EscalaStrategy):
 
     def selecionar(self, candidatos: list[Coroinha], quantidade: int, escala: Escala) -> list[Coroinha]:
         candidatos_map = {c.id: c for c in candidatos}
-        return [candidatos_map[cid] for cid in self.coroinha_ids if cid in candidatos_map][:quantidade]
+        selecionados = [candidatos_map[cid] for cid in self.coroinha_ids if cid in candidatos_map][:quantidade]
+        GemeosService.validar_conjunto([c.id for c in selecionados])
+        return GemeosService.completar_selecao(selecionados, candidatos)
 
 
 class EscalaService:
@@ -125,6 +129,8 @@ class EscalaService:
         desconhecidos = [cid for cid in novos if cid not in validos]
         if desconhecidos:
             raise ValueError("Coroinha(s) inexistente(s) na seleção.")
+
+        GemeosService.validar_conjunto(novos)
 
         atuais = {item.coroinha_id: item for item in escala.itens.all()}
 

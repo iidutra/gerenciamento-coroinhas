@@ -7,6 +7,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from apps.membership.models import Coroinha, StatusCoroinha
+from apps.membership.services.gemeos_service import GemeosService
 from apps.scheduling.models import EscalaItem
 
 BAIRROS_PV = (
@@ -66,9 +67,9 @@ class GrupoMontagemService:
     @classmethod
     def candidatos(cls) -> list[Coroinha]:
         return list(
-            Coroinha.objects.filter(status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO]).order_by(
-                "nome"
-            )
+            Coroinha.objects.filter(status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO])
+            .select_related("gemeo_de")
+            .order_by("nome")
         )
 
     @classmethod
@@ -106,28 +107,54 @@ class GrupoMontagemService:
         faixas_por_grupo: dict[int, set[str]] = {i: set() for i in range(1, cls.NUM_GRUPOS + 1)}
         antigos_por_grupo: dict[int, int] = defaultdict(int)
 
-        pool = list(ordenados[:necessarios])
+        unidades_todas = GemeosService.unidades(ordenados)
+        unidades_todas.sort(key=lambda u: (min(scores.get(c.id, 0) for c in u), u[0].nome))
 
-        for coroinha in pool:
-            bairro = extrair_bairro(coroinha.endereco)
-            faixa = faixa_etaria(coroinha.idade)
+        pool_unidades: list[list[Coroinha]] = []
+        slots = 0
+        for unidade in unidades_todas:
+            if slots >= necessarios:
+                break
+            pool_unidades.append(unidade)
+            slots += len(unidade)
+
+        if slots < necessarios:
+            raise ValueError(
+                f"São necessários pelo menos {necessarios} coroinhas ativos "
+                f"({cls.NUM_GRUPOS} grupos × {tamanho_grupo}). Há {len(candidatos)}."
+            )
+
+        for unidade in pool_unidades:
+            referencia = unidade[0]
+            bairro = extrair_bairro(referencia.endereco)
+            faixa = faixa_etaria(referencia.idade)
+            tamanho_unidade = len(unidade)
 
             def pontuacao_grupo(g: int) -> tuple:
                 membros = len(grupos[g])
-                if membros >= tamanho_grupo:
+                vagas = tamanho_grupo - membros
+                limite = tamanho_grupo + (1 if tamanho_unidade == 2 else 0)
+                if membros + tamanho_unidade > limite:
                     return (999, 0, 0, 0)
                 bairro_bonus = 0 if bairro in bairros_por_grupo[g] or bairro == "outros" else 1
                 faixa_bonus = 0 if faixa in faixas_por_grupo[g] else 1
-                antigo_bonus = 0 if coroinha.antigo and antigos_por_grupo[g] == 0 else 1
-                if not coroinha.antigo and antigos_por_grupo[g] >= max(1, membros // 2):
+                antigos_na_unidade = sum(1 for c in unidade if c.antigo)
+                antigo_bonus = 0
+                if antigos_na_unidade and antigos_por_grupo[g] == 0:
+                    antigo_bonus = 0
+                elif antigos_na_unidade:
+                    antigo_bonus = 1
+                novos_na_unidade = tamanho_unidade - antigos_na_unidade
+                if novos_na_unidade and antigos_por_grupo[g] >= max(1, membros // 2):
                     antigo_bonus = -1
                 return (membros, bairro_bonus, faixa_bonus, antigo_bonus)
 
             escolhido = min(range(1, cls.NUM_GRUPOS + 1), key=pontuacao_grupo)
-            grupos[escolhido].append(coroinha)
+            for coroinha in unidade:
+                grupos[escolhido].append(coroinha)
+                if coroinha.antigo:
+                    antigos_por_grupo[escolhido] += 1
             bairros_por_grupo[escolhido].add(bairro)
             faixas_por_grupo[escolhido].add(faixa)
-            if coroinha.antigo:
-                antigos_por_grupo[escolhido] += 1
 
         return grupos

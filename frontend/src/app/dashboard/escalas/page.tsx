@@ -86,6 +86,7 @@ export default function EscalasPage() {
   const [anoVisualizar, setAnoVisualizar] = useState(new Date().getFullYear());
   const [escalaMensalView, setEscalaMensalView] = useState<EscalaMensal | null>(null);
   const [exportandoPdf, setExportandoPdf] = useState(false);
+  const [excluindoMes, setExcluindoMes] = useState(false);
 
   function carregarEscalaMensal(ano: number, mes: number) {
     apiFetch<EscalaMensal>(`/escalas/mensal/?ano=${ano}&mes=${mes}`)
@@ -323,6 +324,30 @@ export default function EscalasPage() {
       setErro(e instanceof Error ? e.message : "Erro ao exportar PDF");
     } finally {
       setExportandoPdf(false);
+    }
+  }
+
+  async function excluirEscalaMensal() {
+    if (
+      !confirm(
+        `Excluir toda a escala de ${nomeMes(mesVisualizar)}/${anoVisualizar}? Você poderá gerar uma nova em seguida.`,
+      )
+    ) {
+      return;
+    }
+    setErro("");
+    setExcluindoMes(true);
+    try {
+      await apiFetch(`/escalas/mensal/?ano=${anoVisualizar}&mes=${mesVisualizar}`, {
+        method: "DELETE",
+      });
+      setEscalaMensalView(null);
+      setUltimaEscalaMensal(null);
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao excluir escala do mês");
+    } finally {
+      setExcluindoMes(false);
     }
   }
 
@@ -675,6 +700,17 @@ export default function EscalasPage() {
               className="input-field text-sm py-1.5 w-24"
               aria-label="Ano"
             />
+            {escalaMensalExibir && podeEditar && (
+              <button
+                type="button"
+                onClick={excluirEscalaMensal}
+                disabled={excluindoMes}
+                className="btn-outline text-sm flex items-center gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
+              >
+                <Trash2 className="size-4" aria-hidden />
+                {excluindoMes ? "Excluindo…" : "Excluir mês"}
+              </button>
+            )}
             {escalasDoMes.length > 0 && podeEditar && (
               <button
                 type="button"

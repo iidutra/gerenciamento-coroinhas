@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 from apps.membership.models import Coroinha
+from apps.membership.services.gemeos_service import GemeosService
 from apps.scheduling.services.grupo_montagem_service import GrupoMontagemService
 
 
@@ -23,7 +24,7 @@ class ControleEquilibrioMensal:
         return (iso[0], iso[1])
 
     def registrar_grupo_fim_semana(self, sabado: date, coroinha_ids: list[int]) -> None:
-        self.grupo_fim_semana[sabado] = set(coroinha_ids)
+        self.grupo_fim_semana[sabado] = GemeosService.expandir_ids(set(coroinha_ids))
 
     def registrar_servicos(self, data: date, coroinha_ids: list[int]) -> None:
         key = self.chave_semana(data)
@@ -40,7 +41,24 @@ class ControleEquilibrioMensal:
         if incluir_grupo_fim_semana and data.weekday() == 6:
             sabado = data - timedelta(days=1)
             indisponivel |= self.grupo_fim_semana.get(sabado, set())
-        return indisponivel
+        return GemeosService.expandir_ids(indisponivel)
+
+    def _tentar_par_gemeos(self, pool: list[Coroinha], quantidade: int) -> list[Coroinha] | None:
+        if quantidade < 2 or len(pool) < 2:
+            return None
+        vistos: set[int] = set()
+        for coroinha in pool:
+            if coroinha.id in vistos:
+                continue
+            par = GemeosService.par_efetivo(coroinha, self.candidatos)
+            if not par or par not in pool:
+                continue
+            vistos.add(coroinha.id)
+            vistos.add(par.id)
+            if quantidade == 2 and coroinha.antigo != par.antigo:
+                return [coroinha, par] if coroinha.antigo else [par, coroinha]
+            return [coroinha, par]
+        return None
 
     def _pontuacao(self, coroinha: Coroinha) -> tuple:
         return (self.mes.get(coroinha.id, 0), self.historico.get(coroinha.id, 0), coroinha.nome)
@@ -63,6 +81,11 @@ class ControleEquilibrioMensal:
     def escolher_sexta(self, data: date, quantidade: int = 2) -> list[Coroinha]:
         """Sexta: rotativo com 1 antigo + 1 novo (quando quantidade=2)."""
         if quantidade == 2:
+            pool_completo = self._pool_elegivel(data)
+            par_gemeos = self._tentar_par_gemeos(pool_completo, quantidade)
+            if par_gemeos:
+                return par_gemeos
+
             antigos = self._pool_elegivel(data, exigir_antigo=True)
             novos = self._pool_elegivel(data, exigir_antigo=False)
             selecionados: list[Coroinha] = []
@@ -72,9 +95,10 @@ class ControleEquilibrioMensal:
                 novo = novos[0]
                 if novo.id not in {c.id for c in selecionados}:
                     selecionados.append(novo)
+            selecionados = GemeosService.completar_selecao(selecionados, pool_completo)
             if len(selecionados) == 2:
-                return selecionados
-            pool = self._pool_elegivel(data)
+                return selecionados[:2]
+            pool = pool_completo
             for c in pool:
                 if c.id not in {x.id for x in selecionados}:
                     selecionados.append(c)
@@ -83,8 +107,14 @@ class ControleEquilibrioMensal:
             return selecionados[:2]
 
         pool = self._pool_elegivel(data)
-        return pool[:quantidade]
+        selecionados = pool[:quantidade]
+        return GemeosService.completar_selecao(selecionados, pool)
 
     def escolher_comunidade(self, data: date, quantidade: int) -> list[Coroinha]:
         pool = self._pool_elegivel(data)
-        return pool[:quantidade]
+        if quantidade >= 2:
+            par_gemeos = self._tentar_par_gemeos(pool, min(2, quantidade))
+            if par_gemeos and quantidade == 2:
+                return par_gemeos
+        selecionados = pool[:quantidade]
+        return GemeosService.completar_selecao(selecionados, pool)

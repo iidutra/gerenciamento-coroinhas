@@ -42,6 +42,8 @@ export interface Coroinha {
   etapa_catequese?: EtapaCatequese;
   faz_iam?: boolean;
   antigo?: boolean;
+  gemeo_de?: number | null;
+  gemeo_nome?: string | null;
   foto_url?: string | null;
 }
 

@@ -68,6 +68,14 @@ class Coroinha(models.Model):
     )
     faz_iam = models.BooleanField(default=False)
     antigo = models.BooleanField(default=False)
+    gemeo_de = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="gemeos_vinculados",
+        verbose_name="Gêmeo de",
+    )
     batizado = models.BooleanField(default=False)
     primeira_eucaristia = models.BooleanField(default=False)
     crisma = models.BooleanField(default=False)

@@ -206,6 +206,17 @@ class TestGerarMesAPI:
         assert res.status_code == status.HTTP_200_OK
         assert len(res.data["grupos"]) == 4
 
+    def test_excluir_mensal(self, client_coordenador, missas_mensais, coroinhas_grupo):
+        client_coordenador.post(
+            "/api/v1/escalas/gerar-mes/",
+            {"ano": 2026, "mes": 8, "tamanho_grupo": 9},
+            format="json",
+        )
+        res = client_coordenador.delete("/api/v1/escalas/mensal/?ano=2026&mes=8")
+        assert res.status_code == status.HTTP_204_NO_CONTENT
+        res404 = client_coordenador.get("/api/v1/escalas/mensal/?ano=2026&mes=8")
+        assert res404.status_code == status.HTTP_404_NOT_FOUND
+
     def test_escala_inclui_horario(self, client_coordenador, missas_mensais, coroinhas_grupo):
         client_coordenador.post(
             "/api/v1/escalas/gerar-mes/",

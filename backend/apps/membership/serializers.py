@@ -8,6 +8,12 @@ class CoroinhaSerializer(serializers.ModelSerializer):
     idade = serializers.IntegerField(read_only=True)
     foto = serializers.ImageField(write_only=True, required=False, allow_null=True)
     foto_url = serializers.SerializerMethodField()
+    gemeo_de = serializers.PrimaryKeyRelatedField(
+        queryset=Coroinha.objects.all(),
+        allow_null=True,
+        required=False,
+    )
+    gemeo_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = Coroinha
@@ -31,6 +37,8 @@ class CoroinhaSerializer(serializers.ModelSerializer):
             "etapa_catequese",
             "faz_iam",
             "antigo",
+            "gemeo_de",
+            "gemeo_nome",
             "batizado",
             "primeira_eucaristia",
             "crisma",
@@ -41,6 +49,18 @@ class CoroinhaSerializer(serializers.ModelSerializer):
 
     def get_foto_url(self, obj):
         return build_foto_url(obj.foto, self.context.get("request"))
+
+    def get_gemeo_nome(self, obj):
+        from apps.membership.services.gemeos_service import GemeosService
+
+        par = GemeosService.par_gemeo(obj)
+        return par.nome if par else None
+
+    def validate(self, attrs):
+        gemeo = attrs.get("gemeo_de")
+        if gemeo and self.instance and gemeo.pk == self.instance.pk:
+            raise serializers.ValidationError({"gemeo_de": "Um coroinha não pode ser gêmeo de si mesmo."})
+        return attrs
 
 
 class InscricaoPublicaSerializer(serializers.Serializer):

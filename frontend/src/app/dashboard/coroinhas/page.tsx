@@ -36,6 +36,7 @@ type FormState = {
   etapaCatequese: EtapaCatequese;
   fazIam: boolean;
   antigo: boolean;
+  gemeoDeId: string;
   status: string;
 };
 
@@ -51,6 +52,7 @@ const FORM_VAZIO: FormState = {
   etapaCatequese: "",
   fazIam: false,
   antigo: false,
+  gemeoDeId: "",
   status: "EmFormacao",
 };
 
@@ -142,6 +144,7 @@ export default function CoroinhasPage() {
       etapaCatequese: (c.etapa_catequese as EtapaCatequese) ?? "",
       fazIam: Boolean(c.faz_iam),
       antigo: Boolean(c.antigo),
+      gemeoDeId: c.gemeo_de ? String(c.gemeo_de) : "",
       status: c.status || "EmFormacao",
     });
     limparFoto();
@@ -185,6 +188,7 @@ export default function CoroinhasPage() {
       etapa_catequese: form.fazCatequese ? form.etapaCatequese : "",
       faz_iam: form.fazIam,
       antigo: form.antigo,
+      gemeo_de: form.gemeoDeId ? Number(form.gemeoDeId) : null,
     };
     if (editId) {
       dados.status = form.status;
@@ -545,6 +549,31 @@ export default function CoroinhasPage() {
                     </label>
                   </div>
                 </fieldset>
+
+                <div>
+                  <label htmlFor="cad-gemeo" className="block text-sm font-medium mb-1.5">
+                    Gêmeo (opcional)
+                  </label>
+                  <select
+                    id="cad-gemeo"
+                    value={form.gemeoDeId}
+                    onChange={(e) => setCampo("gemeoDeId", e.target.value)}
+                    className="input-field w-full"
+                  >
+                    <option value="">Nenhum</option>
+                    {coroinhas
+                      .filter((c) => c.id !== editId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nome}
+                          {c.gemeo_nome ? ` (gêmeo de ${c.gemeo_nome})` : ""}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Gêmeos ficam sempre na mesma escala (grupo ou missa).
+                  </p>
+                </div>
 
                 {/* status (apenas na edição) */}
                 {editId && (
