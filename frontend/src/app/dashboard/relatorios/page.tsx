@@ -59,7 +59,7 @@ export default function RelatoriosPage() {
               Exportar escala do mês
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              PDF com data, missa, horário, função litúrgica e foto de cada coroinha escalado.
+              PDF no layout paroquial: grupos do mês, seções por horário de missa e listas de coroinhas.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end flex-wrap">
               <label className="text-sm">

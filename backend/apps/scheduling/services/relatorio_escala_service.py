@@ -2,167 +2,188 @@ import csv
 import io
 
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from apps.membership.utils.avatar_placeholder import avatar_placeholder_png
-from apps.scheduling.models import Escala, FUNCOES_ESCALA_ORDEM, FuncaoEscala
+from apps.scheduling.models import FuncaoEscala, TipoSlotMissa
+from apps.scheduling.services.relatorio_escala_pdf_layout import (
+    MESES_PT,
+    SECOES_PDF,
+    agrupar_escalas_por_slot,
+    carregar_dados_mes,
+    linhas_nomes_escala,
+    texto_cabecalho_entrada,
+)
 
-MESES_PT = [
-    "",
-    "Janeiro",
-    "Fevereiro",
-    "Março",
-    "Abril",
-    "Maio",
-    "Junho",
-    "Julho",
-    "Agosto",
-    "Setembro",
-    "Outubro",
-    "Novembro",
-    "Dezembro",
-]
-
-FOTO_MM = 12
-FOTO_PT = FOTO_MM * mm
+BURGUNDY = colors.HexColor("#5C1C24")
+CREME = colors.HexColor("#FAF8F5")
 
 
 class RelatorioEscalaService:
     @staticmethod
     def _escalas_mes(ano: int, mes: int):
-        return (
-            Escala.objects.filter(data__year=ano, data__month=mes)
-            .select_related("missa")
-            .prefetch_related("itens__coroinha")
-            .order_by("data", "missa__horario")
-        )
-
-    @staticmethod
-    def _itens_ordenados(itens):
-        por_funcao = {item.funcao: item for item in itens if item.funcao}
-        ordenados = []
-        for funcao in FUNCOES_ESCALA_ORDEM:
-            item = por_funcao.get(funcao.value)
-            if item:
-                ordenados.append(item)
-        for item in itens:
-            if not item.funcao:
-                ordenados.append(item)
-        return ordenados
-
-    @staticmethod
-    def _foto_flowable(coroinha) -> RLImage:
-        if coroinha.foto and coroinha.foto.name:
-            try:
-                with coroinha.foto.open("rb") as arquivo:
-                    buf = io.BytesIO(arquivo.read())
-                return RLImage(buf, width=FOTO_PT, height=FOTO_PT, kind="proportional")
-            except Exception:
-                pass
-
-        buf = avatar_placeholder_png(128)
-        return RLImage(buf, width=FOTO_PT, height=FOTO_PT)
+        escalas, _ = carregar_dados_mes(ano, mes)
+        return escalas
 
     @staticmethod
     def exportar_mes_pdf(ano: int, mes: int) -> bytes:
-        escalas = list(RelatorioEscalaService._escalas_mes(ano, mes))
+        escalas, escala_mensal = carregar_dados_mes(ano, mes)
+        por_slot = agrupar_escalas_por_slot(escalas)
+
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
             leftMargin=14 * mm,
             rightMargin=14 * mm,
-            topMargin=14 * mm,
-            bottomMargin=14 * mm,
-            title=f"Escala {MESES_PT[mes]}/{ano}",
+            topMargin=12 * mm,
+            bottomMargin=12 * mm,
+            title=f"Escala Coroinhas {MESES_PT[mes]}/{ano}",
         )
 
         styles = getSampleStyleSheet()
-        titulo_style = ParagraphStyle(
-            "TituloEscala",
+        titulo = ParagraphStyle(
+            "TituloParoquial",
             parent=styles["Heading1"],
-            fontSize=16,
-            textColor=colors.HexColor("#5C1C24"),
-            spaceAfter=8,
+            fontSize=15,
+            leading=18,
+            alignment=TA_CENTER,
+            textColor=BURGUNDY,
+            spaceAfter=4,
+            fontName="Helvetica-Bold",
         )
-        subtitulo_style = ParagraphStyle(
-            "SubEscala",
+        subtitulo = ParagraphStyle(
+            "SubParoquial",
             parent=styles["Normal"],
             fontSize=10,
-            textColor=colors.HexColor("#666666"),
-            spaceAfter=12,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#444444"),
+            spaceAfter=10,
         )
-        missa_style = ParagraphStyle(
-            "MissaEscala",
+        secao = ParagraphStyle(
+            "SecaoHorario",
             parent=styles["Heading2"],
-            fontSize=12,
-            textColor=colors.HexColor("#5C1C24"),
+            fontSize=11,
+            textColor=BURGUNDY,
             spaceBefore=10,
+            spaceAfter=2,
+            fontName="Helvetica-Bold",
+        )
+        secao_sub = ParagraphStyle(
+            "SecaoSub",
+            parent=styles["Normal"],
+            fontSize=8,
+            textColor=colors.HexColor("#666666"),
             spaceAfter=6,
         )
-        cell_style = ParagraphStyle(
-            "Celula",
+        entrada_titulo = ParagraphStyle(
+            "EntradaTitulo",
+            parent=styles["Normal"],
+            fontSize=9,
+            fontName="Helvetica-Bold",
+            textColor=BURGUNDY,
+            spaceBefore=4,
+            spaceAfter=1,
+        )
+        lista = ParagraphStyle(
+            "ListaNomes",
+            parent=styles["Normal"],
+            fontSize=9,
+            leading=11,
+            leftIndent=8,
+            spaceAfter=2,
+        )
+        normal = ParagraphStyle(
+            "NormalCompacto",
             parent=styles["Normal"],
             fontSize=9,
             leading=11,
         )
 
+        mes_nome = MESES_PT[mes].upper()
         elementos = [
-            Paragraph(f"Escala do mês — {MESES_PT[mes]} de {ano}", titulo_style),
-            Paragraph("Pastoral dos Coroinhas", subtitulo_style),
+            Paragraph("ESCALA DOS COROINHAS", titulo),
+            Paragraph(f"MÊS DE {mes_nome} {ano}", titulo),
+            Paragraph("Santuário de Fátima — Pastoral dos Coroinhas", subtitulo),
         ]
 
-        if not escalas:
-            elementos.append(Paragraph("Nenhuma escala montada neste período.", styles["Normal"]))
-        else:
-            for escala in escalas:
-                cabecalho = (
-                    f"{escala.data.strftime('%d/%m/%Y')} · {escala.missa.nome} "
-                    f"({escala.missa.horario.strftime('%H:%M')})"
-                )
-                elementos.append(Paragraph(cabecalho, missa_style))
+        if escala_mensal and escala_mensal.grupos.exists():
+            elementos.append(Paragraph("GRUPOS DO MÊS", secao))
+            elementos.append(Spacer(1, 2))
+            grupos = list(escala_mensal.grupos.all().order_by("numero"))
+            colunas = []
+            for grupo in grupos:
+                linhas = [Paragraph(f"<b>GRUPO {grupo.numero}</b>", normal)]
+                for membro in grupo.membros.all().order_by("ordem"):
+                    linhas.append(Paragraph(f"{membro.ordem}. {membro.coroinha.nome}", lista))
+                colunas.append(linhas)
+            while len(colunas) < 4:
+                colunas.append([Paragraph("", normal)])
 
-                itens = RelatorioEscalaService._itens_ordenados(list(escala.itens.all()))
-                if not itens:
-                    elementos.append(Paragraph("Sem coroinhas escalados.", cell_style))
-                    elementos.append(Spacer(1, 6))
+            tabela_grupos = Table(
+                [[colunas[0], colunas[1]], [colunas[2], colunas[3]]],
+                colWidths=[90 * mm, 90 * mm],
+            )
+            tabela_grupos.setStyle(
+                TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("BOX", (0, 0), (-1, -1), 0.5, BURGUNDY),
+                        ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#DDDDDD")),
+                        ("BACKGROUND", (0, 0), (-1, -1), CREME),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                        ("TOPPADDING", (0, 0), (-1, -1), 6),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ]
+                )
+            )
+            elementos.append(tabela_grupos)
+            elementos.append(Spacer(1, 8))
+
+        if not escalas:
+            elementos.append(Paragraph("Nenhuma escala montada neste período.", normal))
+        else:
+            elementos.append(Paragraph("SANTUÁRIO DE FÁTIMA", secao))
+            elementos.append(Spacer(1, 4))
+
+            for slot, titulo_secao, subtitulo_secao in SECOES_PDF:
+                if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
+                    continue
+                lista_escalas = por_slot.get(slot, [])
+                if not lista_escalas:
                     continue
 
-                linhas = [["Função", "", "Coroinha"]]
-                for item in itens:
-                    funcao_txt = item.get_funcao_display() if item.funcao else "—"
-                    linhas.append(
-                        [
-                            Paragraph(funcao_txt, cell_style),
-                            RelatorioEscalaService._foto_flowable(item.coroinha),
-                            Paragraph(item.coroinha.nome, cell_style),
-                        ]
-                    )
+                elementos.append(Paragraph(titulo_secao, secao))
+                if subtitulo_secao:
+                    elementos.append(Paragraph(subtitulo_secao, secao_sub))
 
-                tabela = Table(linhas, colWidths=[42 * mm, FOTO_MM * mm + 4, None])
-                tabela.setStyle(
-                    TableStyle(
-                        [
-                            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#5C1C24")),
-                            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                            ("FONTSIZE", (0, 0), (-1, 0), 9),
-                            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#FAF8F5")]),
-                            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#DDDDDD")),
-                            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                            ("TOPPADDING", (0, 1), (-1, -1), 5),
-                            ("BOTTOMPADDING", (0, 1), (-1, -1), 5),
-                        ]
-                    )
-                )
-                elementos.append(tabela)
-                elementos.append(Spacer(1, 10))
+                for escala in lista_escalas:
+                    elementos.append(Paragraph(texto_cabecalho_entrada(escala), entrada_titulo))
+                    for linha in linhas_nomes_escala(escala):
+                        elementos.append(Paragraph(linha, lista))
+
+            comunidade = por_slot.get(TipoSlotMissa.COMUNIDADE_DOMINGO, [])
+            if comunidade:
+                elementos.append(Spacer(1, 6))
+                elementos.append(Paragraph("COMUNIDADE SANTO ANTÔNIO", secao))
+                elementos.append(Paragraph("Domingo 10h30", secao_sub))
+                for escala in comunidade:
+                    elementos.append(Paragraph(texto_cabecalho_entrada(escala), entrada_titulo))
+                    for linha in linhas_nomes_escala(escala):
+                        elementos.append(Paragraph(linha, lista))
+
+            outros = por_slot.get(TipoSlotMissa.OUTRO, [])
+            if outros:
+                elementos.append(Paragraph("OUTRAS CELEBRAÇÕES", secao))
+                for escala in outros:
+                    cab = f"{escala.data.strftime('%d/%m')} — {escala.missa.nome}"
+                    elementos.append(Paragraph(cab, entrada_titulo))
+                    for linha in linhas_nomes_escala(escala):
+                        elementos.append(Paragraph(linha, lista))
 
         doc.build(elementos)
         return buffer.getvalue()
@@ -171,34 +192,43 @@ class RelatorioEscalaService:
     def exportar_mes_csv(ano: int, mes: int) -> str:
         escalas = RelatorioEscalaService._escalas_mes(ano, mes)
 
-        headers = ["Data", "Missa", "Horário"]
-        headers += [f.label for f in FUNCOES_ESCALA_ORDEM]
-        headers.append("Demais coroinhas")
-
+        headers = ["Data", "Missa", "Horário", "Grupo", "Coroinhas"]
         buffer = io.StringIO()
         writer = csv.writer(buffer, delimiter=";")
         writer.writerow(headers)
 
         for escala in escalas:
-            itens = list(escala.itens.all())
-            por_funcao = {item.funcao: item.coroinha.nome for item in itens if item.funcao}
-            demais = [item.coroinha.nome for item in itens if not item.funcao]
-
-            row = [
-                escala.data.strftime("%d/%m/%Y"),
-                escala.missa.nome,
-                escala.missa.horario.strftime("%H:%M"),
-            ]
-            for funcao in FUNCOES_ESCALA_ORDEM:
-                row.append(por_funcao.get(funcao.value, ""))
-            row.append(", ".join(demais))
-            writer.writerow(row)
+            nomes = ", ".join(item.coroinha.nome for item in escala.itens.all())
+            if escala.voluntarios:
+                nomes = "Voluntários"
+            writer.writerow(
+                [
+                    escala.data.strftime("%d/%m/%Y"),
+                    escala.missa.nome,
+                    escala.missa.horario.strftime("%H:%M"),
+                    escala.grupo_numero or "",
+                    nomes,
+                ]
+            )
 
         return "\ufeff" + buffer.getvalue()
 
     @staticmethod
     def exportar_mes_json(ano: int, mes: int) -> dict:
-        escalas = RelatorioEscalaService._escalas_mes(ano, mes)
+        escalas, escala_mensal = carregar_dados_mes(ano, mes)
+
+        grupos = []
+        if escala_mensal:
+            for grupo in escala_mensal.grupos.all().order_by("numero"):
+                grupos.append(
+                    {
+                        "numero": grupo.numero,
+                        "membros": [
+                            {"ordem": m.ordem, "nome": m.coroinha.nome}
+                            for m in grupo.membros.all().order_by("ordem")
+                        ],
+                    }
+                )
 
         linhas = []
         for escala in escalas:
@@ -213,9 +243,12 @@ class RelatorioEscalaService:
                     "data": escala.data.isoformat(),
                     "missa": escala.missa.nome,
                     "horario": escala.missa.horario.strftime("%H:%M"),
+                    "tipo_slot": escala.missa.tipo_slot,
+                    "grupo_numero": escala.grupo_numero,
+                    "voluntarios": escala.voluntarios,
                     "funcoes": funcoes_label,
-                    "demais": [item.coroinha.nome for item in itens if not item.funcao],
+                    "coroinhas": [item.coroinha.nome for item in itens],
                 }
             )
 
-        return {"ano": ano, "mes": mes, "escalas": linhas}
+        return {"ano": ano, "mes": mes, "grupos": grupos, "escalas": linhas}

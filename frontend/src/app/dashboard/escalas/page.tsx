@@ -1,13 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Calendar, CalendarRange, Clock, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
+import { Calendar, CalendarRange, Clock, Download, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { GruposMensaisPanel } from "@/components/GruposMensaisPanel";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
 import { StaffPage } from "@/components/StaffPage";
-import { apiFetch, apiFetchAll, mediaUrl } from "@/lib/api";
+import { apiDownload, apiFetch, apiFetchAll, mediaUrl } from "@/lib/api";
 import {
   funcoesFromItens,
   funcoesParaPayload,
@@ -85,6 +85,7 @@ export default function EscalasPage() {
   const [mesVisualizar, setMesVisualizar] = useState(new Date().getMonth() + 1);
   const [anoVisualizar, setAnoVisualizar] = useState(new Date().getFullYear());
   const [escalaMensalView, setEscalaMensalView] = useState<EscalaMensal | null>(null);
+  const [exportandoPdf, setExportandoPdf] = useState(false);
 
   function carregarEscalaMensal(ano: number, mes: number) {
     apiFetch<EscalaMensal>(`/escalas/mensal/?ano=${ano}&mes=${mes}`)
@@ -307,6 +308,21 @@ export default function EscalasPage() {
       setErro(e instanceof Error ? e.message : "Erro ao gerar escala do mês");
     } finally {
       setGerandoMes(false);
+    }
+  }
+
+  async function exportarPdfMes() {
+    setErro("");
+    setExportandoPdf(true);
+    try {
+      await apiDownload(
+        `/relatorios/escala-mes?ano=${anoVisualizar}&mes=${mesVisualizar}&formato=pdf`,
+        `escala-${anoVisualizar}-${String(mesVisualizar).padStart(2, "0")}.pdf`,
+      );
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao exportar PDF");
+    } finally {
+      setExportandoPdf(false);
     }
   }
 
@@ -659,6 +675,17 @@ export default function EscalasPage() {
               className="input-field text-sm py-1.5 w-24"
               aria-label="Ano"
             />
+            {escalasDoMes.length > 0 && podeEditar && (
+              <button
+                type="button"
+                onClick={exportarPdfMes}
+                disabled={exportandoPdf}
+                className="btn-outline text-sm flex items-center gap-1.5"
+              >
+                <Download className="size-4" aria-hidden />
+                {exportandoPdf ? "Exportando…" : "PDF do mês"}
+              </button>
+            )}
             {escalasDoMes.length > 0 && (
               <span className="text-sm text-muted-foreground">
                 {escalasDoMes.length} {escalasDoMes.length === 1 ? "celebração" : "celebrações"}
