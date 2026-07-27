@@ -2,11 +2,11 @@ import csv
 import io
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from apps.scheduling.models import FuncaoEscala, TipoSlotMissa
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
@@ -21,6 +21,8 @@ from apps.scheduling.services.relatorio_escala_pdf_layout import (
 
 BURGUNDY = colors.HexColor("#5C1C24")
 CREME = colors.HexColor("#FAF8F5")
+CREME_ESCURO = colors.HexColor("#F0EBE3")
+CINZA_TEXTO = colors.HexColor("#333333")
 
 
 class RelatorioEscalaService:
@@ -28,6 +30,221 @@ class RelatorioEscalaService:
     def _escalas_mes(ano: int, mes: int):
         escalas, _ = carregar_dados_mes(ano, mes)
         return escalas
+
+    @staticmethod
+    def _estilos_pdf():
+        base = getSampleStyleSheet()
+        return {
+            "titulo": ParagraphStyle(
+                "TituloParoquial",
+                parent=base["Heading1"],
+                fontSize=20,
+                leading=24,
+                alignment=TA_CENTER,
+                textColor=BURGUNDY,
+                spaceAfter=6,
+                fontName="Helvetica-Bold",
+            ),
+            "mes": ParagraphStyle(
+                "MesParoquial",
+                parent=base["Heading1"],
+                fontSize=16,
+                leading=20,
+                alignment=TA_CENTER,
+                textColor=BURGUNDY,
+                spaceAfter=4,
+                fontName="Helvetica-Bold",
+            ),
+            "subtitulo": ParagraphStyle(
+                "SubParoquial",
+                parent=base["Normal"],
+                fontSize=11,
+                alignment=TA_CENTER,
+                textColor=CINZA_TEXTO,
+                spaceAfter=14,
+            ),
+            "instrucao_titulo": ParagraphStyle(
+                "InstrucaoTitulo",
+                parent=base["Normal"],
+                fontSize=11,
+                fontName="Helvetica-Bold",
+                textColor=BURGUNDY,
+                spaceAfter=4,
+            ),
+            "instrucao": ParagraphStyle(
+                "Instrucao",
+                parent=base["Normal"],
+                fontSize=10,
+                leading=14,
+                textColor=CINZA_TEXTO,
+                leftIndent=4,
+                spaceAfter=2,
+            ),
+            "secao": ParagraphStyle(
+                "SecaoHorario",
+                parent=base["Heading2"],
+                fontSize=14,
+                leading=17,
+                textColor=colors.white,
+                alignment=TA_LEFT,
+                fontName="Helvetica-Bold",
+                spaceBefore=0,
+                spaceAfter=0,
+            ),
+            "secao_sub": ParagraphStyle(
+                "SecaoSub",
+                parent=base["Normal"],
+                fontSize=10,
+                textColor=CINZA_TEXTO,
+                spaceAfter=8,
+                leftIndent=2,
+            ),
+            "grupo_titulo": ParagraphStyle(
+                "GrupoTitulo",
+                parent=base["Normal"],
+                fontSize=12,
+                fontName="Helvetica-Bold",
+                textColor=BURGUNDY,
+                spaceAfter=4,
+            ),
+            "nome": ParagraphStyle(
+                "NomeCoroinha",
+                parent=base["Normal"],
+                fontSize=11,
+                leading=15,
+                textColor=CINZA_TEXTO,
+                leftIndent=6,
+                spaceAfter=3,
+            ),
+            "data_cab": ParagraphStyle(
+                "DataCab",
+                parent=base["Normal"],
+                fontSize=12,
+                leading=15,
+                fontName="Helvetica-Bold",
+                textColor=BURGUNDY,
+                spaceAfter=4,
+            ),
+            "normal": ParagraphStyle(
+                "NormalLegivel",
+                parent=base["Normal"],
+                fontSize=11,
+                leading=14,
+                textColor=CINZA_TEXTO,
+            ),
+        }
+
+    @staticmethod
+    def _caixa_instrucoes(estilos) -> Table:
+        linhas = [
+            [Paragraph("Como ler esta escala", estilos["instrucao_titulo"])],
+            [Paragraph("1. Veja abaixo em qual <b>GRUPO</b> você está (fins de semana).", estilos["instrucao"])],
+            [Paragraph("2. Procure o <b>dia da semana</b> e o <b>horário</b> da sua missa.", estilos["instrucao"])],
+            [Paragraph("3. Cada quadro mostra a data e os coroinhas escalados.", estilos["instrucao"])],
+        ]
+        tabela = Table(linhas, colWidths=[180 * mm])
+        tabela.setStyle(
+            TableStyle(
+                [
+                    ("BOX", (0, 0), (-1, -1), 1, BURGUNDY),
+                    ("BACKGROUND", (0, 0), (-1, -1), CREME_ESCURO),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ]
+            )
+        )
+        return tabela
+
+    @staticmethod
+    def _faixa_secao(titulo: str, estilos) -> Table:
+        tabela = Table([[Paragraph(titulo, estilos["secao"])]], colWidths=[180 * mm])
+        tabela.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), BURGUNDY),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ]
+            )
+        )
+        return tabela
+
+    @staticmethod
+    def _celula_grupo(grupo, estilos, largura_col: float) -> Table:
+        linhas = [[Paragraph(f"GRUPO {grupo.numero}", estilos["grupo_titulo"])]]
+        for membro in grupo.membros.all().order_by("ordem"):
+            texto = f"{membro.ordem}. {membro.coroinha.nome}"
+            linhas.append([Paragraph(texto, estilos["nome"])])
+        return Table(linhas, colWidths=[largura_col - 24])
+
+    @staticmethod
+    def _tabela_grupos(escala_mensal, estilos, largura_col: float) -> Table:
+        grupos = list(escala_mensal.grupos.all().order_by("numero"))
+        celulas = [
+            RelatorioEscalaService._celula_grupo(grupo, estilos, largura_col) for grupo in grupos
+        ]
+        while len(celulas) < 4:
+            celulas.append(Table([[Paragraph("", estilos["normal"])]]))
+
+        tabela = Table(
+            [[celulas[0], celulas[1]], [celulas[2], celulas[3]]],
+            colWidths=[largura_col, largura_col],
+        )
+        tabela.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BOX", (0, 0), (-1, -1), 1, BURGUNDY),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
+                    ("BACKGROUND", (0, 0), (-1, -1), CREME),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                    ("TOPPADDING", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ]
+            )
+        )
+        return tabela
+
+    @staticmethod
+    def _caixa_escala(escala, estilos, largura: float):
+        linhas = [[Paragraph(texto_cabecalho_entrada(escala), estilos["data_cab"])]]
+        for texto, coroinha in itens_coroinha_escala(escala):
+            for flow in linha_coroinha_flowable(coroinha, texto, estilos["nome"]):
+                linhas.append([flow])
+
+        tabela = Table(linhas, colWidths=[largura])
+        tabela.setStyle(
+            TableStyle(
+                [
+                    ("BOX", (0, 0), (-1, -1), 0.75, BURGUNDY),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        return KeepTogether([tabela, Spacer(1, 6)])
+
+    @staticmethod
+    def _render_secao_escalas(elementos, titulo_secao, subtitulo_secao, escalas, estilos, largura_util):
+        if not escalas:
+            return
+        elementos.append(Spacer(1, 10))
+        elementos.append(RelatorioEscalaService._faixa_secao(titulo_secao, estilos))
+        if subtitulo_secao:
+            elementos.append(Spacer(1, 4))
+            elementos.append(Paragraph(subtitulo_secao, estilos["secao_sub"]))
+        elementos.append(Spacer(1, 6))
+        for escala in escalas:
+            elementos.append(RelatorioEscalaService._caixa_escala(escala, estilos, largura_util))
 
     @staticmethod
     def exportar_mes_pdf(ano: int, mes: int) -> bytes:
@@ -38,154 +255,79 @@ class RelatorioEscalaService:
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            leftMargin=14 * mm,
-            rightMargin=14 * mm,
-            topMargin=12 * mm,
-            bottomMargin=12 * mm,
+            leftMargin=16 * mm,
+            rightMargin=16 * mm,
+            topMargin=14 * mm,
+            bottomMargin=14 * mm,
             title=f"Escala Coroinhas {MESES_PT[mes]}/{ano}",
         )
+        largura_util = doc.width
+        largura_col_grupo = largura_util / 2
 
-        styles = getSampleStyleSheet()
-        titulo = ParagraphStyle(
-            "TituloParoquial",
-            parent=styles["Heading1"],
-            fontSize=15,
-            leading=18,
-            alignment=TA_CENTER,
-            textColor=BURGUNDY,
-            spaceAfter=4,
-            fontName="Helvetica-Bold",
-        )
-        subtitulo = ParagraphStyle(
-            "SubParoquial",
-            parent=styles["Normal"],
-            fontSize=10,
-            alignment=TA_CENTER,
-            textColor=colors.HexColor("#444444"),
-            spaceAfter=10,
-        )
-        secao = ParagraphStyle(
-            "SecaoHorario",
-            parent=styles["Heading2"],
-            fontSize=11,
-            textColor=BURGUNDY,
-            spaceBefore=10,
-            spaceAfter=2,
-            fontName="Helvetica-Bold",
-        )
-        secao_sub = ParagraphStyle(
-            "SecaoSub",
-            parent=styles["Normal"],
-            fontSize=8,
-            textColor=colors.HexColor("#666666"),
-            spaceAfter=6,
-        )
-        entrada_titulo = ParagraphStyle(
-            "EntradaTitulo",
-            parent=styles["Normal"],
-            fontSize=9,
-            fontName="Helvetica-Bold",
-            textColor=BURGUNDY,
-            spaceBefore=4,
-            spaceAfter=1,
-        )
-        lista = ParagraphStyle(
-            "ListaNomes",
-            parent=styles["Normal"],
-            fontSize=9,
-            leading=11,
-            leftIndent=8,
-            spaceAfter=2,
-        )
-        normal = ParagraphStyle(
-            "NormalCompacto",
-            parent=styles["Normal"],
-            fontSize=9,
-            leading=11,
-        )
-
+        estilos = RelatorioEscalaService._estilos_pdf()
         mes_nome = MESES_PT[mes].upper()
+
         elementos = [
-            Paragraph("ESCALA DOS COROINHAS", titulo),
-            Paragraph(f"MÊS DE {mes_nome} {ano}", titulo),
-            Paragraph("Santuário de Fátima — Pastoral dos Coroinhas", subtitulo),
+            Paragraph("ESCALA DOS COROINHAS", estilos["titulo"]),
+            Paragraph(f"{mes_nome} de {ano}", estilos["mes"]),
+            Paragraph("Santuário de Fátima — Pastoral dos Coroinhas", estilos["subtitulo"]),
+            RelatorioEscalaService._caixa_instrucoes(estilos),
+            Spacer(1, 12),
         ]
 
         if escala_mensal and escala_mensal.grupos.exists():
-            elementos.append(Paragraph("GRUPOS DO MÊS", secao))
-            elementos.append(Spacer(1, 2))
-            grupos = list(escala_mensal.grupos.all().order_by("numero"))
-            colunas = []
-            for grupo in grupos:
-                linhas = [Paragraph(f"<b>GRUPO {grupo.numero}</b>", normal)]
-                for membro in grupo.membros.all().order_by("ordem"):
-                    texto = f"{membro.ordem}. {membro.coroinha.nome}"
-                    linhas.extend(linha_coroinha_flowable(membro.coroinha, texto, lista))
-                colunas.append(linhas)
-            while len(colunas) < 4:
-                colunas.append([Paragraph("", normal)])
-
-            tabela_grupos = Table(
-                [[colunas[0], colunas[1]], [colunas[2], colunas[3]]],
-                colWidths=[90 * mm, 90 * mm],
-            )
-            tabela_grupos.setStyle(
-                TableStyle(
-                    [
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("BOX", (0, 0), (-1, -1), 0.5, BURGUNDY),
-                        ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#DDDDDD")),
-                        ("BACKGROUND", (0, 0), (-1, -1), CREME),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                        ("TOPPADDING", (0, 0), (-1, -1), 6),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                    ]
+            elementos.append(RelatorioEscalaService._faixa_secao("GRUPOS DO MÊS (sábado e domingo)", estilos))
+            elementos.append(Spacer(1, 6))
+            elementos.append(
+                Paragraph(
+                    "Anote o número do seu grupo. Nos fins de semana, sirva com o grupo indicado abaixo.",
+                    estilos["secao_sub"],
                 )
             )
-            elementos.append(tabela_grupos)
-            elementos.append(Spacer(1, 8))
+            elementos.append(RelatorioEscalaService._tabela_grupos(escala_mensal, estilos, largura_col_grupo))
+            elementos.append(Spacer(1, 14))
 
         if not escalas:
-            elementos.append(Paragraph("Nenhuma escala montada neste período.", normal))
+            elementos.append(Paragraph("Nenhuma escala montada neste período.", estilos["normal"]))
         else:
-            elementos.append(Paragraph("SANTUÁRIO DE FÁTIMA", secao))
-            elementos.append(Spacer(1, 4))
+            elementos.append(PageBreak())
+            elementos.append(RelatorioEscalaService._faixa_secao("CRONOGRAMA DO MÊS — SANTUÁRIO DE FÁTIMA", estilos))
+            elementos.append(Spacer(1, 8))
 
             for slot, titulo_secao, subtitulo_secao in SECOES_PDF:
                 if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
                     continue
-                lista_escalas = por_slot.get(slot, [])
-                if not lista_escalas:
-                    continue
-
-                elementos.append(Paragraph(titulo_secao, secao))
-                if subtitulo_secao:
-                    elementos.append(Paragraph(subtitulo_secao, secao_sub))
-
-                for escala in lista_escalas:
-                    elementos.append(Paragraph(texto_cabecalho_entrada(escala), entrada_titulo))
-                    for texto, coroinha in itens_coroinha_escala(escala):
-                        elementos.extend(linha_coroinha_flowable(coroinha, texto, lista))
+                RelatorioEscalaService._render_secao_escalas(
+                    elementos,
+                    titulo_secao,
+                    subtitulo_secao,
+                    por_slot.get(slot, []),
+                    estilos,
+                    largura_util,
+                )
 
             comunidade = por_slot.get(TipoSlotMissa.COMUNIDADE_DOMINGO, [])
             if comunidade:
-                elementos.append(Spacer(1, 6))
-                elementos.append(Paragraph("COMUNIDADE SANTO ANTÔNIO", secao))
-                elementos.append(Paragraph("Domingo 10h30", secao_sub))
-                for escala in comunidade:
-                    elementos.append(Paragraph(texto_cabecalho_entrada(escala), entrada_titulo))
-                    for texto, coroinha in itens_coroinha_escala(escala):
-                        elementos.extend(linha_coroinha_flowable(coroinha, texto, lista))
+                elementos.append(PageBreak())
+                RelatorioEscalaService._render_secao_escalas(
+                    elementos,
+                    "COMUNIDADE SANTO ANTÔNIO · DOMINGO 10h30",
+                    "Missas na comunidade (fora do santuário).",
+                    comunidade,
+                    estilos,
+                    largura_util,
+                )
 
             outros = por_slot.get(TipoSlotMissa.OUTRO, [])
             if outros:
-                elementos.append(Paragraph("OUTRAS CELEBRAÇÕES", secao))
-                for escala in outros:
-                    cab = f"{escala.data.strftime('%d/%m')} — {escala.missa.nome}"
-                    elementos.append(Paragraph(cab, entrada_titulo))
-                    for texto, coroinha in itens_coroinha_escala(escala):
-                        elementos.extend(linha_coroinha_flowable(coroinha, texto, lista))
+                RelatorioEscalaService._render_secao_escalas(
+                    elementos,
+                    "OUTRAS CELEBRAÇÕES",
+                    "",
+                    outros,
+                    estilos,
+                    largura_util,
+                )
 
         doc.build(elementos)
         return buffer.getvalue()

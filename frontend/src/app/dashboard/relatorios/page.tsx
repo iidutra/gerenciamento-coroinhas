@@ -59,7 +59,7 @@ export default function RelatoriosPage() {
               Exportar escala do mês
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              PDF no layout paroquial: grupos do mês e seções por horário.
+              PDF legível: grupos, datas por extenso e quadros por celebração.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end flex-wrap">
               <label className="text-sm">

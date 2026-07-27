@@ -1,6 +1,7 @@
 """Layout paroquial da escala mensal (PDF)."""
 
 from collections import defaultdict
+from datetime import date
 
 from reportlab.platypus import Paragraph
 
@@ -23,16 +24,33 @@ MESES_PT = [
     "Dezembro",
 ]
 
+DIAS_SEMANA_PT = [
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+    "Domingo",
+]
+
 SECOES_PDF = [
-    (TipoSlotMissa.SEXTA_ADORACAO, "SEXTA 18h", "Adoração ao Santíssimo seguida de Missa"),
-    (TipoSlotMissa.SABADO_NOITE, "SÁBADO 18h30", "Grupos rotativos"),
-    (TipoSlotMissa.DOMINGO_MANHA, "DOMINGO 08h", "Grupos rotativos"),
-    (TipoSlotMissa.DOMINGO_NOITE, "DOMINGO 18h30", "Grupos rotativos"),
-    (TipoSlotMissa.QUARTA_VOLUNTARIOS, "QUARTA 19h", "Voluntários"),
-    (TipoSlotMissa.COMUNIDADE_DOMINGO, "COMUNIDADE — DOMINGO 10h30", "Comunidade Santo Antônio"),
-    (TipoSlotMissa.DIA_13, "DIA 13", "Memória mensal de Nossa Senhora de Fátima"),
+    (TipoSlotMissa.SEXTA_ADORACAO, "SEXTA-FEIRA · 18h", "Adoração ao Santíssimo e Missa"),
+    (TipoSlotMissa.SABADO_NOITE, "SÁBADO · 18h30", "Missas com grupos rotativos"),
+    (TipoSlotMissa.DOMINGO_MANHA, "DOMINGO · 08h", "Missas com grupos rotativos"),
+    (TipoSlotMissa.DOMINGO_NOITE, "DOMINGO · 18h30", "Missas com grupos rotativos"),
+    (TipoSlotMissa.QUARTA_VOLUNTARIOS, "QUARTA-FEIRA · 19h", "Voluntários — sem nomes fixos"),
+    (TipoSlotMissa.COMUNIDADE_DOMINGO, "COMUNIDADE · DOMINGO 10h30", "Comunidade Santo Antônio"),
+    (TipoSlotMissa.DIA_13, "DIA 13", "Memória de Nossa Senhora de Fátima"),
     (TipoSlotMissa.OUTRO, "OUTRAS CELEBRAÇÕES", ""),
 ]
+
+
+def formatar_data_legivel(data: date) -> str:
+    """Ex.: Sábado, 5 de agosto"""
+    dia_semana = DIAS_SEMANA_PT[data.weekday()]
+    mes = MESES_PT[data.month].lower()
+    return f"{dia_semana}, {data.day} de {mes}"
 
 
 def agrupar_escalas_por_slot(escalas: list[Escala]) -> dict[str, list[Escala]]:
@@ -58,11 +76,12 @@ def linhas_nomes_escala(escala: Escala) -> list[str]:
 
 
 def texto_cabecalho_entrada(escala: Escala) -> str:
-    data_txt = escala.data.strftime("%d/%m")
+    data_txt = formatar_data_legivel(escala.data)
     if escala.grupo_numero is not None:
-        return f"{data_txt} — GRUPO {escala.grupo_numero}"
+        return f"{data_txt}  ·  GRUPO {escala.grupo_numero}"
     if escala.missa.tipo_slot == TipoSlotMissa.DIA_13:
-        return f"{data_txt} — {escala.missa.horario.strftime('%H:%M')}"
+        hora = escala.missa.horario.strftime("%H:%M")
+        return f"{data_txt}  ·  {hora}"
     return data_txt
 
 
