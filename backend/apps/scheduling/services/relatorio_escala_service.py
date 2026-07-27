@@ -14,7 +14,8 @@ from apps.scheduling.services.relatorio_escala_pdf_layout import (
     SECOES_PDF,
     agrupar_escalas_por_slot,
     carregar_dados_mes,
-    linhas_nomes_escala,
+    itens_coroinha_escala,
+    linha_coroinha_flowable,
     texto_cabecalho_entrada,
 )
 
@@ -118,7 +119,8 @@ class RelatorioEscalaService:
             for grupo in grupos:
                 linhas = [Paragraph(f"<b>GRUPO {grupo.numero}</b>", normal)]
                 for membro in grupo.membros.all().order_by("ordem"):
-                    linhas.append(Paragraph(f"{membro.ordem}. {membro.coroinha.nome}", lista))
+                    texto = f"{membro.ordem}. {membro.coroinha.nome}"
+                    linhas.extend(linha_coroinha_flowable(membro.coroinha, texto, lista))
                 colunas.append(linhas)
             while len(colunas) < 4:
                 colunas.append([Paragraph("", normal)])
@@ -163,8 +165,8 @@ class RelatorioEscalaService:
 
                 for escala in lista_escalas:
                     elementos.append(Paragraph(texto_cabecalho_entrada(escala), entrada_titulo))
-                    for linha in linhas_nomes_escala(escala):
-                        elementos.append(Paragraph(linha, lista))
+                    for texto, coroinha in itens_coroinha_escala(escala):
+                        elementos.extend(linha_coroinha_flowable(coroinha, texto, lista))
 
             comunidade = por_slot.get(TipoSlotMissa.COMUNIDADE_DOMINGO, [])
             if comunidade:
@@ -173,8 +175,8 @@ class RelatorioEscalaService:
                 elementos.append(Paragraph("Domingo 10h30", secao_sub))
                 for escala in comunidade:
                     elementos.append(Paragraph(texto_cabecalho_entrada(escala), entrada_titulo))
-                    for linha in linhas_nomes_escala(escala):
-                        elementos.append(Paragraph(linha, lista))
+                    for texto, coroinha in itens_coroinha_escala(escala):
+                        elementos.extend(linha_coroinha_flowable(coroinha, texto, lista))
 
             outros = por_slot.get(TipoSlotMissa.OUTRO, [])
             if outros:
@@ -182,8 +184,8 @@ class RelatorioEscalaService:
                 for escala in outros:
                     cab = f"{escala.data.strftime('%d/%m')} — {escala.missa.nome}"
                     elementos.append(Paragraph(cab, entrada_titulo))
-                    for linha in linhas_nomes_escala(escala):
-                        elementos.append(Paragraph(linha, lista))
+                    for texto, coroinha in itens_coroinha_escala(escala):
+                        elementos.extend(linha_coroinha_flowable(coroinha, texto, lista))
 
         doc.build(elementos)
         return buffer.getvalue()

@@ -1,8 +1,16 @@
 """Layout paroquial da escala mensal (PDF)."""
 
+import io
 from collections import defaultdict
 
-from apps.scheduling.models import Escala, EscalaMensal, TipoSlotMissa
+from reportlab.lib.units import mm
+from reportlab.platypus import Image as RLImage, Paragraph, Table
+
+from apps.membership.models import Coroinha
+from apps.scheduling.models import Escala, EscalaItem, EscalaMensal, TipoSlotMissa
+
+FOTO_MM = 7
+FOTO_PT = FOTO_MM * mm
 
 MESES_PT = [
     "",
@@ -76,3 +84,47 @@ def carregar_dados_mes(ano: int, mes: int) -> tuple[list[Escala], EscalaMensal |
         .first()
     )
     return escalas, escala_mensal
+
+
+def foto_flowable(coroinha: Coroinha) -> RLImage | None:
+    """Miniatura apenas se a foto já estiver cadastrada."""
+    if not coroinha.foto or not coroinha.foto.name:
+        return None
+    try:
+        with coroinha.foto.open("rb") as arquivo:
+            buf = io.BytesIO(arquivo.read())
+        return RLImage(buf, width=FOTO_PT, height=FOTO_PT, kind="proportional")
+    except Exception:
+        return None
+
+
+def linha_coroinha_flowable(coroinha: Coroinha | None, texto: str, estilo) -> list:
+    """Linha com foto opcional à esquerda do nome."""
+    paragrafo = Paragraph(texto, estilo)
+    if coroinha is None:
+        return [paragrafo]
+    foto = foto_flowable(coroinha)
+    if not foto:
+        return [paragrafo]
+    tabela = Table([[foto, paragrafo]], colWidths=[FOTO_PT + 1 * mm, None])
+    tabela.setStyle(
+        [
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ]
+    )
+    return [tabela]
+
+
+def itens_coroinha_escala(escala: Escala) -> list[tuple[str, Coroinha | None]]:
+    if escala.voluntarios:
+        return [("Voluntários", None)]
+    itens: list[EscalaItem] = list(escala.itens.all())
+    if not itens:
+        return [("—", None)]
+    if escala.grupo_numero is not None:
+        return [(f"{i + 1}. {item.coroinha.nome}", item.coroinha) for i, item in enumerate(itens)]
+    return [(item.coroinha.nome, item.coroinha) for item in itens]
