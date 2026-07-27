@@ -22,7 +22,7 @@ from apps.scheduling.services.grupo_montagem_service import (
     GrupoMontagemService,
 )
 
- = "Adoração ao Santíssimo seguida de Missa"
+OBS_SEXTA = "Adoração ao Santíssimo seguida de Missa"
 OBS_QUARTA = "Voluntários"
 
 
