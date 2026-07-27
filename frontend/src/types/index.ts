@@ -75,6 +75,32 @@ export interface Escala {
   criado_em: string;
   itens: EscalaItem[];
   notificacao_enviada?: boolean;
+  grupo_numero?: number | null;
+  observacao?: string;
+  voluntarios?: boolean;
+}
+
+export interface GrupoMensalMembro {
+  coroinha_id: number;
+  coroinha_nome: string;
+  ordem: number;
+}
+
+export interface GrupoMensal {
+  numero: number;
+  membros: GrupoMensalMembro[];
+}
+
+export interface EscalaMensal {
+  id: number;
+  ano: number;
+  mes: number;
+  tamanho_grupo: number;
+  quantidade_sexta: number;
+  quantidade_comunidade: number;
+  criado_em: string;
+  grupos: GrupoMensal[];
+  total_escalas: number;
 }
 
 export interface Missa {

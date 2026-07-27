@@ -7,16 +7,19 @@ from rest_framework.views import APIView
 
 from apps.communication.serializers import MensagemSerializer
 from apps.identity.permissions import IsGestorCoroinhas, IsStaffPastoral
-from apps.scheduling.models import Escala, Missa
+from apps.scheduling.models import Escala, EscalaMensal, Missa
 from apps.scheduling.serializers import (
     AtribuirFuncoesSerializer,
     DefinirMembrosSerializer,
+    EscalaMensalSerializer,
     EscalaSerializer,
+    GerarEscalaMesSerializer,
     MissaSerializer,
     MontarEscalaSerializer,
     NotificarEscalaSerializer,
 )
 from apps.scheduling.services.escala_service import EscalaService
+from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscalaMensalService
 from apps.scheduling.services.notificacao_escala_service import NotificacaoEscalaService
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
 
@@ -53,6 +56,32 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         escala = Escala.objects.prefetch_related("itens__coroinha").get(pk=escala.pk)
         return Response(EscalaSerializer(escala, context={"request": request}).data)
+
+    @action(detail=False, methods=["post"], url_path="gerar-mes", permission_classes=[IsGestorCoroinhas])
+    def gerar_mes(self, request):
+        serializer = GerarEscalaMesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            escala_mensal = GeradorEscalaMensalService.gerar(
+                ano=data["ano"],
+                mes=data["mes"],
+                usuario=request.user,
+                tamanho_grupo=data["tamanho_grupo"],
+                quantidade_sexta=data["quantidade_sexta"],
+                quantidade_comunidade=data["quantidade_comunidade"],
+                substituir=data["substituir"],
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        escala_mensal = (
+            EscalaMensal.objects.prefetch_related("grupos__membros__coroinha")
+            .get(pk=escala_mensal.pk)
+        )
+        return Response(
+            EscalaMensalSerializer(escala_mensal).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=False, methods=["post"], permission_classes=[IsGestorCoroinhas])
     def montar(self, request):

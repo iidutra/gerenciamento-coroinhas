@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Calendar, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
+import { Calendar, CalendarRange, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
@@ -12,7 +12,7 @@ import {
   funcoesParaPayload,
   funcoesVazias,
 } from "@/lib/scheduling";
-import type { Coroinha, Escala, Missa } from "@/types";
+import type { Coroinha, Escala, EscalaMensal, Missa } from "@/types";
 
 const DIAS_SEMANA = [
   "Domingo", "Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado",
@@ -67,6 +67,15 @@ export default function EscalasPage() {
   const [notificarEscalados, setNotificarEscalados] = useState(true);
   const [notificandoId, setNotificandoId] = useState<number | null>(null);
   const [excluindoEscalaId, setExcluindoEscalaId] = useState<number | null>(null);
+  const [mostrarGerarMes, setMostrarGerarMes] = useState(false);
+  const [mesGerar, setMesGerar] = useState(new Date().getMonth() + 1);
+  const [anoGerar, setAnoGerar] = useState(new Date().getFullYear());
+  const [tamanhoGrupo, setTamanhoGrupo] = useState(9);
+  const [quantidadeSexta, setQuantidadeSexta] = useState(2);
+  const [quantidadeComunidade, setQuantidadeComunidade] = useState(2);
+  const [substituirMes, setSubstituirMes] = useState(false);
+  const [gerandoMes, setGerandoMes] = useState(false);
+  const [ultimaEscalaMensal, setUltimaEscalaMensal] = useState<EscalaMensal | null>(null);
 
   function load() {
     Promise.all([
@@ -237,6 +246,32 @@ export default function EscalasPage() {
     }
   }
 
+  async function gerarEscalaMes(ev: FormEvent) {
+    ev.preventDefault();
+    setErro("");
+    setGerandoMes(true);
+    try {
+      const resultado = await apiFetch<EscalaMensal>("/escalas/gerar-mes/", {
+        method: "POST",
+        body: JSON.stringify({
+          ano: anoGerar,
+          mes: mesGerar,
+          tamanho_grupo: tamanhoGrupo,
+          quantidade_sexta: quantidadeSexta,
+          quantidade_comunidade: quantidadeComunidade,
+          substituir: substituirMes,
+        }),
+      });
+      setUltimaEscalaMensal(resultado);
+      setMostrarGerarMes(false);
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao gerar escala do mês");
+    } finally {
+      setGerandoMes(false);
+    }
+  }
+
   async function excluirEscala(escalaId: number) {
     if (!confirm("Excluir esta escala? Esta ação não pode ser desfeita.")) return;
     setErro("");
@@ -263,6 +298,18 @@ export default function EscalasPage() {
           <p className="mb-4 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3" role="alert">
             {erro}
           </p>
+        )}
+
+        {ultimaEscalaMensal && (
+          <div className="mb-6 card-liturgical p-4 border border-emerald-500/30 bg-emerald-500/5">
+            <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+              Escala de {ultimaEscalaMensal.mes.toString().padStart(2, "0")}/{ultimaEscalaMensal.ano} gerada
+              — {ultimaEscalaMensal.total_escalas} celebrações, 4 grupos de {ultimaEscalaMensal.tamanho_grupo} coroinhas.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Quarta: voluntários (sem nomes). Dia 13: cadastre manualmente quando receber a lista.
+            </p>
+          </div>
         )}
 
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
@@ -381,10 +428,11 @@ export default function EscalasPage() {
           </div>
 
           {podeEditar ? (
-            <form onSubmit={montarEscala} className="card-liturgical p-6 space-y-4">
-              <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-                <Shuffle className="size-5 text-gold" aria-hidden /> Nova escala
-              </h2>
+            <div className="space-y-6">
+              <form onSubmit={montarEscala} className="card-liturgical p-6 space-y-4">
+                <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+                  <Shuffle className="size-5 text-gold" aria-hidden /> Nova escala (avulsa)
+                </h2>
               <input type="date" value={data} onChange={(e) => setData(e.target.value)} className="input-field" required />
               <select value={missaId} onChange={(e) => setMissaId(e.target.value)} className="input-field" required>
                 <option value="">Selecione a missa...</option>
@@ -440,7 +488,107 @@ export default function EscalasPage() {
                 Notificar escalados automaticamente (WhatsApp/e-mail)
               </label>
               <button type="submit" className="btn-primary w-full">Sortear coroinhas</button>
-            </form>
+              </form>
+
+              <div className="card-liturgical p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+                    <CalendarRange className="size-5 text-gold" aria-hidden /> Gerar escala do mês
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarGerarMes((v) => !v)}
+                    className="btn-outline text-sm"
+                  >
+                    {mostrarGerarMes ? "Fechar" : "Abrir"}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Monta sábado/domingo (grupos rotativos), sextas, comunidade e quartas (voluntários).
+                  O dia 13 fica de fora — você cadastra depois com a lista manual.
+                </p>
+                {mostrarGerarMes && (
+                  <form onSubmit={gerarEscalaMes} className="space-y-3 border-t border-border pt-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Mês</label>
+                        <select
+                          value={mesGerar}
+                          onChange={(e) => setMesGerar(Number(e.target.value))}
+                          className="input-field"
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                            <option key={m} value={m}>
+                              {new Date(2000, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" })}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Ano</label>
+                        <input
+                          type="number"
+                          min={2020}
+                          max={2100}
+                          value={anoGerar}
+                          onChange={(e) => setAnoGerar(Number(e.target.value))}
+                          className="input-field"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">
+                        Tamanho de cada grupo (fim de semana)
+                      </label>
+                      <input
+                        type="number"
+                        min={4}
+                        max={15}
+                        value={tamanhoGrupo}
+                        onChange={(e) => setTamanhoGrupo(Number(e.target.value))}
+                        className="input-field"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Coroinhas por sexta</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={6}
+                          value={quantidadeSexta}
+                          onChange={(e) => setQuantidadeSexta(Number(e.target.value))}
+                          className="input-field"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Coroinhas comunidade (dom.)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={6}
+                          value={quantidadeComunidade}
+                          onChange={(e) => setQuantidadeComunidade(Number(e.target.value))}
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={substituirMes}
+                        onChange={(e) => setSubstituirMes(e.target.checked)}
+                      />
+                      Substituir escala deste mês se já existir
+                    </label>
+                    <button type="submit" disabled={gerandoMes} className="btn-primary w-full">
+                      {gerandoMes ? "Gerando…" : "Gerar escala do mês"}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="card-liturgical p-6 text-sm text-muted-foreground">
               A montagem de escalas é feita pelo coordenador ou secretário.
@@ -500,10 +648,23 @@ export default function EscalasPage() {
                               Notificado
                             </span>
                           )}
+                          {e.voluntarios && (
+                            <span className="inline-flex items-center gap-1 text-xs rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 px-2 py-0.5">
+                              Voluntários
+                            </span>
+                          )}
+                          {e.grupo_numero != null && (
+                            <span className="text-xs rounded-full bg-burgundy/10 text-burgundy px-2 py-0.5">
+                              Grupo {e.grupo_numero}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                          {semana} · {e.itens.length} {e.itens.length === 1 ? "coroinha" : "coroinhas"}
+                          {semana} · {e.voluntarios ? "sem escala fixa" : `${e.itens.length} ${e.itens.length === 1 ? "coroinha" : "coroinhas"}`}
                         </p>
+                        {e.observacao && (
+                          <p className="text-xs text-muted-foreground italic mt-0.5">{e.observacao}</p>
+                        )}
                       </div>
                     </div>
 
@@ -565,7 +726,9 @@ export default function EscalasPage() {
                   {/* Coroinhas */}
                   <div className="px-4 sm:px-5 pb-4">
                     {e.itens.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic">Nenhum coroinha nesta escala.</p>
+                      <p className="text-sm text-muted-foreground italic">
+                        {e.voluntarios ? "Voluntários — nenhum nome na escala automática." : "Nenhum coroinha nesta escala."}
+                      </p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {e.itens.map((i) => (

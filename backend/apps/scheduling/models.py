@@ -14,6 +14,23 @@ class DiaSemana(models.TextChoices):
 class ModoEscala(models.TextChoices):
     SORTEIO_AUTOMATICO = "SorteioAutomatico", "Sorteio automático"
     SELECAO_MANUAL = "SelecaoManual", "Seleção manual"
+    GRUPO_MENSAL = "GrupoMensal", "Grupo mensal"
+
+
+class TipoSlotMissa(models.TextChoices):
+    SABADO_NOITE = "SabadoNoite", "Sábado noite"
+    DOMINGO_MANHA = "DomingoManha", "Domingo manhã"
+    DOMINGO_NOITE = "DomingoNoite", "Domingo noite"
+    SEXTA_ADORACAO = "SextaAdoracao", "Sexta — Adoração + Missa"
+    QUARTA_VOLUNTARIOS = "QuartaVoluntarios", "Quarta — Voluntários"
+    DIA_13 = "Dia13", "Dia 13"
+    COMUNIDADE_DOMINGO = "ComunidadeDomingo", "Comunidade — Domingo"
+    OUTRO = "Outro", "Outro"
+
+
+class LocalCelebracao(models.TextChoices):
+    SANTUARIO = "Santuario", "Santuário de Fátima"
+    COMUNIDADE = "Comunidade", "Comunidade Santo Antônio"
 
 
 class FuncaoEscala(models.TextChoices):
@@ -51,6 +68,16 @@ class Missa(models.Model):
     )
     horario = models.TimeField()
     ativa = models.BooleanField(default=True)
+    tipo_slot = models.CharField(
+        max_length=30,
+        choices=TipoSlotMissa.choices,
+        default=TipoSlotMissa.OUTRO,
+    )
+    local = models.CharField(
+        max_length=30,
+        choices=LocalCelebracao.choices,
+        default=LocalCelebracao.SANTUARIO,
+    )
 
     class Meta:
         verbose_name = "Missa"
@@ -73,10 +100,72 @@ class Missa(models.Model):
         return self.get_dia_semana_display() or ""
 
 
+class EscalaMensal(models.Model):
+    """Planejamento de escalas de um mês — grupos renovados a cada geração."""
+
+    ano = models.PositiveSmallIntegerField()
+    mes = models.PositiveSmallIntegerField()
+    tamanho_grupo = models.PositiveSmallIntegerField(default=9)
+    quantidade_sexta = models.PositiveSmallIntegerField(default=2)
+    quantidade_comunidade = models.PositiveSmallIntegerField(default=2)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    criado_por = models.ForeignKey(
+        "identity.Usuario",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="escalas_mensais_criadas",
+    )
+
+    class Meta:
+        verbose_name = "Escala mensal"
+        verbose_name_plural = "Escalas mensais"
+        ordering = ["-ano", "-mes"]
+        unique_together = [("ano", "mes")]
+
+    def __str__(self):
+        return f"Escala {self.mes:02d}/{self.ano}"
+
+
+class GrupoMensal(models.Model):
+    escala_mensal = models.ForeignKey(
+        EscalaMensal, on_delete=models.CASCADE, related_name="grupos"
+    )
+    numero = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ["numero"]
+        unique_together = [("escala_mensal", "numero")]
+
+    def __str__(self):
+        return f"Grupo {self.numero} — {self.escala_mensal}"
+
+
+class GrupoMensalMembro(models.Model):
+    grupo = models.ForeignKey(GrupoMensal, on_delete=models.CASCADE, related_name="membros")
+    coroinha = models.ForeignKey(
+        "membership.Coroinha", on_delete=models.CASCADE, related_name="grupos_mensais"
+    )
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem"]
+        unique_together = [("grupo", "coroinha")]
+
+
 class Escala(models.Model):
     data = models.DateField()
     missa = models.ForeignKey(Missa, on_delete=models.PROTECT, related_name="escalas")
     modo = models.CharField(max_length=20, choices=ModoEscala.choices)
+    escala_mensal = models.ForeignKey(
+        EscalaMensal,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="escalas",
+    )
+    grupo_numero = models.PositiveSmallIntegerField(null=True, blank=True)
+    observacao = models.TextField(blank=True)
+    voluntarios = models.BooleanField(default=False)
     criado_em = models.DateTimeField(auto_now_add=True)
     criado_por = models.ForeignKey(
         "identity.Usuario",

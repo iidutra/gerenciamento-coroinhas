@@ -1,7 +1,16 @@
 from rest_framework import serializers
 
 from apps.communication.models import CanalMensagem
-from apps.scheduling.models import Escala, EscalaItem, Missa, ModoEscala, FuncaoEscala
+from apps.scheduling.models import (
+    Escala,
+    EscalaItem,
+    EscalaMensal,
+    GrupoMensal,
+    GrupoMensalMembro,
+    Missa,
+    ModoEscala,
+    FuncaoEscala,
+)
 
 
 class MissaSerializer(serializers.ModelSerializer):
@@ -92,7 +101,19 @@ class EscalaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Escala
-        fields = ("id", "data", "missa", "missa_nome", "modo", "criado_em", "itens", "notificacao_enviada")
+        fields = (
+            "id",
+            "data",
+            "missa",
+            "missa_nome",
+            "modo",
+            "criado_em",
+            "itens",
+            "notificacao_enviada",
+            "grupo_numero",
+            "observacao",
+            "voluntarios",
+        )
 
     def get_notificacao_enviada(self, obj):
         return obj.mensagens_notificacao.exists()
@@ -137,3 +158,51 @@ class AtribuirFuncoesSerializer(serializers.Serializer):
 
 class DefinirMembrosSerializer(serializers.Serializer):
     coroinha_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=True)
+
+
+class GrupoMensalMembroSerializer(serializers.ModelSerializer):
+    coroinha_id = serializers.IntegerField(source="coroinha.id", read_only=True)
+    coroinha_nome = serializers.CharField(source="coroinha.nome", read_only=True)
+
+    class Meta:
+        model = GrupoMensalMembro
+        fields = ("coroinha_id", "coroinha_nome", "ordem")
+
+
+class GrupoMensalSerializer(serializers.ModelSerializer):
+    membros = GrupoMensalMembroSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = GrupoMensal
+        fields = ("numero", "membros")
+
+
+class EscalaMensalSerializer(serializers.ModelSerializer):
+    grupos = GrupoMensalSerializer(many=True, read_only=True)
+    total_escalas = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EscalaMensal
+        fields = (
+            "id",
+            "ano",
+            "mes",
+            "tamanho_grupo",
+            "quantidade_sexta",
+            "quantidade_comunidade",
+            "criado_em",
+            "grupos",
+            "total_escalas",
+        )
+
+    def get_total_escalas(self, obj):
+        return obj.escalas.count()
+
+
+class GerarEscalaMesSerializer(serializers.Serializer):
+    ano = serializers.IntegerField(min_value=2020, max_value=2100)
+    mes = serializers.IntegerField(min_value=1, max_value=12)
+    tamanho_grupo = serializers.IntegerField(min_value=4, max_value=15, default=9)
+    quantidade_sexta = serializers.IntegerField(min_value=1, max_value=6, default=2)
+    quantidade_comunidade = serializers.IntegerField(min_value=1, max_value=6, default=2)
+    substituir = serializers.BooleanField(default=False)
