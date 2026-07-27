@@ -96,6 +96,9 @@ class EscalaItemSerializer(serializers.ModelSerializer):
 
 class EscalaSerializer(serializers.ModelSerializer):
     missa_nome = serializers.CharField(source="missa.nome", read_only=True)
+    missa_horario = serializers.TimeField(source="missa.horario", format="%H:%M", read_only=True)
+    missa_tipo_slot = serializers.CharField(source="missa.tipo_slot", read_only=True)
+    missa_local = serializers.CharField(source="missa.local", read_only=True)
     itens = EscalaItemSerializer(many=True, read_only=True)
     notificacao_enviada = serializers.SerializerMethodField()
 
@@ -106,6 +109,9 @@ class EscalaSerializer(serializers.ModelSerializer):
             "data",
             "missa",
             "missa_nome",
+            "missa_horario",
+            "missa_tipo_slot",
+            "missa_local",
             "modo",
             "criado_em",
             "itens",

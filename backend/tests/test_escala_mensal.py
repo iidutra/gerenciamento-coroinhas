@@ -1,6 +1,6 @@
 """Testes do gerador de escala mensal."""
 
-from datetime import date, time
+from datetime import date, time, timedelta
 
 import pytest
 from rest_framework import status
@@ -135,6 +135,41 @@ class TestGeradorEscalaMensal:
         with pytest.raises(ValueError, match="Já existe escala mensal"):
             GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
 
+    def test_sexta_um_antigo_um_novo(self, coordenador, missas_mensais, coroinhas_grupo):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
+        sextas = Escala.objects.filter(
+            data__year=2026,
+            data__month=7,
+            missa__tipo_slot=TipoSlotMissa.SEXTA_ADORACAO,
+        ).prefetch_related("itens__coroinha")
+        assert sextas.exists()
+        for escala in sextas:
+            assert escala.itens.count() == 2
+            flags = [item.coroinha.antigo for item in escala.itens.all()]
+            assert True in flags
+            assert False in flags
+
+    def test_sexta_nao_sobrepoe_grupo_fim_de_semana(self, coordenador, missas_mensais, coroinhas_grupo):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
+        sabados = {
+            e.data: set(e.itens.values_list("coroinha_id", flat=True))
+            for e in Escala.objects.filter(
+                data__year=2026,
+                data__month=7,
+                missa__tipo_slot=TipoSlotMissa.SABADO_NOITE,
+            ).prefetch_related("itens")
+        }
+        sextas = Escala.objects.filter(
+            data__year=2026,
+            data__month=7,
+            missa__tipo_slot=TipoSlotMissa.SEXTA_ADORACAO,
+        ).prefetch_related("itens")
+        for escala in sextas:
+            sabado = escala.data + timedelta(days=1)
+            grupo_ids = sabados.get(sabado, set())
+            sexta_ids = {item.coroinha_id for item in escala.itens.all()}
+            assert not (sexta_ids & grupo_ids), f"Sobreposição na sexta {escala.data}"
+
 
 class TestGerarMesAPI:
     def test_gerar_mes_via_api(self, client_coordenador, missas_mensais, coroinhas_grupo):
@@ -160,3 +195,24 @@ class TestGerarMesAPI:
             format="json",
         )
         assert res.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_consultar_mensal(self, client_coordenador, missas_mensais, coroinhas_grupo):
+        client_coordenador.post(
+            "/api/v1/escalas/gerar-mes/",
+            {"ano": 2026, "mes": 7, "tamanho_grupo": 9},
+            format="json",
+        )
+        res = client_coordenador.get("/api/v1/escalas/mensal/?ano=2026&mes=7")
+        assert res.status_code == status.HTTP_200_OK
+        assert len(res.data["grupos"]) == 4
+
+    def test_escala_inclui_horario(self, client_coordenador, missas_mensais, coroinhas_grupo):
+        client_coordenador.post(
+            "/api/v1/escalas/gerar-mes/",
+            {"ano": 2026, "mes": 7, "tamanho_grupo": 9},
+            format="json",
+        )
+        res = client_coordenador.get("/api/v1/escalas/")
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["results"][0]["missa_horario"]
+        assert res.data["results"][0]["missa_tipo_slot"]

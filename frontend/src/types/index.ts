@@ -71,6 +71,9 @@ export interface Escala {
   data: string;
   missa: number;
   missa_nome: string;
+  missa_horario?: string;
+  missa_tipo_slot?: string;
+  missa_local?: string;
   modo: string;
   criado_em: string;
   itens: EscalaItem[];

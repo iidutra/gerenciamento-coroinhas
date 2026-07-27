@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { Calendar, CalendarRange, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Calendar, CalendarRange, Clock, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
+import { GruposMensaisPanel } from "@/components/GruposMensaisPanel";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
 import { StaffPage } from "@/components/StaffPage";
 import { apiFetch, apiFetchAll, mediaUrl } from "@/lib/api";
@@ -12,6 +13,11 @@ import {
   funcoesParaPayload,
   funcoesVazias,
 } from "@/lib/scheduling";
+import {
+  agruparEscalasPorHorario,
+  filtrarEscalasDoMes,
+  nomeMes,
+} from "@/lib/escala-layout";
 import type { Coroinha, Escala, EscalaMensal, Missa } from "@/types";
 
 const DIAS_SEMANA = [
@@ -76,6 +82,31 @@ export default function EscalasPage() {
   const [substituirMes, setSubstituirMes] = useState(false);
   const [gerandoMes, setGerandoMes] = useState(false);
   const [ultimaEscalaMensal, setUltimaEscalaMensal] = useState<EscalaMensal | null>(null);
+  const [mesVisualizar, setMesVisualizar] = useState(new Date().getMonth() + 1);
+  const [anoVisualizar, setAnoVisualizar] = useState(new Date().getFullYear());
+  const [escalaMensalView, setEscalaMensalView] = useState<EscalaMensal | null>(null);
+
+  function carregarEscalaMensal(ano: number, mes: number) {
+    apiFetch<EscalaMensal>(`/escalas/mensal/?ano=${ano}&mes=${mes}`)
+      .then(setEscalaMensalView)
+      .catch(() => setEscalaMensalView(null));
+  }
+
+  const escalasDoMes = useMemo(
+    () => filtrarEscalasDoMes(escalas, anoVisualizar, mesVisualizar),
+    [escalas, anoVisualizar, mesVisualizar],
+  );
+
+  const secoesEscalas = useMemo(
+    () => agruparEscalasPorHorario(escalasDoMes),
+    [escalasDoMes],
+  );
+
+  const escalaMensalExibir = escalaMensalView ?? (
+    ultimaEscalaMensal?.ano === anoVisualizar && ultimaEscalaMensal?.mes === mesVisualizar
+      ? ultimaEscalaMensal
+      : null
+  );
 
   function load() {
     Promise.all([
@@ -94,6 +125,10 @@ export default function EscalasPage() {
   useEffect(() => {
     if (ready) load();
   }, [ready]);
+
+  useEffect(() => {
+    if (ready) carregarEscalaMensal(anoVisualizar, mesVisualizar);
+  }, [ready, anoVisualizar, mesVisualizar]);
 
   function resetFormMissa() {
     setNomeMissa("");
@@ -263,6 +298,9 @@ export default function EscalasPage() {
         }),
       });
       setUltimaEscalaMensal(resultado);
+      setMesVisualizar(resultado.mes);
+      setAnoVisualizar(resultado.ano);
+      setEscalaMensalView(resultado);
       setMostrarGerarMes(false);
       load();
     } catch (e) {
@@ -504,7 +542,7 @@ export default function EscalasPage() {
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Monta sábado/domingo (grupos rotativos), sextas, comunidade e quartas (voluntários).
+                  Monta sábado/domingo (grupos rotativos), sextas (1 antigo + 1 novo, sem repetir quem já serve no fim de semana), comunidade e quartas (voluntários).
                   O dia 13 fica de fora — você cadastra depois com a lista manual.
                 </p>
                 {mostrarGerarMes && (
@@ -596,232 +634,270 @@ export default function EscalasPage() {
           )}
         </div>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="font-display text-xl font-semibold flex items-center gap-2">
             <Calendar className="size-5 text-gold" aria-hidden />
             Escalas montadas
           </h2>
-          {escalas.length > 0 && (
-            <span className="text-sm text-muted-foreground">
-              {escalas.length} {escalas.length === 1 ? "escala" : "escalas"}
-            </span>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={mesVisualizar}
+              onChange={(e) => setMesVisualizar(Number(e.target.value))}
+              className="input-field text-sm py-1.5 w-auto min-w-[8rem]"
+              aria-label="Mês"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>{nomeMes(m)}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={2020}
+              max={2100}
+              value={anoVisualizar}
+              onChange={(e) => setAnoVisualizar(Number(e.target.value))}
+              className="input-field text-sm py-1.5 w-24"
+              aria-label="Ano"
+            />
+            {escalasDoMes.length > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {escalasDoMes.length} {escalasDoMes.length === 1 ? "celebração" : "celebrações"}
+              </span>
+            )}
+          </div>
         </div>
 
-        {escalas.length === 0 ? (
+        {escalaMensalExibir && <GruposMensaisPanel escalaMensal={escalaMensalExibir} />}
+
+        {escalasDoMes.length === 0 ? (
           <div className="card-liturgical p-10 text-center">
             <Calendar className="size-10 text-muted-foreground/40 mx-auto mb-3" aria-hidden />
-            <p className="text-muted-foreground">Nenhuma escala montada ainda.</p>
+            <p className="text-muted-foreground">
+              Nenhuma escala em {nomeMes(mesVisualizar)} de {anoVisualizar}.
+            </p>
             {podeEditar && (
               <p className="text-sm text-muted-foreground/80 mt-1">
-                Use o formulário “Nova escala” acima para criar a primeira.
+                Use “Gerar escala do mês” ou “Nova escala (avulsa)” acima.
               </p>
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {escalas.map((e) => {
-              const { dia, mes, semana } = partesData(e.data);
-              const editandoMembros = editandoMembrosId === e.id;
-              const editandoFuncoes = editandoFuncoesId === e.id;
-              return (
-                <div key={e.id} className="card-liturgical overflow-hidden">
-                  <div className="flex flex-col gap-4 p-4 sm:p-5 sm:flex-row sm:items-start sm:justify-between">
-                    {/* Data + missa */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="shrink-0 w-14 overflow-hidden rounded-xl border border-border bg-card text-center">
-                        <div className="bg-card text-burgundy text-[10px] font-semibold leading-none tracking-wide py-1 border-b border-border">
-                          {mes}
-                        </div>
-                        <div className="bg-gradient-gold text-burgundy-deep font-display text-xl font-bold leading-none py-1.5">
-                          {dia}
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-display font-semibold text-burgundy truncate">
-                            {e.missa_nome}
-                          </h3>
-                          {e.notificacao_enviada && (
-                            <span className="inline-flex items-center gap-1 text-xs rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5">
-                              <Send className="size-3" aria-hidden />
-                              Notificado
-                            </span>
+          <div className="space-y-8">
+            {secoesEscalas.map((secao) => (
+              <section key={secao.id}>
+                <div className="flex items-start gap-2 mb-3 pb-2 border-b border-border">
+                  <Clock className="size-4 text-gold mt-0.5 shrink-0" aria-hidden />
+                  <div>
+                    <h3 className="font-display font-semibold text-burgundy">{secao.titulo}</h3>
+                    {secao.subtitulo && (
+                      <p className="text-xs text-muted-foreground">{secao.subtitulo}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {secao.escalas.map((e) => {
+                    const { dia, mes, semana } = partesData(e.data);
+                    const editandoMembros = editandoMembrosId === e.id;
+                    const editandoFuncoes = editandoFuncoesId === e.id;
+                    const listaNumerada = e.grupo_numero != null && e.itens.length > 0;
+                    return (
+                      <div key={e.id} className="card-liturgical overflow-hidden">
+                        <div className="flex flex-col gap-4 p-4 sm:p-5 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="shrink-0 w-14 overflow-hidden rounded-xl border border-border bg-card text-center">
+                              <div className="bg-card text-burgundy text-[10px] font-semibold leading-none tracking-wide py-1 border-b border-border">
+                                {mes}
+                              </div>
+                              <div className="bg-gradient-gold text-burgundy-deep font-display text-xl font-bold leading-none py-1.5">
+                                {dia}
+                              </div>
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-display font-semibold text-burgundy capitalize">
+                                  {semana}
+                                  {e.missa_horario && (
+                                    <span className="text-muted-foreground font-normal"> · {formatarHorario(e.missa_horario)}</span>
+                                  )}
+                                </h4>
+                                {e.grupo_numero != null && (
+                                  <span className="text-xs rounded-full bg-burgundy/10 text-burgundy px-2 py-0.5 font-semibold">
+                                    GRUPO {e.grupo_numero}
+                                  </span>
+                                )}
+                                {e.notificacao_enviada && (
+                                  <span className="inline-flex items-center gap-1 text-xs rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5">
+                                    <Send className="size-3" aria-hidden />
+                                    Notificado
+                                  </span>
+                                )}
+                                {e.voluntarios && (
+                                  <span className="inline-flex items-center gap-1 text-xs rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 px-2 py-0.5">
+                                    Voluntários
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {e.missa_nome}
+                                {e.voluntarios ? " · sem escala fixa" : ` · ${e.itens.length} ${e.itens.length === 1 ? "coroinha" : "coroinhas"}`}
+                              </p>
+                              {e.observacao && (
+                                <p className="text-xs text-muted-foreground italic mt-0.5">{e.observacao}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {podeEditar && (
+                            <div className="flex items-center gap-1.5 shrink-0 self-start">
+                              <button
+                                type="button"
+                                onClick={() => (editandoMembros ? setEditandoMembrosId(null) : abrirEdicaoMembros(e))}
+                                aria-pressed={editandoMembros}
+                                title="Editar coroinhas"
+                                aria-label="Editar coroinhas"
+                                className={`p-2 rounded-lg border transition-colors ${
+                                  editandoMembros
+                                    ? "border-burgundy/40 bg-burgundy/5 text-burgundy"
+                                    : "border-border text-muted-foreground hover:bg-muted hover:text-burgundy"
+                                }`}
+                              >
+                                <Users className="size-4" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => (editandoFuncoes ? setEditandoFuncoesId(null) : abrirEdicaoFuncoes(e))}
+                                aria-pressed={editandoFuncoes}
+                                title="Editar funções"
+                                aria-label="Editar funções"
+                                className={`p-2 rounded-lg border transition-colors ${
+                                  editandoFuncoes
+                                    ? "border-burgundy/40 bg-burgundy/5 text-burgundy"
+                                    : "border-border text-muted-foreground hover:bg-muted hover:text-burgundy"
+                                }`}
+                              >
+                                <UserCog className="size-4" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => notificarEscala(e.id)}
+                                disabled={notificandoId === e.id}
+                                title="Notificar escalados"
+                                aria-label="Notificar escalados"
+                                className="p-2 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-burgundy transition-colors disabled:opacity-50"
+                              >
+                                <Send className={`size-4 ${notificandoId === e.id ? "animate-pulse" : ""}`} aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => excluirEscala(e.id)}
+                                disabled={excluindoEscalaId === e.id}
+                                title="Excluir escala"
+                                aria-label="Excluir escala"
+                                className="p-2 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                              >
+                                <Trash2 className="size-4" aria-hidden />
+                              </button>
+                            </div>
                           )}
-                          {e.voluntarios && (
-                            <span className="inline-flex items-center gap-1 text-xs rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 px-2 py-0.5">
-                              Voluntários
-                            </span>
-                          )}
-                          {e.grupo_numero != null && (
-                            <span className="text-xs rounded-full bg-burgundy/10 text-burgundy px-2 py-0.5">
-                              Grupo {e.grupo_numero}
-                            </span>
+                        </div>
+
+                        <div className="px-4 sm:px-5 pb-4">
+                          {e.itens.length === 0 ? (
+                            <p className="text-sm text-muted-foreground italic">
+                              {e.voluntarios ? "Voluntários — nenhum nome na escala automática." : "Nenhum coroinha nesta escala."}
+                            </p>
+                          ) : listaNumerada ? (
+                            <ol className="text-sm space-y-1 list-decimal list-inside columns-1 sm:columns-2">
+                              {e.itens.map((i) => (
+                                <li key={i.id} className="break-inside-avoid">
+                                  {i.coroinha_nome}
+                                  {i.funcao_label && (
+                                    <span className="text-xs text-gold ml-1">({i.funcao_label})</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {e.itens.map((i) => (
+                                <div
+                                  key={i.id}
+                                  className="flex items-center gap-2 rounded-full border border-border bg-muted/30 pl-1 pr-3 py-1"
+                                  title={i.funcao_label ? `${i.funcao_label}: ${i.coroinha_nome}` : i.coroinha_nome}
+                                >
+                                  <CoroinhaAvatar
+                                    nome={i.coroinha_nome}
+                                    fotoUrl={mediaUrl(i.coroinha_foto_url)}
+                                    size="sm"
+                                  />
+                                  <span className="text-sm leading-tight">
+                                    {i.funcao_label && (
+                                      <span className="block text-[11px] font-semibold text-gold uppercase tracking-wide">
+                                        {i.funcao_label}
+                                      </span>
+                                    )}
+                                    <span>{i.coroinha_nome}</span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                          {semana} · {e.voluntarios ? "sem escala fixa" : `${e.itens.length} ${e.itens.length === 1 ? "coroinha" : "coroinhas"}`}
-                        </p>
-                        {e.observacao && (
-                          <p className="text-xs text-muted-foreground italic mt-0.5">{e.observacao}</p>
+
+                        {editandoMembros && (
+                          <div className="border-t border-border bg-muted/20 p-4 sm:p-5">
+                            <p className="text-sm font-medium mb-2">Selecione os coroinhas desta escala</p>
+                            <div className="max-h-56 overflow-y-auto border border-border rounded-lg bg-card p-2 grid sm:grid-cols-2 gap-1">
+                              {coroinhas.map((c) => (
+                                <label
+                                  key={c.id}
+                                  className="flex items-center gap-2 text-sm cursor-pointer px-2 py-1.5 rounded hover:bg-muted/50"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="accent-[var(--burgundy)] size-4"
+                                    checked={membrosEdicao.includes(c.id)}
+                                    onChange={() => toggleMembro(c.id)}
+                                  />
+                                  {c.nome}
+                                </label>
+                              ))}
+                            </div>
+                            <div className="flex gap-2 mt-3">
+                              <button type="button" onClick={() => salvarMembros(e.id)} className="btn-primary text-sm">
+                                Salvar coroinhas
+                              </button>
+                              <button type="button" onClick={() => setEditandoMembrosId(null)} className="btn-outline text-sm">
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {editandoFuncoes && (
+                          <div className="border-t border-border bg-muted/20 p-4 sm:p-5">
+                            <FuncoesEscalaForm
+                              coroinhas={coroinhas}
+                              valores={funcoesEdicao}
+                              onChange={setFuncoesEdicao}
+                              compact
+                            />
+                            <div className="flex gap-2 mt-3">
+                              <button type="button" onClick={() => salvarFuncoes(e.id)} className="btn-primary text-sm">
+                                Salvar funções
+                              </button>
+                              <button type="button" onClick={() => setEditandoFuncoesId(null)} className="btn-outline text-sm">
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </div>
-
-                    {/* Ações */}
-                    {podeEditar && (
-                      <div className="flex items-center gap-1.5 shrink-0 self-start">
-                        <button
-                          type="button"
-                          onClick={() => (editandoMembros ? setEditandoMembrosId(null) : abrirEdicaoMembros(e))}
-                          aria-pressed={editandoMembros}
-                          title="Editar coroinhas"
-                          aria-label="Editar coroinhas"
-                          className={`p-2 rounded-lg border transition-colors ${
-                            editandoMembros
-                              ? "border-burgundy/40 bg-burgundy/5 text-burgundy"
-                              : "border-border text-muted-foreground hover:bg-muted hover:text-burgundy"
-                          }`}
-                        >
-                          <Users className="size-4" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => (editandoFuncoes ? setEditandoFuncoesId(null) : abrirEdicaoFuncoes(e))}
-                          aria-pressed={editandoFuncoes}
-                          title="Editar funções"
-                          aria-label="Editar funções"
-                          className={`p-2 rounded-lg border transition-colors ${
-                            editandoFuncoes
-                              ? "border-burgundy/40 bg-burgundy/5 text-burgundy"
-                              : "border-border text-muted-foreground hover:bg-muted hover:text-burgundy"
-                          }`}
-                        >
-                          <UserCog className="size-4" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => notificarEscala(e.id)}
-                          disabled={notificandoId === e.id}
-                          title="Notificar escalados"
-                          aria-label="Notificar escalados"
-                          className="p-2 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-burgundy transition-colors disabled:opacity-50"
-                        >
-                          <Send className={`size-4 ${notificandoId === e.id ? "animate-pulse" : ""}`} aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => excluirEscala(e.id)}
-                          disabled={excluindoEscalaId === e.id}
-                          title="Excluir escala"
-                          aria-label="Excluir escala"
-                          className="p-2 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                        >
-                          <Trash2 className="size-4" aria-hidden />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Coroinhas */}
-                  <div className="px-4 sm:px-5 pb-4">
-                    {e.itens.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic">
-                        {e.voluntarios ? "Voluntários — nenhum nome na escala automática." : "Nenhum coroinha nesta escala."}
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {e.itens.map((i) => (
-                          <div
-                            key={i.id}
-                            className="flex items-center gap-2 rounded-full border border-border bg-muted/30 pl-1 pr-3 py-1"
-                            title={i.funcao_label ? `${i.funcao_label}: ${i.coroinha_nome}` : i.coroinha_nome}
-                          >
-                            <CoroinhaAvatar
-                              nome={i.coroinha_nome}
-                              fotoUrl={mediaUrl(i.coroinha_foto_url)}
-                              size="sm"
-                            />
-                            <span className="text-sm leading-tight">
-                              {i.funcao_label && (
-                                <span className="block text-[11px] font-semibold text-gold uppercase tracking-wide">
-                                  {i.funcao_label}
-                                </span>
-                              )}
-                              <span className={i.funcao_label ? "text-foreground" : "text-foreground"}>
-                                {i.coroinha_nome}
-                              </span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Editor de coroinhas */}
-                  {editandoMembros && (
-                    <div className="border-t border-border bg-muted/20 p-4 sm:p-5">
-                      <p className="text-sm font-medium mb-2">Selecione os coroinhas desta escala</p>
-                      <div className="max-h-56 overflow-y-auto border border-border rounded-lg bg-card p-2 grid sm:grid-cols-2 gap-1">
-                        {coroinhas.map((c) => (
-                          <label
-                            key={c.id}
-                            className="flex items-center gap-2 text-sm cursor-pointer px-2 py-1.5 rounded hover:bg-muted/50"
-                          >
-                            <input
-                              type="checkbox"
-                              className="accent-[var(--burgundy)] size-4"
-                              checked={membrosEdicao.includes(c.id)}
-                              onChange={() => toggleMembro(c.id)}
-                            />
-                            {c.nome}
-                          </label>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Remover um coroinha também remove a função dele nesta escala.
-                      </p>
-                      <div className="flex gap-2 mt-3">
-                        <button type="button" onClick={() => salvarMembros(e.id)} className="btn-primary text-sm">
-                          Salvar coroinhas
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditandoMembrosId(null)}
-                          className="btn-outline text-sm"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Editor de funções */}
-                  {editandoFuncoes && (
-                    <div className="border-t border-border bg-muted/20 p-4 sm:p-5">
-                      <FuncoesEscalaForm
-                        coroinhas={coroinhas}
-                        valores={funcoesEdicao}
-                        onChange={setFuncoesEdicao}
-                        compact
-                      />
-                      <div className="flex gap-2 mt-3">
-                        <button type="button" onClick={() => salvarFuncoes(e.id)} className="btn-primary text-sm">
-                          Salvar funções
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditandoFuncoesId(null)}
-                          className="btn-outline text-sm"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </section>
+            ))}
           </div>
         )}
       </StaffPage>

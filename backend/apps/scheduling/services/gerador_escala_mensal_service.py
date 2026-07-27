@@ -17,6 +17,7 @@ from apps.scheduling.models import (
     ModoEscala,
     TipoSlotMissa,
 )
+from apps.scheduling.services.equilibrio_escala_service import ControleEquilibrioMensal
 from apps.scheduling.services.grupo_montagem_service import (
     ROTACAO_FIM_DE_SEMANA,
     GrupoMontagemService,
@@ -51,6 +52,8 @@ class GeradorEscalaMensalService:
             existente.delete()
 
         grupos_map = GrupoMontagemService.montar_grupos(tamanho_grupo)
+        candidatos = GrupoMontagemService.candidatos()
+        controle = ControleEquilibrioMensal(candidatos)
 
         escala_mensal = EscalaMensal.objects.create(
             ano=ano,
@@ -61,10 +64,8 @@ class GeradorEscalaMensalService:
             criado_por=usuario,
         )
 
-        grupos_db: dict[int, GrupoMensal] = {}
         for numero, membros in grupos_map.items():
             grupo = GrupoMensal.objects.create(escala_mensal=escala_mensal, numero=numero)
-            grupos_db[numero] = grupo
             for ordem, coroinha in enumerate(membros, start=1):
                 GrupoMensalMembro.objects.create(grupo=grupo, coroinha=coroinha, ordem=ordem)
 
@@ -72,10 +73,10 @@ class GeradorEscalaMensalService:
         _, ultimo_dia = calendar.monthrange(ano, mes)
         datas = [date(ano, mes, d) for d in range(1, ultimo_dia + 1)]
 
-        cls._gerar_fins_de_semana(datas, escala_mensal, grupos_map, missas, usuario)
-        cls._gerar_sextas(datas, escala_mensal, missas, usuario, quantidade_sexta, grupos_map)
+        cls._gerar_fins_de_semana(datas, escala_mensal, grupos_map, missas, usuario, controle)
+        cls._gerar_sextas(datas, escala_mensal, missas, usuario, quantidade_sexta, controle)
         cls._gerar_quartas(datas, escala_mensal, missas, usuario)
-        cls._gerar_comunidade(datas, escala_mensal, missas, usuario, quantidade_comunidade)
+        cls._gerar_comunidade(datas, escala_mensal, missas, usuario, quantidade_comunidade, controle)
 
         return escala_mensal
 
@@ -88,6 +89,7 @@ class GeradorEscalaMensalService:
         usuario,
         escala_mensal: EscalaMensal,
         coroinhas: list[Coroinha],
+        controle: ControleEquilibrioMensal | None = None,
         grupo_numero: int | None = None,
         observacao: str = "",
         voluntarios: bool = False,
@@ -105,12 +107,16 @@ class GeradorEscalaMensalService:
             observacao=observacao,
             voluntarios=voluntarios,
         )
+        ids = []
         for ordem, coroinha in enumerate(coroinhas, start=1):
             EscalaItem.objects.create(escala=escala, coroinha=coroinha, ordem=ordem)
+            ids.append(coroinha.id)
+        if controle and ids:
+            controle.registrar_servicos(data, ids)
         return escala
 
     @classmethod
-    def _gerar_fins_de_semana(cls, datas, escala_mensal, grupos_map, missas, usuario):
+    def _gerar_fins_de_semana(cls, datas, escala_mensal, grupos_map, missas, usuario, controle):
         missa_sab = missas.get(TipoSlotMissa.SABADO_NOITE)
         missa_dom_m = missas.get(TipoSlotMissa.DOMINGO_MANHA)
         missa_dom_n = missas.get(TipoSlotMissa.DOMINGO_NOITE)
@@ -120,12 +126,16 @@ class GeradorEscalaMensalService:
         sabados = [d for d in datas if d.weekday() == 5]
         for i, sab in enumerate(sabados):
             rot = ROTACAO_FIM_DE_SEMANA[i % len(ROTACAO_FIM_DE_SEMANA)]
+            membros_sab = list(grupos_map.get(rot["sabado"], []))
+            controle.registrar_grupo_fim_semana(sab, [c.id for c in membros_sab])
+
             cls._criar_escala_com_membros(
                 data=sab,
                 missa=missa_sab,
                 usuario=usuario,
                 escala_mensal=escala_mensal,
-                coroinhas=list(grupos_map.get(rot["sabado"], [])),
+                coroinhas=membros_sab,
+                controle=controle,
                 grupo_numero=rot["sabado"],
             )
             dom = sab + timedelta(days=1)
@@ -136,6 +146,7 @@ class GeradorEscalaMensalService:
                     usuario=usuario,
                     escala_mensal=escala_mensal,
                     coroinhas=list(grupos_map.get(rot["dom_manha"], [])),
+                    controle=controle,
                     grupo_numero=rot["dom_manha"],
                 )
                 cls._criar_escala_com_membros(
@@ -144,6 +155,7 @@ class GeradorEscalaMensalService:
                     usuario=usuario,
                     escala_mensal=escala_mensal,
                     coroinhas=list(grupos_map.get(rot["dom_noite"], [])),
+                    controle=controle,
                     grupo_numero=rot["dom_noite"],
                 )
 
@@ -158,6 +170,7 @@ class GeradorEscalaMensalService:
                         usuario=usuario,
                         escala_mensal=escala_mensal,
                         coroinhas=list(grupos_map.get(rot["dom_manha"], [])),
+                        controle=controle,
                         grupo_numero=rot["dom_manha"],
                     )
                     cls._criar_escala_com_membros(
@@ -166,32 +179,27 @@ class GeradorEscalaMensalService:
                         usuario=usuario,
                         escala_mensal=escala_mensal,
                         coroinhas=list(grupos_map.get(rot["dom_noite"], [])),
+                        controle=controle,
                         grupo_numero=rot["dom_noite"],
                     )
 
     @classmethod
-    def _gerar_sextas(cls, datas, escala_mensal, missas, usuario, quantidade, grupos_map):
+    def _gerar_sextas(cls, datas, escala_mensal, missas, usuario, quantidade, controle):
         missa = missas.get(TipoSlotMissa.SEXTA_ADORACAO)
         if not missa:
             return
 
-        todos = [c for membros in grupos_map.values() for c in membros]
-        idx = 0
         for d in datas:
             if d.weekday() != 4:
                 continue
-            selecionados: list[Coroinha] = []
-            for _ in range(quantidade):
-                if not todos:
-                    break
-                selecionados.append(todos[idx % len(todos)])
-                idx += 1
+            selecionados = controle.escolher_sexta(d, quantidade)
             cls._criar_escala_com_membros(
                 data=d,
                 missa=missa,
                 usuario=usuario,
                 escala_mensal=escala_mensal,
                 coroinhas=selecionados,
+                controle=controle,
                 observacao=OBS_SEXTA,
             )
 
@@ -215,7 +223,7 @@ class GeradorEscalaMensalService:
             )
 
     @classmethod
-    def _gerar_comunidade(cls, datas, escala_mensal, missas, usuario, quantidade):
+    def _gerar_comunidade(cls, datas, escala_mensal, missas, usuario, quantidade, controle):
         missa = Missa.objects.filter(
             ativa=True,
             tipo_slot=TipoSlotMissa.COMUNIDADE_DOMINGO,
@@ -224,25 +232,15 @@ class GeradorEscalaMensalService:
         if not missa:
             return
 
-        candidatos = list(
-            Coroinha.objects.filter(status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO]).order_by(
-                "nome"
-            )
-        )
-        idx = 0
         for d in datas:
             if d.weekday() != 6:
                 continue
-            selecionados = []
-            for _ in range(quantidade):
-                if not candidatos:
-                    break
-                selecionados.append(candidatos[idx % len(candidatos)])
-                idx += quantidade
+            selecionados = controle.escolher_comunidade(d, quantidade)
             cls._criar_escala_com_membros(
                 data=d,
                 missa=missa,
                 usuario=usuario,
                 escala_mensal=escala_mensal,
                 coroinhas=selecionados,
+                controle=controle,
             )
