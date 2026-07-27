@@ -2,12 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Calendar, CalendarRange, Clock, Download, Pencil, Plus, Send, Shuffle, Trash2, UserCog, Users } from "lucide-react";
-import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { GruposMensaisPanel } from "@/components/GruposMensaisPanel";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
 import { StaffPage } from "@/components/StaffPage";
-import { apiDownload, apiFetch, apiFetchAll, mediaUrl } from "@/lib/api";
+import { apiDownload, apiFetch, apiFetchAll } from "@/lib/api";
 import {
   funcoesFromItens,
   funcoesParaPayload,
@@ -883,25 +882,18 @@ export default function EscalasPage() {
                           ) : (
                             <div className="flex flex-wrap gap-2">
                               {e.itens.map((i) => (
-                                <div
+                                <span
                                   key={i.id}
-                                  className="flex items-center gap-2 rounded-full border border-border bg-muted/30 pl-1 pr-3 py-1"
+                                  className="inline-flex items-center rounded-full border border-border bg-muted/30 px-3 py-1 text-sm"
                                   title={i.funcao_label ? `${i.funcao_label}: ${i.coroinha_nome}` : i.coroinha_nome}
                                 >
-                                  <CoroinhaAvatar
-                                    nome={i.coroinha_nome}
-                                    fotoUrl={mediaUrl(i.coroinha_foto_url)}
-                                    size="sm"
-                                  />
-                                  <span className="text-sm leading-tight">
-                                    {i.funcao_label && (
-                                      <span className="block text-[11px] font-semibold text-gold uppercase tracking-wide">
-                                        {i.funcao_label}
-                                      </span>
-                                    )}
-                                    <span>{i.coroinha_nome}</span>
-                                  </span>
-                                </div>
+                                  {i.funcao_label && (
+                                    <span className="text-[11px] font-semibold text-gold uppercase tracking-wide mr-1.5">
+                                      {i.funcao_label}:
+                                    </span>
+                                  )}
+                                  {i.coroinha_nome}
+                                </span>
                               ))}
                             </div>
                           )}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from apps.membership.models import Coroinha
+from apps.membership.models import Coroinha, StatusCoroinha
 
 
 def _norm(texto: str) -> str:
@@ -12,11 +12,17 @@ def _norm(texto: str) -> str:
 
 
 def extrair_sobrenome(nome: str) -> str:
-    """Sobrenome completo = tudo após o primeiro nome."""
+    """Sobrenome familiar para agrupar irmãos (últimas palavras do nome)."""
     partes = _norm(nome).split()
     if len(partes) <= 1:
         return ""
-    return " ".join(partes[1:])
+    if len(partes) == 2:
+        return partes[1]
+    if len(partes) == 3:
+        return " ".join(partes[1:])
+    if partes[-2] == "de":
+        return " ".join(partes[-3:])
+    return " ".join(partes[-2:])
 
 
 class GemeosService:
@@ -29,14 +35,10 @@ class GemeosService:
         return Coroinha.objects.filter(gemeo_de=coroinha).select_related("gemeo_de").first()
 
     @classmethod
-    def chave_familia(cls, coroinha: Coroinha) -> tuple[str, str, str] | None:
-        """Mesmo sobrenome completo e mesmos pais."""
+    def chave_familia(cls, coroinha: Coroinha) -> str | None:
+        """Irmãos pelo mesmo sobrenome (cadastro de pais opcional)."""
         sobrenome = extrair_sobrenome(coroinha.nome)
-        mae = _norm(coroinha.nome_mae)
-        pai = _norm(coroinha.nome_pai)
-        if not sobrenome or not mae or not pai:
-            return None
-        return (sobrenome, mae, pai)
+        return sobrenome or None
 
     @classmethod
     def _unir(cls, parent: dict[int, int], a: int, b: int) -> None:
@@ -53,7 +55,7 @@ class GemeosService:
 
     @classmethod
     def componentes(cls, candidatos: list[Coroinha]) -> dict[int, set[int]]:
-        """Agrupa gêmeos (vínculo explícito) e irmãos (sobrenome + pais)."""
+        """Agrupa gêmeos (vínculo explícito) e irmãos (mesmo sobrenome)."""
         id_map = {c.id: c for c in candidatos}
         parent = {c.id: c.id for c in candidatos}
 
@@ -62,7 +64,7 @@ class GemeosService:
             if par and par.id in id_map:
                 cls._unir(parent, coroinha.id, par.id)
 
-        familias: dict[tuple[str, str, str], list[int]] = defaultdict(list)
+        familias: dict[str, list[int]] = defaultdict(list)
         for coroinha in candidatos:
             chave = cls.chave_familia(coroinha)
             if chave:
@@ -82,35 +84,20 @@ class GemeosService:
         return componentes
 
     @classmethod
+    def _candidatos_db(cls) -> list[Coroinha]:
+        return list(
+            Coroinha.objects.filter(
+                status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO]
+            ).select_related("gemeo_de")
+        )
+
+    @classmethod
     def familia_ids(cls, coroinha_id: int, candidatos: list[Coroinha] | None = None) -> set[int]:
         if candidatos:
             componentes = cls.componentes(candidatos)
             return componentes.get(coroinha_id, {coroinha_id})
 
-        coroinha = Coroinha.objects.filter(pk=coroinha_id).select_related("gemeo_de").first()
-        if not coroinha:
-            return set()
-
-        ids = {coroinha_id}
-        par = cls.par_gemeo(coroinha)
-        if par:
-            ids.add(par.id)
-
-        chave = cls.chave_familia(coroinha)
-        if not chave:
-            return ids
-
-        sobrenome, mae, pai = chave
-        possiveis = Coroinha.objects.exclude(nome_mae="").exclude(nome_pai="").filter(
-            nome_mae__iexact=coroinha.nome_mae.strip(),
-            nome_pai__iexact=coroinha.nome_pai.strip(),
-        )
-        for outro in possiveis:
-            if outro.id in ids:
-                continue
-            if cls.chave_familia(outro) == chave:
-                ids.add(outro.id)
-        return ids
+        return cls.componentes(cls._candidatos_db()).get(coroinha_id, {coroinha_id})
 
     @classmethod
     def par_id(cls, coroinha_id: int) -> int | None:

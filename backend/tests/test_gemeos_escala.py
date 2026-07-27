@@ -5,7 +5,7 @@ from datetime import date, time
 import pytest
 
 from apps.membership.models import Coroinha, StatusCoroinha, Turma
-from apps.membership.services.gemeos_service import GemeosService
+from apps.membership.services.gemeos_service import GemeosService, extrair_sobrenome
 from apps.scheduling.models import DiaSemana, Escala, Missa, ModoEscala
 from apps.scheduling.services.equilibrio_escala_service import ControleEquilibrioMensal
 from apps.scheduling.services.escala_service import EscalaService
@@ -140,53 +140,75 @@ class TestDefinirMembrosGemeos:
 
 
 class TestIrmaosService:
+    def test_extrair_sobrenome_nomes_reais(self):
+        assert extrair_sobrenome("Valentina Damazio Moterle") == "damazio moterle"
+        assert extrair_sobrenome("Esther Damazio Moterle") == "damazio moterle"
+        assert extrair_sobrenome("Carlos Henrique Siqueira de Carlos") == "siqueira de carlos"
+        assert extrair_sobrenome("Maria Luíza Siqueira de Carlos") == "siqueira de carlos"
+
     @pytest.fixture
     def irmaos(self, db):
-        pai = "João Silva"
-        mae = "Maria Silva"
         a = Coroinha.objects.create(
             nome="Pedro Silva Santos",
             data_nascimento=date(2012, 1, 10),
-            nome_pai=pai,
-            nome_mae=mae,
             status=StatusCoroinha.ATIVO,
         )
         b = Coroinha.objects.create(
             nome="Ana Silva Santos",
             data_nascimento=date(2014, 6, 20),
-            nome_pai=pai,
-            nome_mae=mae,
             status=StatusCoroinha.ATIVO,
         )
         c = Coroinha.objects.create(
             nome="Lucas Silva Santos",
             data_nascimento=date(2016, 3, 5),
-            nome_pai=pai,
-            nome_mae=mae,
             status=StatusCoroinha.ATIVO,
         )
         return a, b, c
 
-    def test_detecta_irmaos_por_sobrenome_e_pais(self, irmaos):
+    def test_detecta_irmaos_por_sobrenome(self, irmaos):
         a, b, c = irmaos
         familia = GemeosService.familia_ids(a.id, list(irmaos))
         assert familia == {a.id, b.id, c.id}
 
+    def test_moterle_e_siqueira_de_carlos(self, db):
+        valentina = Coroinha.objects.create(
+            nome="Valentina Damazio Moterle",
+            data_nascimento=date(2012, 5, 1),
+            status=StatusCoroinha.ATIVO,
+        )
+        esther = Coroinha.objects.create(
+            nome="Esther Damazio Moterle",
+            data_nascimento=date(2012, 5, 1),
+            status=StatusCoroinha.ATIVO,
+        )
+        carlos = Coroinha.objects.create(
+            nome="Carlos Henrique Siqueira de Carlos",
+            data_nascimento=date(2011, 3, 1),
+            status=StatusCoroinha.ATIVO,
+        )
+        maria = Coroinha.objects.create(
+            nome="Maria Luíza Siqueira de Carlos",
+            data_nascimento=date(2013, 8, 1),
+            status=StatusCoroinha.ATIVO,
+        )
+        assert GemeosService.familia_ids(valentina.id, [valentina, esther, carlos, maria]) == {
+            valentina.id,
+            esther.id,
+        }
+        assert GemeosService.familia_ids(carlos.id, [valentina, esther, carlos, maria]) == {
+            carlos.id,
+            maria.id,
+        }
+
     def test_nao_agrupa_sobrenome_diferente(self, db):
-        pai = "João Silva"
-        mae = "Maria Silva"
         a = Coroinha.objects.create(
             nome="Pedro Silva Santos",
             data_nascimento=date(2012, 1, 10),
-            nome_pai=pai,
-            nome_mae=mae,
             status=StatusCoroinha.ATIVO,
         )
         b = Coroinha.objects.create(
             nome="Ana Oliveira Santos",
             data_nascimento=date(2014, 6, 20),
-            nome_pai=pai,
-            nome_mae=mae,
             status=StatusCoroinha.ATIVO,
         )
         familia = GemeosService.familia_ids(a.id, [a, b])

@@ -571,7 +571,7 @@ export default function CoroinhasPage() {
                       ))}
                   </select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Irmãos com mesmo sobrenome e mesmos pais ficam automaticamente na mesma escala.
+                    Irmãos com o mesmo sobrenome ficam automaticamente no mesmo grupo da escala.
                   </p>
                 </div>
 

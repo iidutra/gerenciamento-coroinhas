@@ -78,16 +78,8 @@ class TestPdfParoquial:
         assert len(data["grupos"]) == 4
         assert len(data["escalas"]) > 0
 
-    def test_pdf_com_foto_cadastrada(self, coordenador, missas_mensais, coroinhas_grupo):
-        from django.core.files.base import ContentFile
-
-        from apps.membership.utils.avatar_placeholder import avatar_placeholder_png
-
-        c = coroinhas_grupo[0]
-        c.foto.save("foto-teste.png", ContentFile(avatar_placeholder_png(64).read()), save=True)
-
+    def test_pdf_gera_com_coroinhas_cadastrados(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
-        pdf_sem = RelatorioEscalaService.exportar_mes_pdf(2026, 6)
-        pdf_com = RelatorioEscalaService.exportar_mes_pdf(2026, 7)
-        assert pdf_com[:4] == b"%PDF"
-        assert len(pdf_com) >= len(pdf_sem)
+        pdf = RelatorioEscalaService.exportar_mes_pdf(2026, 7)
+        assert pdf[:4] == b"%PDF"
+        assert len(pdf) > 4000
