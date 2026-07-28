@@ -4,8 +4,16 @@ from datetime import date, time
 
 import pytest
 
-from apps.scheduling.models import DiaSemana, LocalCelebracao, Missa, TipoSlotMissa
+from apps.scheduling.models import (
+    DiaSemana,
+    Escala,
+    LocalCelebracao,
+    Missa,
+    ModoEscala,
+    TipoSlotMissa,
+)
 from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscalaMensalService
+from apps.scheduling.services.relatorio_escala_pdf_layout import texto_cabecalho_entrada
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
 
 pytestmark = pytest.mark.django_db
@@ -61,6 +69,43 @@ def coroinhas_grupo(db):
 
 
 class TestPdfParoquial:
+    def test_texto_cabecalho_formato_completo(self, db):
+        missa = Missa.objects.create(
+            nome="Domingo 08h",
+            dia_semana=DiaSemana.DOMINGO,
+            horario=time(8, 0),
+            ativa=True,
+            tipo_slot=TipoSlotMissa.DOMINGO_MANHA,
+            local=LocalCelebracao.SANTUARIO,
+        )
+        escala = Escala.objects.create(
+            data=date(2026, 8, 2),
+            missa=missa,
+            modo=ModoEscala.GRUPO_MENSAL,
+            grupo_numero=2,
+        )
+        assert texto_cabecalho_entrada(escala) == (
+            "Domingo, 2 de agosto  ·  N. Sra. de Fátima  ·  8h  ·  GRUPO 2"
+        )
+
+    def test_texto_cabecalho_comunidade_santo_antonio(self, db):
+        missa = Missa.objects.create(
+            nome="Comunidade — Domingo 10h30",
+            dia_semana=DiaSemana.DOMINGO,
+            horario=time(10, 30),
+            ativa=True,
+            tipo_slot=TipoSlotMissa.COMUNIDADE_DOMINGO,
+            local=LocalCelebracao.COMUNIDADE,
+        )
+        escala = Escala.objects.create(
+            data=date(2026, 8, 2),
+            missa=missa,
+            modo=ModoEscala.SELECAO_MANUAL,
+        )
+        assert texto_cabecalho_entrada(escala) == (
+            "Domingo, 2 de agosto  ·  Santo Antônio  ·  10h30"
+        )
+
     def test_pdf_contem_estrutura_paroquial(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
         pdf = RelatorioEscalaService.exportar_mes_pdf(2026, 7)

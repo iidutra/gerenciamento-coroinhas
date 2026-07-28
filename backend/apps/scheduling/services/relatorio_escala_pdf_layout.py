@@ -1,12 +1,12 @@
 """Layout paroquial da escala mensal (PDF)."""
 
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 from reportlab.platypus import Paragraph
 
 from apps.membership.models import Coroinha
-from apps.scheduling.models import Escala, EscalaItem, EscalaMensal, TipoSlotMissa
+from apps.scheduling.models import Escala, EscalaItem, EscalaMensal, LocalCelebracao, TipoSlotMissa
 
 MESES_PT = [
     "",
@@ -57,11 +57,33 @@ SECOES_EXTRAS_PDF = [
 ]
 
 
+LOCAIS_CELEBRACAO = {
+    LocalCelebracao.SANTUARIO: "N. Sra. de Fátima",
+    LocalCelebracao.COMUNIDADE: "Santo Antônio",
+}
+
+
+def local_celebracao(escala: Escala) -> str:
+    if escala.missa.tipo_slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
+        return "Santo Antônio"
+    return LOCAIS_CELEBRACAO.get(escala.missa.local, "N. Sra. de Fátima")
+
+
+def horario_celebracao(escala: Escala) -> str:
+    return formatar_horario_curto(escala.missa.horario)
+
+
 def formatar_data_legivel(data: date) -> str:
     """Ex.: Sábado, 5 de agosto"""
     dia_semana = DIAS_SEMANA_PT[data.weekday()]
     mes = MESES_PT[data.month].lower()
     return f"{dia_semana}, {data.day} de {mes}"
+
+
+def formatar_horario_curto(horario: time) -> str:
+    if horario.minute == 0:
+        return f"{horario.hour}h"
+    return f"{horario.hour}h{horario.minute:02d}"
 
 
 def agrupar_escalas_por_slot(escalas: list[Escala]) -> dict[str, list[Escala]]:
@@ -146,13 +168,11 @@ def linhas_nomes_escala(escala: Escala) -> list[str]:
 
 
 def texto_cabecalho_entrada(escala: Escala) -> str:
-    data_txt = formatar_data_legivel(escala.data)
+    """Ex.: Domingo, 3 de agosto · Santo Antônio · 10h30"""
+    partes = [formatar_data_legivel(escala.data), local_celebracao(escala), horario_celebracao(escala)]
     if escala.grupo_numero is not None:
-        return f"{data_txt}  ·  GRUPO {escala.grupo_numero}"
-    if escala.missa.tipo_slot == TipoSlotMissa.DIA_13:
-        hora = escala.missa.horario.strftime("%H:%M")
-        return f"{data_txt}  ·  {hora}"
-    return data_txt
+        partes.append(f"GRUPO {escala.grupo_numero}")
+    return "  ·  ".join(partes)
 
 
 def carregar_dados_mes(ano: int, mes: int) -> tuple[list[Escala], EscalaMensal | None]:

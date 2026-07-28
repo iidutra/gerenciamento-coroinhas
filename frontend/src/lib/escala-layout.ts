@@ -1,5 +1,26 @@
 import type { Escala } from "@/types";
 
+const LOCAIS_CELEBRACAO: Record<string, string> = {
+  Santuario: "N. Sra. de Fátima",
+  Comunidade: "Santo Antônio",
+};
+
+function localCelebracao(escala: Escala): string {
+  if (escala.missa_tipo_slot === "ComunidadeDomingo" || escala.missa_local === "Comunidade") {
+    return "Santo Antônio";
+  }
+  if (escala.missa_local) {
+    return LOCAIS_CELEBRACAO[escala.missa_local] ?? escala.missa_local;
+  }
+  return "N. Sra. de Fátima";
+}
+
+function horarioCelebracao(escala: Escala): string {
+  if (escala.missa_horario) return formatarHorarioCurto(escala.missa_horario);
+  if (escala.missa_tipo_slot === "ComunidadeDomingo") return "10h30";
+  return "";
+}
+
 /** Ordem das seções extras (fora do bloco sexta–domingo). */
 export const SECOES_EXTRAS = [
   {
@@ -56,6 +77,34 @@ const MESES = [
 
 export function nomeMes(mes: number): string {
   return MESES[mes] ?? String(mes);
+}
+
+export function formatarHorarioCurto(horario: string): string {
+  const [hRaw, mRaw] = horario.slice(0, 5).split(":");
+  const h = parseInt(hRaw, 10);
+  const m = parseInt(mRaw, 10);
+  if (m === 0) return `${h}h`;
+  return `${h}h${String(m).padStart(2, "0")}`;
+}
+
+export function formatarDataLegivelEscala(dataIso: string): string {
+  const d = new Date(`${dataIso}T12:00:00`);
+  const diaSemana = d.toLocaleDateString("pt-BR", { weekday: "long" });
+  const capitalizado = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+  const dia = d.getDate();
+  const mes = d.toLocaleDateString("pt-BR", { month: "long" });
+  return `${capitalizado}, ${dia} de ${mes}`;
+}
+
+/** Ex.: Domingo, 3 de agosto · Santo Antônio · 10h30 */
+export function tituloCelebracaoEscala(escala: Escala): string {
+  const partes = [formatarDataLegivelEscala(escala.data), localCelebracao(escala)];
+  const horario = horarioCelebracao(escala);
+  if (horario) partes.push(horario);
+  if (escala.grupo_numero != null) {
+    partes.push(`GRUPO ${escala.grupo_numero}`);
+  }
+  return partes.join(" · ");
 }
 
 export function filtrarEscalasDoMes(escalas: Escala[], ano: number, mes: number): Escala[] {

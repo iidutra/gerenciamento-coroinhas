@@ -16,6 +16,7 @@ import {
   agruparEscalasPorSemana,
   filtrarEscalasDoMes,
   nomeMes,
+  tituloCelebracaoEscala,
 } from "@/lib/escala-layout";
 import type { Coroinha, Escala, EscalaMensal, Missa } from "@/types";
 
@@ -756,7 +757,7 @@ export default function EscalasPage() {
                 </div>
                 <div className="space-y-3">
                   {semana.escalas.map((e) => {
-                    const { dia, mes, semana: diaSemana } = partesData(e.data);
+                    const { dia, mes } = partesData(e.data);
                     const editandoMembros = editandoMembrosId === e.id;
                     const editandoFuncoes = editandoFuncoesId === e.id;
                     const listaNumerada = e.grupo_numero != null && e.itens.length > 0;
@@ -774,17 +775,9 @@ export default function EscalasPage() {
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="font-display font-semibold text-burgundy capitalize">
-                                  {diaSemana}
-                                  {e.missa_horario && (
-                                    <span className="text-muted-foreground font-normal"> · {formatarHorario(e.missa_horario)}</span>
-                                  )}
+                                <h4 className="font-display font-semibold text-burgundy leading-snug">
+                                  {tituloCelebracaoEscala(e)}
                                 </h4>
-                                {e.grupo_numero != null && (
-                                  <span className="text-xs rounded-full bg-burgundy/10 text-burgundy px-2 py-0.5 font-semibold">
-                                    GRUPO {e.grupo_numero}
-                                  </span>
-                                )}
                                 {e.notificacao_enviada && (
                                   <span className="inline-flex items-center gap-1 text-xs rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5">
                                     <Send className="size-3" aria-hidden />
@@ -798,8 +791,9 @@ export default function EscalasPage() {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {e.missa_nome}
-                                {e.voluntarios ? " · sem escala fixa" : ` · ${e.itens.length} ${e.itens.length === 1 ? "coroinha" : "coroinhas"}`}
+                                {e.voluntarios
+                                  ? "Voluntários — sem escala fixa"
+                                  : `${e.itens.length} ${e.itens.length === 1 ? "coroinha" : "coroinhas"}`}
                               </p>
                               {e.observacao && (
                                 <p className="text-xs text-muted-foreground italic mt-0.5">{e.observacao}</p>
@@ -965,7 +959,7 @@ export default function EscalasPage() {
                 </div>
                 <div className="space-y-3">
                   {secao.escalas.map((e) => {
-                    const { dia, mes, semana: diaSemana } = partesData(e.data);
+                    const { dia, mes } = partesData(e.data);
                     const editandoMembros = editandoMembrosId === e.id;
                     const editandoFuncoes = editandoFuncoesId === e.id;
                     const listaNumerada = e.grupo_numero != null && e.itens.length > 0;
@@ -983,17 +977,9 @@ export default function EscalasPage() {
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="font-display font-semibold text-burgundy capitalize">
-                                  {diaSemana}
-                                  {e.missa_horario && (
-                                    <span className="text-muted-foreground font-normal"> · {formatarHorario(e.missa_horario)}</span>
-                                  )}
+                                <h4 className="font-display font-semibold text-burgundy leading-snug">
+                                  {tituloCelebracaoEscala(e)}
                                 </h4>
-                                {e.grupo_numero != null && (
-                                  <span className="text-xs rounded-full bg-burgundy/10 text-burgundy px-2 py-0.5 font-semibold">
-                                    GRUPO {e.grupo_numero}
-                                  </span>
-                                )}
                                 {e.notificacao_enviada && (
                                   <span className="inline-flex items-center gap-1 text-xs rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5">
                                     <Send className="size-3" aria-hidden />
@@ -1007,8 +993,9 @@ export default function EscalasPage() {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {e.missa_nome}
-                                {e.voluntarios ? " · sem escala fixa" : ` · ${e.itens.length} ${e.itens.length === 1 ? "coroinha" : "coroinhas"}`}
+                                {e.voluntarios
+                                  ? "Voluntários — sem escala fixa"
+                                  : `${e.itens.length} ${e.itens.length === 1 ? "coroinha" : "coroinhas"}`}
                               </p>
                               {e.observacao && (
                                 <p className="text-xs text-muted-foreground italic mt-0.5">{e.observacao}</p>
