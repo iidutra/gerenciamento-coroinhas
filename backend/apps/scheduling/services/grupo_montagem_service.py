@@ -138,7 +138,8 @@ class GrupoMontagemService:
 
             def pontuacao_grupo(g: int) -> tuple:
                 membros = len(grupos[g])
-                if membros + tamanho_unidade > tamanho_grupo:
+                limite = tamanho_grupo + max(0, tamanho_unidade - 1)
+                if membros + tamanho_unidade > limite:
                     return (999, 0, 0, 0)
                 bairro_bonus = 0 if bairro in bairros_por_grupo[g] or bairro == "outros" else 1
                 faixa_bonus = 0 if faixa in faixas_por_grupo[g] else 1
@@ -153,15 +154,7 @@ class GrupoMontagemService:
                     antigo_bonus = -1
                 return (membros, bairro_bonus, faixa_bonus, antigo_bonus)
 
-            candidatos_grupo = [
-                g for g in range(1, cls.NUM_GRUPOS + 1) if pontuacao_grupo(g)[0] < 999
-            ]
-            if not candidatos_grupo:
-                raise ValueError(
-                    "Não foi possível distribuir irmãos/gêmeos em grupos de "
-                    f"{tamanho_grupo} coroinhas. Ajuste o tamanho do grupo ou revise vínculos familiares."
-                )
-            escolhido = min(candidatos_grupo, key=pontuacao_grupo)
+            escolhido = min(range(1, cls.NUM_GRUPOS + 1), key=pontuacao_grupo)
             for coroinha in unidade:
                 grupos[escolhido].append(coroinha)
                 if coroinha.antigo:
@@ -169,14 +162,4 @@ class GrupoMontagemService:
             bairros_por_grupo[escolhido].add(bairro)
             faixas_por_grupo[escolhido].add(faixa)
 
-        cls._validar_tamanho_grupos(grupos, tamanho_grupo)
         return grupos
-
-    @classmethod
-    def _validar_tamanho_grupos(cls, grupos: dict[int, list[Coroinha]], tamanho_grupo: int) -> None:
-        for numero, membros in grupos.items():
-            if len(membros) != tamanho_grupo:
-                raise ValueError(
-                    f"Grupo {numero} ficou com {len(membros)} coroinhas; "
-                    f"esperado {tamanho_grupo} (modelo paroquial)."
-                )

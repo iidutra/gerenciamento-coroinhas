@@ -155,6 +155,40 @@ def agrupar_escalas_por_semana(
     return semanas, extras
 
 
+ORDEM_SLOT_CRONO = {
+    TipoSlotMissa.SEXTA_ADORACAO: 1,
+    TipoSlotMissa.SABADO_NOITE: 2,
+    TipoSlotMissa.DOMINGO_MANHA: 3,
+    TipoSlotMissa.DOMINGO_NOITE: 4,
+    TipoSlotMissa.QUARTA_VOLUNTARIOS: 5,
+    TipoSlotMissa.DIA_13: 6,
+    TipoSlotMissa.OUTRO: 7,
+}
+
+
+def chave_ordem_escala(escala: Escala) -> tuple:
+    slot = slot_da_escala(escala)
+    return (
+        escala.data,
+        ORDEM_SLOT_CRONO.get(slot, 99),
+        escala.missa.horario,
+    )
+
+
+def separar_escalas_cronologico_pdf(escalas: list[Escala]) -> tuple[list[Escala], list[Escala]]:
+    """Santuário em ordem de data (como PDF paroquial); comunidade ao final."""
+    santuario: list[Escala] = []
+    comunidade: list[Escala] = []
+    for escala in escalas:
+        if slot_da_escala(escala) == TipoSlotMissa.COMUNIDADE_DOMINGO:
+            comunidade.append(escala)
+        else:
+            santuario.append(escala)
+    santuario.sort(key=chave_ordem_escala)
+    comunidade.sort(key=chave_ordem_escala)
+    return santuario, comunidade
+
+
 def linhas_nomes_escala(escala: Escala) -> list[str]:
     if escala.voluntarios:
         return ["Voluntários"]

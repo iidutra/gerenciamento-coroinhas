@@ -13,7 +13,10 @@ from apps.scheduling.models import (
     TipoSlotMissa,
 )
 from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscalaMensalService
-from apps.scheduling.services.relatorio_escala_pdf_layout import texto_cabecalho_entrada
+from apps.scheduling.services.relatorio_escala_pdf_layout import (
+    separar_escalas_cronologico_pdf,
+    texto_cabecalho_entrada,
+)
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
 
 pytestmark = pytest.mark.django_db
@@ -128,3 +131,16 @@ class TestPdfParoquial:
         pdf = RelatorioEscalaService.exportar_mes_pdf(2026, 7)
         assert pdf[:4] == b"%PDF"
         assert len(pdf) > 4000
+
+    def test_cronograma_pdf_ordem_cronologica(self, coordenador, missas_mensais, coroinhas_grupo):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
+        escalas = list(Escala.objects.select_related("missa").order_by("data", "missa__horario"))
+        santuario, comunidade = separar_escalas_cronologico_pdf(escalas)
+        assert santuario
+        assert all(
+            slot != TipoSlotMissa.COMUNIDADE_DOMINGO for slot in (e.missa.tipo_slot for e in santuario)
+        )
+        datas_santuario = [e.data for e in santuario]
+        assert datas_santuario == sorted(datas_santuario)
+        if comunidade:
+            assert all(e.missa.tipo_slot == TipoSlotMissa.COMUNIDADE_DOMINGO for e in comunidade)

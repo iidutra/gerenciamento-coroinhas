@@ -11,11 +11,10 @@ from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemp
 from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     MESES_PT,
-    agrupar_escalas_por_semana,
     carregar_dados_mes,
     itens_coroinha_escala,
     linha_coroinha_flowable,
-    rotulo_semana,
+    separar_escalas_cronologico_pdf,
     texto_cabecalho_entrada,
 )
 
@@ -139,7 +138,7 @@ class RelatorioEscalaService:
         linhas = [
             [Paragraph("Como ler esta escala", estilos["instrucao_titulo"])],
             [Paragraph("1. Veja abaixo em qual <b>GRUPO</b> você está (fins de semana).", estilos["instrucao"])],
-            [Paragraph("2. Procure a <b>semana</b> do seu fim de semana e o <b>horário</b> da missa.", estilos["instrucao"])],
+            [Paragraph("2. Procure a <b>data</b> da sua missa no cronograma abaixo.", estilos["instrucao"])],
             [Paragraph("3. Cada quadro mostra a data e os coroinhas escalados.", estilos["instrucao"])],
         ]
         tabela = Table(linhas, colWidths=[180 * mm])
@@ -249,7 +248,7 @@ class RelatorioEscalaService:
     @staticmethod
     def exportar_mes_pdf(ano: int, mes: int) -> bytes:
         escalas, escala_mensal = carregar_dados_mes(ano, mes)
-        semanas, extras = agrupar_escalas_por_semana(escalas)
+        santuario, comunidade = separar_escalas_cronologico_pdf(escalas)
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -294,22 +293,15 @@ class RelatorioEscalaService:
             elementos.append(RelatorioEscalaService._faixa_secao("CRONOGRAMA DO MÊS — SANTUÁRIO DE FÁTIMA", estilos))
             elementos.append(Spacer(1, 8))
 
-            for num, chave, escalas_semana in semanas:
-                RelatorioEscalaService._render_secao_escalas(
-                    elementos,
-                    f"SEMANA {num} · {rotulo_semana(chave).upper()}",
-                    "Sexta · Sábado · Domingo",
-                    escalas_semana,
-                    estilos,
-                    largura_util,
-                )
+            for escala in santuario:
+                elementos.append(RelatorioEscalaService._caixa_escala(escala, estilos, largura_util))
 
-            for titulo_secao, subtitulo_secao, escalas_extra in extras:
+            if comunidade:
                 RelatorioEscalaService._render_secao_escalas(
                     elementos,
-                    titulo_secao,
-                    subtitulo_secao,
-                    escalas_extra,
+                    "COMUNIDADE SANTO ANTÔNIO",
+                    "Domingo · 10h30",
+                    comunidade,
                     estilos,
                     largura_util,
                 )

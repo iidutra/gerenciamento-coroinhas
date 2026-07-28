@@ -83,13 +83,15 @@ class TestGrupoMontagemGemeos:
         grupo_b = next(n for n, membros in grupos.items() if any(c.id == b.id for c in membros))
         assert grupo_a == grupo_b
 
-    def test_grupos_com_tamanho_fixo_modelo_paroquial(self, coroinhas_com_gemeos):
+    def test_grupos_tamanho_flexivel_modelo_paroquial(self, coroinhas_com_gemeos):
         grupos = GrupoMontagemService.montar_grupos(tamanho_grupo=9)
         assert len(grupos) == 4
-        for numero, membros in grupos.items():
-            assert len(membros) == 9, f"Grupo {numero} deveria ter 9 coroinhas (modelo julho)"
+        tamanhos = [len(membros) for membros in grupos.values()]
+        assert sum(tamanhos) == 36
+        for numero, tamanho in enumerate(tamanhos, start=1):
+            assert 8 <= tamanho <= 10, f"Grupo {numero} deveria ter 8–10 coroinhas (modelo julho)"
 
-    def test_irmaos_mesmo_grupo_sem_estourar_tamanho(self, db):
+    def test_irmaos_mesmo_grupo_com_tamanho_flexivel(self, db):
         irmaos = []
         for nome in (
             "Carlos Henrique Siqueira de Carlos",
@@ -115,8 +117,9 @@ class TestGrupoMontagemGemeos:
                 endereco="Centro" if i % 2 == 0 else "Cohab",
             )
         grupos = GrupoMontagemService.montar_grupos(tamanho_grupo=9)
-        for membros in grupos.values():
-            assert len(membros) == 9
+        tamanhos = [len(membros) for membros in grupos.values()]
+        assert sum(tamanhos) == 36
+        assert all(8 <= t <= 10 for t in tamanhos)
         carlos, maria, valentina, esther = irmaos
         g_carlos = next(n for n, m in grupos.items() if any(c.id == carlos.id for c in m))
         g_maria = next(n for n, m in grupos.items() if any(c.id == maria.id for c in m))
