@@ -83,6 +83,48 @@ class TestGrupoMontagemGemeos:
         grupo_b = next(n for n, membros in grupos.items() if any(c.id == b.id for c in membros))
         assert grupo_a == grupo_b
 
+    def test_grupos_com_tamanho_fixo_modelo_paroquial(self, coroinhas_com_gemeos):
+        grupos = GrupoMontagemService.montar_grupos(tamanho_grupo=9)
+        assert len(grupos) == 4
+        for numero, membros in grupos.items():
+            assert len(membros) == 9, f"Grupo {numero} deveria ter 9 coroinhas (modelo julho)"
+
+    def test_irmaos_mesmo_grupo_sem_estourar_tamanho(self, db):
+        irmaos = []
+        for nome in (
+            "Carlos Henrique Siqueira de Carlos",
+            "Maria Luíza Siqueira de Carlos",
+            "Valentina Damazio Moterle",
+            "Esther Damazio Moterle",
+        ):
+            irmaos.append(
+                Coroinha.objects.create(
+                    nome=nome,
+                    data_nascimento=date(2012, 1, 15),
+                    status=StatusCoroinha.ATIVO,
+                    antigo=False,
+                    endereco="Centro",
+                )
+            )
+        for i in range(32):
+            Coroinha.objects.create(
+                nome=f"Coroinha {i + 1:02d}",
+                data_nascimento=date(2010 + (i % 8), 1, 15),
+                status=StatusCoroinha.ATIVO,
+                antigo=(i % 3 == 0),
+                endereco="Centro" if i % 2 == 0 else "Cohab",
+            )
+        grupos = GrupoMontagemService.montar_grupos(tamanho_grupo=9)
+        for membros in grupos.values():
+            assert len(membros) == 9
+        carlos, maria, valentina, esther = irmaos
+        g_carlos = next(n for n, m in grupos.items() if any(c.id == carlos.id for c in m))
+        g_maria = next(n for n, m in grupos.items() if any(c.id == maria.id for c in m))
+        g_val = next(n for n, m in grupos.items() if any(c.id == valentina.id for c in m))
+        g_est = next(n for n, m in grupos.items() if any(c.id == esther.id for c in m))
+        assert g_carlos == g_maria
+        assert g_val == g_est
+
 
 class TestEquilibrioGemeos:
     def test_sexta_prefere_par_gemeos(self, gemeos):

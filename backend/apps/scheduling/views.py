@@ -57,7 +57,7 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         escala = Escala.objects.prefetch_related("itens__coroinha").get(pk=escala.pk)
         return Response(EscalaSerializer(escala, context={"request": request}).data)
 
-    @action(detail=False, methods=["get"], url_path="mensal", permission_classes=[IsStaffPastoral])
+    @action(detail=False, methods=["get", "delete"], url_path="mensal", permission_classes=[IsStaffPastoral])
     def mensal(self, request):
         try:
             ano = int(request.query_params.get("ano", timezone.now().year))
@@ -66,6 +66,17 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "Ano e mês inválidos."}, status=status.HTTP_400_BAD_REQUEST)
         if not (1 <= mes <= 12):
             return Response({"detail": "Mês deve ser entre 1 e 12."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.method == "DELETE":
+            if not IsGestorCoroinhas().has_permission(request, self):
+                return Response(status=status.HTTP_403_FORBIDDEN)
+            escala_mensal = EscalaMensal.objects.filter(ano=ano, mes=mes).first()
+            if not escala_mensal:
+                return Response({"detail": "Escala mensal não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+            escala_mensal.escalas.all().delete()
+            escala_mensal.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
         escala_mensal = (
             EscalaMensal.objects.filter(ano=ano, mes=mes)
             .prefetch_related("grupos__membros__coroinha")
@@ -74,22 +85,6 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         if not escala_mensal:
             return Response({"detail": "Escala mensal não encontrada."}, status=status.HTTP_404_NOT_FOUND)
         return Response(EscalaMensalSerializer(escala_mensal).data)
-
-    @action(detail=False, methods=["delete"], url_path="mensal", permission_classes=[IsGestorCoroinhas])
-    def excluir_mensal(self, request):
-        try:
-            ano = int(request.query_params.get("ano", timezone.now().year))
-            mes = int(request.query_params.get("mes", timezone.now().month))
-        except (TypeError, ValueError):
-            return Response({"detail": "Ano e mês inválidos."}, status=status.HTTP_400_BAD_REQUEST)
-        if not (1 <= mes <= 12):
-            return Response({"detail": "Mês deve ser entre 1 e 12."}, status=status.HTTP_400_BAD_REQUEST)
-        escala_mensal = EscalaMensal.objects.filter(ano=ano, mes=mes).first()
-        if not escala_mensal:
-            return Response({"detail": "Escala mensal não encontrada."}, status=status.HTTP_404_NOT_FOUND)
-        escala_mensal.escalas.all().delete()
-        escala_mensal.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["post"], url_path="gerar-mes", permission_classes=[IsGestorCoroinhas])
     def gerar_mes(self, request):
