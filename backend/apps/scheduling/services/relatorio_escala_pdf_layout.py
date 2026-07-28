@@ -1,7 +1,7 @@
 """Layout paroquial da escala mensal (PDF)."""
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 
 from reportlab.platypus import Paragraph
 
@@ -34,13 +34,24 @@ DIAS_SEMANA_PT = [
     "Domingo",
 ]
 
-SECOES_PDF = [
-    (TipoSlotMissa.SEXTA_ADORACAO, "SEXTA-FEIRA · 18h", "Adoração ao Santíssimo e Missa"),
-    (TipoSlotMissa.SABADO_NOITE, "SÁBADO · 18h30", "Missas com grupos rotativos"),
-    (TipoSlotMissa.DOMINGO_MANHA, "DOMINGO · 08h", "Missas com grupos rotativos"),
-    (TipoSlotMissa.DOMINGO_NOITE, "DOMINGO · 18h30", "Missas com grupos rotativos"),
+SLOTS_FIM_DE_SEMANA = {
+    TipoSlotMissa.SEXTA_ADORACAO,
+    TipoSlotMissa.SABADO_NOITE,
+    TipoSlotMissa.DOMINGO_MANHA,
+    TipoSlotMissa.DOMINGO_NOITE,
+    TipoSlotMissa.COMUNIDADE_DOMINGO,
+}
+
+ORDEM_SLOT_FDS = {
+    TipoSlotMissa.SEXTA_ADORACAO: 1,
+    TipoSlotMissa.SABADO_NOITE: 2,
+    TipoSlotMissa.DOMINGO_MANHA: 3,
+    TipoSlotMissa.COMUNIDADE_DOMINGO: 4,
+    TipoSlotMissa.DOMINGO_NOITE: 5,
+}
+
+SECOES_EXTRAS_PDF = [
     (TipoSlotMissa.QUARTA_VOLUNTARIOS, "QUARTA-FEIRA · 19h", "Voluntários — sem nomes fixos"),
-    (TipoSlotMissa.COMUNIDADE_DOMINGO, "COMUNIDADE · DOMINGO 10h30", "Comunidade Santo Antônio"),
     (TipoSlotMissa.DIA_13, "DIA 13", "Memória de Nossa Senhora de Fátima"),
     (TipoSlotMissa.OUTRO, "OUTRAS CELEBRAÇÕES", ""),
 ]
@@ -61,6 +72,65 @@ def agrupar_escalas_por_slot(escalas: list[Escala]) -> dict[str, list[Escala]]:
     for lista in por_slot.values():
         lista.sort(key=lambda e: (e.data, e.missa.horario))
     return por_slot
+
+
+def slot_da_escala(escala: Escala) -> str:
+    return escala.missa.tipo_slot or TipoSlotMissa.OUTRO
+
+
+def chave_fim_de_semana(data: date) -> date:
+    """Sábado de referência do bloco sexta–sábado–domingo."""
+    wd = data.weekday()
+    if wd == 4:
+        return data + timedelta(days=1)
+    if wd == 6:
+        return data - timedelta(days=1)
+    return data
+
+
+def rotulo_semana(chave_sabado: date) -> str:
+    sex = chave_sabado - timedelta(days=1)
+    dom = chave_sabado + timedelta(days=1)
+    if sex.month == dom.month:
+        mes = MESES_PT[dom.month].lower()
+        return f"{sex.day} a {dom.day} de {mes}"
+    mes_sex = MESES_PT[sex.month].lower()
+    mes_dom = MESES_PT[dom.month].lower()
+    return f"{sex.day} de {mes_sex} a {dom.day} de {mes_dom}"
+
+
+def agrupar_escalas_por_semana(
+    escalas: list[Escala],
+) -> tuple[list[tuple[int, date, list[Escala]]], list[tuple[str, str, list[Escala]]]]:
+    por_semana: dict[date, list[Escala]] = defaultdict(list)
+    extras_por_slot: dict[str, list[Escala]] = defaultdict(list)
+
+    for escala in escalas:
+        slot = slot_da_escala(escala)
+        if slot in SLOTS_FIM_DE_SEMANA:
+            por_semana[chave_fim_de_semana(escala.data)].append(escala)
+        else:
+            extras_por_slot[slot].append(escala)
+
+    semanas: list[tuple[int, date, list[Escala]]] = []
+    for idx, (chave, lista) in enumerate(sorted(por_semana.items())):
+        lista.sort(
+            key=lambda e: (
+                ORDEM_SLOT_FDS.get(slot_da_escala(e), 99),
+                e.data,
+                e.missa.horario,
+            )
+        )
+        semanas.append((idx + 1, chave, lista))
+
+    extras: list[tuple[str, str, list[Escala]]] = []
+    for slot, titulo, subtitulo in SECOES_EXTRAS_PDF:
+        lista = extras_por_slot.get(slot, [])
+        if lista:
+            lista.sort(key=lambda e: (e.data, e.missa.horario))
+            extras.append((titulo, subtitulo, lista))
+
+    return semanas, extras
 
 
 def linhas_nomes_escala(escala: Escala) -> list[str]:

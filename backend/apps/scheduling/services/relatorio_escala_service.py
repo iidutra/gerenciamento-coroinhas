@@ -8,14 +8,14 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from apps.scheduling.models import FuncaoEscala, TipoSlotMissa
+from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     MESES_PT,
-    SECOES_PDF,
-    agrupar_escalas_por_slot,
+    agrupar_escalas_por_semana,
     carregar_dados_mes,
     itens_coroinha_escala,
     linha_coroinha_flowable,
+    rotulo_semana,
     texto_cabecalho_entrada,
 )
 
@@ -139,7 +139,7 @@ class RelatorioEscalaService:
         linhas = [
             [Paragraph("Como ler esta escala", estilos["instrucao_titulo"])],
             [Paragraph("1. Veja abaixo em qual <b>GRUPO</b> você está (fins de semana).", estilos["instrucao"])],
-            [Paragraph("2. Procure o <b>dia da semana</b> e o <b>horário</b> da sua missa.", estilos["instrucao"])],
+            [Paragraph("2. Procure a <b>semana</b> do seu fim de semana e o <b>horário</b> da missa.", estilos["instrucao"])],
             [Paragraph("3. Cada quadro mostra a data e os coroinhas escalados.", estilos["instrucao"])],
         ]
         tabela = Table(linhas, colWidths=[180 * mm])
@@ -249,7 +249,7 @@ class RelatorioEscalaService:
     @staticmethod
     def exportar_mes_pdf(ano: int, mes: int) -> bytes:
         escalas, escala_mensal = carregar_dados_mes(ano, mes)
-        por_slot = agrupar_escalas_por_slot(escalas)
+        semanas, extras = agrupar_escalas_por_semana(escalas)
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -294,37 +294,22 @@ class RelatorioEscalaService:
             elementos.append(RelatorioEscalaService._faixa_secao("CRONOGRAMA DO MÊS — SANTUÁRIO DE FÁTIMA", estilos))
             elementos.append(Spacer(1, 8))
 
-            for slot, titulo_secao, subtitulo_secao in SECOES_PDF:
-                if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
-                    continue
+            for num, chave, escalas_semana in semanas:
+                RelatorioEscalaService._render_secao_escalas(
+                    elementos,
+                    f"SEMANA {num} · {rotulo_semana(chave).upper()}",
+                    "Sexta · Sábado · Domingo",
+                    escalas_semana,
+                    estilos,
+                    largura_util,
+                )
+
+            for titulo_secao, subtitulo_secao, escalas_extra in extras:
                 RelatorioEscalaService._render_secao_escalas(
                     elementos,
                     titulo_secao,
                     subtitulo_secao,
-                    por_slot.get(slot, []),
-                    estilos,
-                    largura_util,
-                )
-
-            comunidade = por_slot.get(TipoSlotMissa.COMUNIDADE_DOMINGO, [])
-            if comunidade:
-                elementos.append(PageBreak())
-                RelatorioEscalaService._render_secao_escalas(
-                    elementos,
-                    "COMUNIDADE SANTO ANTÔNIO · DOMINGO 10h30",
-                    "Missas na comunidade (fora do santuário).",
-                    comunidade,
-                    estilos,
-                    largura_util,
-                )
-
-            outros = por_slot.get(TipoSlotMissa.OUTRO, [])
-            if outros:
-                RelatorioEscalaService._render_secao_escalas(
-                    elementos,
-                    "OUTRAS CELEBRAÇÕES",
-                    "",
-                    outros,
+                    escalas_extra,
                     estilos,
                     largura_util,
                 )
