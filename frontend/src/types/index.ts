@@ -24,6 +24,8 @@ export interface AuthResponse {
 
 export type EtapaCatequese = "" | "PreEucaristia" | "PrimeiraEucaristia" | "Crisma";
 
+export type ComunidadeFixa = "" | "SantaTerezinha" | "NossaSenhoraAuxiliadora";
+
 export interface Coroinha {
   id: number;
   nome: string;
@@ -42,6 +44,7 @@ export interface Coroinha {
   etapa_catequese?: EtapaCatequese;
   faz_iam?: boolean;
   antigo?: boolean;
+  comunidade_fixa?: ComunidadeFixa;
   gemeo_de?: number | null;
   gemeo_nome?: string | null;
   foto_url?: string | null;

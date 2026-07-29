@@ -37,6 +37,7 @@ class CoroinhaSerializer(serializers.ModelSerializer):
             "etapa_catequese",
             "faz_iam",
             "antigo",
+            "comunidade_fixa",
             "gemeo_de",
             "gemeo_nome",
             "batizado",

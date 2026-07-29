@@ -25,6 +25,14 @@ class EtapaCatequese(models.TextChoices):
     CRISMA = "Crisma", "Crisma"
 
 
+class ComunidadeFixa(models.TextChoices):
+    """Coroinhas fixos em comunidades — não entram na escala rotativa do santuário."""
+
+    NENHUMA = "", "Santuário (escala rotativa)"
+    SANTA_TEREZINHA = "SantaTerezinha", "Santa Terezinha"
+    NOSSA_SENHORA_AUXILIADORA = "NossaSenhoraAuxiliadora", "Nossa Senhora Auxiliadora"
+
+
 class Responsavel(models.Model):
     nome = models.CharField(max_length=200)
     cpf = models.CharField(max_length=11, unique=True, db_index=True)
@@ -68,6 +76,14 @@ class Coroinha(models.Model):
     )
     faz_iam = models.BooleanField(default=False)
     antigo = models.BooleanField(default=False)
+    comunidade_fixa = models.CharField(
+        max_length=40,
+        choices=ComunidadeFixa.choices,
+        blank=True,
+        default="",
+        verbose_name="Comunidade fixa",
+        help_text="Coroinhas de comunidade não entram na geração automática de grupos.",
+    )
     gemeo_de = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,
@@ -91,6 +107,10 @@ class Coroinha(models.Model):
 
     def __str__(self):
         return self.nome
+
+    @property
+    def participa_escala_rotativa(self) -> bool:
+        return not self.comunidade_fixa
 
     @property
     def idade(self) -> int:

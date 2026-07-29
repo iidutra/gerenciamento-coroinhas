@@ -173,6 +173,12 @@ class RemanejarGrupoSerializer(serializers.Serializer):
     grupo_destino = serializers.IntegerField(min_value=1, max_value=4)
 
 
+class RemoverGrupoSerializer(serializers.Serializer):
+    ano = serializers.IntegerField(min_value=2020, max_value=2100)
+    mes = serializers.IntegerField(min_value=1, max_value=12)
+    coroinha_id = serializers.IntegerField()
+
+
 class MoverCoroinhaCelebracaoSerializer(serializers.Serializer):
     coroinha_id = serializers.IntegerField()
     escala_destino_id = serializers.IntegerField(required=False, allow_null=True)

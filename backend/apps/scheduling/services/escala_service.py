@@ -58,9 +58,10 @@ class EscalaService:
     @staticmethod
     def candidatos_elegiveis():
         return list(
-            Coroinha.objects.filter(status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO]).order_by(
-                "nome"
-            )
+            Coroinha.objects.filter(
+                status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO],
+                comunidade_fixa="",
+            ).order_by("nome")
         )
 
     @classmethod

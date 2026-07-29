@@ -14,6 +14,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { PainelCoroinhasRemanejamento } from "@/components/PainelCoroinhasRemanejamento";
 import { EscalaMesCronologico } from "@/components/EscalaMesCronologico";
 import { apiFetch } from "@/lib/api";
 import { agruparEscalasPorDia, nomeMes } from "@/lib/escala-layout";
@@ -99,7 +100,7 @@ function RemoverZone() {
       }`}
     >
       <Trash2 className="size-4" aria-hidden />
-      <span className="text-sm font-medium">Remover da celebração</span>
+      <span className="text-sm font-medium">Remover do grupo ou da celebração</span>
     </div>
   );
 }
@@ -136,6 +137,7 @@ export function EscalaRemanejamentoKanban({
   mes,
   ano,
   podeEditar,
+  coroinhas,
   onAtualizado,
   ...cronologicoProps
 }: EscalaRemanejamentoKanbanProps) {
@@ -189,6 +191,35 @@ export function EscalaRemanejamentoKanban({
         return;
       }
 
+      if (alvo.kind === "remover") {
+        if (item.source.kind === "grupo") {
+          const res = await apiFetch<{ escala_mensal: EscalaMensal; escalas: Escala[] }>(
+            "/escalas/mensal/remover-grupo/",
+            {
+              method: "PATCH",
+              body: JSON.stringify({
+                ano,
+                mes,
+                coroinha_id: item.coroinhaId,
+              }),
+            },
+          );
+          onAtualizado(res.escala_mensal, res.escalas, true);
+          return;
+        }
+
+        const origemId = item.source.kind === "escala" ? item.source.escalaId : null;
+        if (!origemId) {
+          throw new Error("Não foi possível identificar a celebração de origem.");
+        }
+        const res = await apiFetch<{ origem: Escala }>(`/escalas/${origemId}/mover-coroinha/`, {
+          method: "PATCH",
+          body: JSON.stringify({ coroinha_id: item.coroinhaId, escala_destino_id: null }),
+        });
+        onAtualizado(escalaMensal, [res.origem]);
+        return;
+      }
+
       const origemId = item.source.kind === "escala" ? item.source.escalaId : null;
 
       if (!origemId && item.source.kind === "grupo" && alvo.kind === "escala") {
@@ -224,15 +255,6 @@ export function EscalaRemanejamentoKanban({
 
       if (!origemId) {
         throw new Error("Não foi possível identificar a celebração de origem.");
-      }
-
-      if (alvo.kind === "remover") {
-        const res = await apiFetch<{ origem: Escala }>(`/escalas/${origemId}/mover-coroinha/`, {
-          method: "PATCH",
-          body: JSON.stringify({ coroinha_id: item.coroinhaId, escala_destino_id: null }),
-        });
-        onAtualizado(escalaMensal, [res.origem]);
-        return;
       }
 
       const res = await apiFetch<{ origem: Escala; destino?: Escala }>(
@@ -319,6 +341,17 @@ export function EscalaRemanejamentoKanban({
           </div>
 
           <RemoverZone />
+
+          <div className="mt-4">
+            <PainelCoroinhasRemanejamento
+              coroinhas={coroinhas}
+              escalaMensal={escalaMensal}
+              ano={ano}
+              mes={mes}
+              podeEditar={podeEditar}
+              onAtualizado={(em, esc) => onAtualizado(em, esc, true)}
+            />
+          </div>
         </div>
 
         <EscalaMesCronologico

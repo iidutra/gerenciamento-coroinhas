@@ -20,6 +20,7 @@ from apps.scheduling.serializers import (
     MoverCoroinhaCelebracaoSerializer,
     NotificarEscalaSerializer,
     RemanejarGrupoSerializer,
+    RemoverGrupoSerializer,
     TransferirCelebracaoSerializer,
 )
 from apps.scheduling.services.escala_service import EscalaService
@@ -156,6 +157,36 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
                 data["coroinha_id"],
                 data["grupo_destino"],
             )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        escala_mensal = (
+            EscalaMensal.objects.filter(pk=escala_mensal.pk)
+            .prefetch_related("grupos__membros__coroinha")
+            .first()
+        )
+        escalas = Escala.objects.filter(escala_mensal=escala_mensal).prefetch_related("itens__coroinha")
+        return Response(
+            {
+                "escala_mensal": EscalaMensalSerializer(escala_mensal).data,
+                "escalas": EscalaSerializer(escalas, many=True, context={"request": request}).data,
+            }
+        )
+
+    @action(
+        detail=False,
+        methods=["patch"],
+        url_path="mensal/remover-grupo",
+        permission_classes=[IsGestorCoroinhas],
+    )
+    def remover_grupo(self, request):
+        serializer = RemoverGrupoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        escala_mensal = EscalaMensal.objects.filter(ano=data["ano"], mes=data["mes"]).first()
+        if not escala_mensal:
+            return Response({"detail": "Escala mensal não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            RemanejamentoEscalaService.remover_do_grupo(escala_mensal, data["coroinha_id"])
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         escala_mensal = (

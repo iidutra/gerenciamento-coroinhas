@@ -67,7 +67,10 @@ class GrupoMontagemService:
     @classmethod
     def candidatos(cls) -> list[Coroinha]:
         return list(
-            Coroinha.objects.filter(status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO])
+            Coroinha.objects.filter(
+                status__in=[StatusCoroinha.ATIVO, StatusCoroinha.EM_FORMACAO],
+                comunidade_fixa="",
+            )
             .select_related("gemeo_de")
             .order_by("nome")
         )

@@ -258,3 +258,84 @@ class TestTransferenciaComunidadeAdoracao:
         for cid in ids_transferir:
             assert comunidade.itens.filter(coroinha_id=cid).exists()
             assert not dom_manha.itens.filter(coroinha_id=cid).exists()
+
+
+class TestRemoverDoGrupo:
+    def test_remover_do_grupo_sai_de_todas_escalas(
+        self, coordenador, missas_mensais, coroinhas_grupo
+    ):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador, tamanho_grupo=9)
+        escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
+        grupo1 = GrupoMensal.objects.get(escala_mensal=escala_mensal, numero=1)
+        coroinha = grupo1.membros.order_by("ordem").first().coroinha
+
+        assert EscalaItem.objects.filter(
+            escala__escala_mensal=escala_mensal, coroinha=coroinha
+        ).exists()
+
+        RemanejamentoEscalaService.remover_do_grupo(escala_mensal, coroinha.id)
+
+        assert not GrupoMensalMembro.objects.filter(
+            grupo__escala_mensal=escala_mensal, coroinha=coroinha
+        ).exists()
+        assert not EscalaItem.objects.filter(
+            escala__escala_mensal=escala_mensal, coroinha=coroinha
+        ).exists()
+
+    def test_api_remover_grupo(self, client_coordenador, coordenador, missas_mensais, coroinhas_grupo):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador)
+        escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
+        coroinha_id = (
+            GrupoMensalMembro.objects.filter(grupo__escala_mensal=escala_mensal, grupo__numero=2)
+            .first()
+            .coroinha_id
+        )
+        res = client_coordenador.patch(
+            "/api/v1/escalas/mensal/remover-grupo/",
+            {"ano": 2026, "mes": 8, "coroinha_id": coroinha_id},
+            format="json",
+        )
+        assert res.status_code == status.HTTP_200_OK
+        assert not GrupoMensalMembro.objects.filter(
+            grupo__escala_mensal=escala_mensal, coroinha_id=coroinha_id
+        ).exists()
+
+
+class TestComunidadeFixa:
+    def test_comunidade_fixa_excluida_da_geracao(
+        self, coordenador, missas_mensais, coroinhas_grupo
+    ):
+        from apps.membership.models import ComunidadeFixa
+
+        Coroinha.objects.filter(pk=coroinhas_grupo[0].pk).update(
+            comunidade_fixa=ComunidadeFixa.SANTA_TEREZINHA
+        )
+        Coroinha.objects.filter(pk=coroinhas_grupo[1].pk).update(
+            comunidade_fixa=ComunidadeFixa.NOSSA_SENHORA_AUXILIADORA
+        )
+
+        GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador, tamanho_grupo=8)
+        escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
+        ids_grupos = set(
+            GrupoMensalMembro.objects.filter(grupo__escala_mensal=escala_mensal).values_list(
+                "coroinha_id", flat=True
+            )
+        )
+        assert coroinhas_grupo[0].id not in ids_grupos
+        assert coroinhas_grupo[1].id not in ids_grupos
+
+    def test_nao_adiciona_comunidade_fixa_ao_grupo(
+        self, coordenador, missas_mensais, coroinhas_grupo
+    ):
+        from apps.membership.models import ComunidadeFixa
+
+        GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador, tamanho_grupo=9)
+        escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
+        fixo = coroinhas_grupo[-1]
+        Coroinha.objects.filter(pk=fixo.pk).update(
+            comunidade_fixa=ComunidadeFixa.SANTA_TEREZINHA
+        )
+
+        with pytest.raises(ValueError, match="escala fixa"):
+            RemanejamentoEscalaService.mover_grupo(escala_mensal, fixo.id, 1)
+

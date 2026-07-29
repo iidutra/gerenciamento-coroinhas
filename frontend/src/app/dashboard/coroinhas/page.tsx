@@ -10,7 +10,8 @@ import { StaffPage } from "@/components/StaffPage";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch, apiFetchAll, apiFetchForm, mediaUrl } from "@/lib/api";
 import { etapaCatequeseLabel, formatarTelefone, normalizarBusca, telefoneDigits } from "@/lib/format";
-import type { Coroinha, EtapaCatequese } from "@/types";
+import type { Coroinha, ComunidadeFixa, EtapaCatequese } from "@/types";
+import { COMUNIDADE_FIXA_OPCOES, labelComunidadeFixa } from "@/lib/comunidade-fixa";
 
 const STATUS_OPCOES = [
   { value: "EmFormacao", label: "Em formação" },
@@ -36,6 +37,7 @@ type FormState = {
   etapaCatequese: EtapaCatequese;
   fazIam: boolean;
   antigo: boolean;
+  comunidadeFixa: ComunidadeFixa;
   gemeoDeId: string;
   status: string;
 };
@@ -52,6 +54,7 @@ const FORM_VAZIO: FormState = {
   etapaCatequese: "",
   fazIam: false,
   antigo: false,
+  comunidadeFixa: "",
   gemeoDeId: "",
   status: "EmFormacao",
 };
@@ -144,6 +147,7 @@ export default function CoroinhasPage() {
       etapaCatequese: (c.etapa_catequese as EtapaCatequese) ?? "",
       fazIam: Boolean(c.faz_iam),
       antigo: Boolean(c.antigo),
+      comunidadeFixa: (c.comunidade_fixa as ComunidadeFixa) ?? "",
       gemeoDeId: c.gemeo_de ? String(c.gemeo_de) : "",
       status: c.status || "EmFormacao",
     });
@@ -188,6 +192,7 @@ export default function CoroinhasPage() {
       etapa_catequese: form.fazCatequese ? form.etapaCatequese : "",
       faz_iam: form.fazIam,
       antigo: form.antigo,
+      comunidade_fixa: form.comunidadeFixa,
       gemeo_de: form.gemeoDeId ? Number(form.gemeoDeId) : null,
     };
     if (editId) {
@@ -551,6 +556,28 @@ export default function CoroinhasPage() {
                 </fieldset>
 
                 <div>
+                  <label htmlFor="cad-comunidade" className="block text-sm font-medium mb-1.5">
+                    Comunidade / escala
+                  </label>
+                  <select
+                    id="cad-comunidade"
+                    value={form.comunidadeFixa}
+                    onChange={(e) => setCampo("comunidadeFixa", e.target.value as ComunidadeFixa)}
+                    className="input-field w-full sm:max-w-md"
+                  >
+                    {COMUNIDADE_FIXA_OPCOES.map((op) => (
+                      <option key={op.value || "santuario"} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Coroinhas de comunidade fixa não entram na geração automática de grupos do
+                    santuário.
+                  </p>
+                </div>
+
+                <div>
                   <label htmlFor="cad-gemeo" className="block text-sm font-medium mb-1.5">
                     Gêmeo (opcional)
                   </label>
@@ -662,6 +689,7 @@ export default function CoroinhasPage() {
                   <th>Catequese</th>
                   <th>IAM</th>
                   <th>Antigo</th>
+                  <th>Comunidade</th>
                   <th>Status</th>
                   {podeEditar && <th className="text-right">Ações</th>}
                 </tr>
@@ -683,6 +711,7 @@ export default function CoroinhasPage() {
                     </td>
                     <td>{c.faz_iam ? "Sim" : "—"}</td>
                     <td>{c.antigo ? "Sim" : "—"}</td>
+                    <td className="text-sm">{labelComunidadeFixa(c.comunidade_fixa)}</td>
                     <td>
                       <StatusBadge status={c.status} />
                     </td>

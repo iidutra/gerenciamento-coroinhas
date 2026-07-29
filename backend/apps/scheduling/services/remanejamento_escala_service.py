@@ -174,6 +174,7 @@ class RemanejamentoEscalaService:
         if not (1 <= grupo_destino_numero <= 4):
             raise ValueError("Grupo destino deve ser entre 1 e 4.")
 
+        cls._validar_coroinha_rotativo(coroinha_id)
         familia = cls._familia_ids(coroinha_id)
         grupos_origem: set[int] = set()
 
@@ -214,6 +215,48 @@ class RemanejamentoEscalaService:
         cls._reordenar_grupo(grupo_destino)
 
         for numero in grupos_origem | {grupo_destino_numero}:
+            cls.sincronizar_escalas_grupo(escala_mensal, numero)
+
+    @classmethod
+    def _validar_coroinha_rotativo(cls, coroinha_id: int) -> None:
+        from apps.membership.models import Coroinha
+
+        coroinha = Coroinha.objects.get(pk=coroinha_id)
+        if coroinha.comunidade_fixa:
+            label = coroinha.get_comunidade_fixa_display()
+            raise ValueError(
+                f"{coroinha.nome} é coroinha de {label} (escala fixa) e não entra nos grupos do santuário."
+            )
+
+    @classmethod
+    @transaction.atomic
+    def remover_do_grupo(cls, escala_mensal: EscalaMensal, coroinha_id: int) -> None:
+        familia = cls._familia_ids(coroinha_id)
+        grupos_afetados: set[int] = set()
+
+        for membro in GrupoMensalMembro.objects.filter(
+            grupo__escala_mensal=escala_mensal,
+            coroinha_id__in=familia,
+        ).select_related("grupo"):
+            grupos_afetados.add(membro.grupo.numero)
+
+        if not grupos_afetados:
+            raise ValueError("Coroinha não está em nenhum grupo deste mês.")
+
+        GrupoMensalMembro.objects.filter(
+            grupo__escala_mensal=escala_mensal,
+            coroinha_id__in=familia,
+        ).delete()
+
+        for escala in Escala.objects.filter(escala_mensal=escala_mensal).prefetch_related("itens"):
+            ids_atuais = list(escala.itens.order_by("ordem").values_list("coroinha_id", flat=True))
+            ids_novos = [cid for cid in ids_atuais if cid not in familia]
+            if len(ids_novos) != len(ids_atuais):
+                EscalaService.definir_membros(escala, ids_novos)
+
+        for numero in grupos_afetados:
+            grupo = GrupoMensal.objects.get(escala_mensal=escala_mensal, numero=numero)
+            cls._reordenar_grupo(grupo)
             cls.sincronizar_escalas_grupo(escala_mensal, numero)
 
     @classmethod
