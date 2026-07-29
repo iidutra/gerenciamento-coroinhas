@@ -14,8 +14,8 @@ from apps.scheduling.models import (
 )
 from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscalaMensalService
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
-    separar_escalas_cronologico_pdf,
-    texto_cabecalho_entrada,
+    agrupar_escalas_por_dia,
+    linha_titulo_v6,
 )
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
 
@@ -87,9 +87,7 @@ class TestPdfParoquial:
             modo=ModoEscala.GRUPO_MENSAL,
             grupo_numero=2,
         )
-        assert texto_cabecalho_entrada(escala) == (
-            "Domingo, 2 de agosto  ·  N. Sra. de Fátima  ·  8h  ·  GRUPO 2"
-        )
+        assert linha_titulo_v6(escala) == "8h Missa da Manhã Grupo 2"
 
     def test_texto_cabecalho_comunidade_santo_antonio(self, db):
         missa = Missa.objects.create(
@@ -105,9 +103,7 @@ class TestPdfParoquial:
             missa=missa,
             modo=ModoEscala.SELECAO_MANUAL,
         )
-        assert texto_cabecalho_entrada(escala) == (
-            "Domingo, 2 de agosto  ·  Santo Antônio  ·  10h30"
-        )
+        assert linha_titulo_v6(escala) == "10h30 Comunidade Santo Antônio Santo Antônio"
 
     def test_pdf_contem_estrutura_paroquial(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
@@ -135,12 +131,12 @@ class TestPdfParoquial:
     def test_cronograma_pdf_ordem_cronologica(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
         escalas = list(Escala.objects.select_related("missa").order_by("data", "missa__horario"))
-        santuario, comunidade = separar_escalas_cronologico_pdf(escalas)
-        assert santuario
-        assert all(
-            slot != TipoSlotMissa.COMUNIDADE_DOMINGO for slot in (e.missa.tipo_slot for e in santuario)
-        )
-        datas_santuario = [e.data for e in santuario]
-        assert datas_santuario == sorted(datas_santuario)
-        if comunidade:
-            assert all(e.missa.tipo_slot == TipoSlotMissa.COMUNIDADE_DOMINGO for e in comunidade)
+        dias = agrupar_escalas_por_dia(escalas)
+        assert dias
+        datas = [dia for dia, _ in dias]
+        assert datas == sorted(datas)
+        for _dia, escalas_dia in dias:
+            ordem = [e.missa.tipo_slot for e in escalas_dia]
+            assert TipoSlotMissa.COMUNIDADE_DOMINGO not in ordem or ordem.index(
+                TipoSlotMissa.COMUNIDADE_DOMINGO
+            ) < ordem.index(TipoSlotMissa.DOMINGO_NOITE) if TipoSlotMissa.DOMINGO_NOITE in ordem else True

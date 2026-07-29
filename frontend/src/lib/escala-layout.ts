@@ -5,21 +5,35 @@ const LOCAIS_CELEBRACAO: Record<string, string> = {
   Comunidade: "Santo Antônio",
 };
 
-function localCelebracao(escala: Escala): string {
-  if (escala.missa_tipo_slot === "ComunidadeDomingo" || escala.missa_local === "Comunidade") {
-    return "Santo Antônio";
-  }
-  if (escala.missa_local) {
-    return LOCAIS_CELEBRACAO[escala.missa_local] ?? escala.missa_local;
-  }
-  return "N. Sra. de Fátima";
-}
+const ORDEM_SLOT_CRONO: Record<string, number> = {
+  SextaAdoracao: 1,
+  SabadoNoite: 2,
+  DomingoManha: 3,
+  ComunidadeDomingo: 4,
+  DomingoNoite: 5,
+  QuartaVoluntarios: 6,
+  Dia13: 7,
+  Outro: 8,
+};
 
-function horarioCelebracao(escala: Escala): string {
-  if (escala.missa_horario) return formatarHorarioCurto(escala.missa_horario);
-  if (escala.missa_tipo_slot === "ComunidadeDomingo") return "10h30";
-  return "";
-}
+export const LEGENDA_CATEGORIAS_V6 = [
+  "Grupo 1",
+  "Grupo 2",
+  "Grupo 3",
+  "Grupo 4",
+  "S. Antônio",
+  "Solenidade",
+  "Novena",
+] as const;
+
+export const ORIENTACOES_GERAIS_V6 = [
+  "Chegada com 30 minutos de antecedência em todas as celebrações.",
+  "Meninas: cabelos presos e trajes adequados ao ambiente da sacristia.",
+  "Meninos: trajes adequados ao ambiente da sacristia.",
+  "Sapatos preferencialmente pretos e vestes limpas e passadas.",
+  "Em caso de impedimento, avisar com antecedência para reorganização.",
+  "Dúvidas e trocas: falar com Igor ou Giaritssa.",
+] as const;
 
 /** Ordem das seções extras (fora do bloco sexta–domingo). */
 export const SECOES_EXTRAS = [
@@ -87,6 +101,22 @@ export function formatarHorarioCurto(horario: string): string {
   return `${h}h${String(m).padStart(2, "0")}`;
 }
 
+function localCelebracao(escala: Escala): string {
+  if (escala.missa_tipo_slot === "ComunidadeDomingo" || escala.missa_local === "Comunidade") {
+    return "Santo Antônio";
+  }
+  if (escala.missa_local) {
+    return LOCAIS_CELEBRACAO[escala.missa_local] ?? escala.missa_local;
+  }
+  return "N. Sra. de Fátima";
+}
+
+function horarioCelebracao(escala: Escala): string {
+  if (escala.missa_horario) return formatarHorarioCurto(escala.missa_horario);
+  if (escala.missa_tipo_slot === "ComunidadeDomingo") return "10h30";
+  return "";
+}
+
 export function formatarDataLegivelEscala(dataIso: string): string {
   const d = new Date(`${dataIso}T12:00:00`);
   const diaSemana = d.toLocaleDateString("pt-BR", { weekday: "long" });
@@ -96,15 +126,9 @@ export function formatarDataLegivelEscala(dataIso: string): string {
   return `${capitalizado}, ${dia} de ${mes}`;
 }
 
-/** Ex.: Domingo, 3 de agosto · Santo Antônio · 10h30 */
+/** @deprecated Prefer linhaTituloV6 */
 export function tituloCelebracaoEscala(escala: Escala): string {
-  const partes = [formatarDataLegivelEscala(escala.data), localCelebracao(escala)];
-  const horario = horarioCelebracao(escala);
-  if (horario) partes.push(horario);
-  if (escala.grupo_numero != null) {
-    partes.push(`GRUPO ${escala.grupo_numero}`);
-  }
-  return partes.join(" · ");
+  return linhaTituloV6(escala);
 }
 
 export function filtrarEscalasDoMes(escalas: Escala[], ano: number, mes: number): Escala[] {
@@ -117,6 +141,100 @@ export function filtrarEscalasDoMes(escalas: Escala[], ano: number, mes: number)
 function slotDaEscala(escala: Escala): string {
   if (escala.missa_tipo_slot) return escala.missa_tipo_slot;
   return "Outro";
+}
+
+function chaveOrdemEscala(escala: Escala): [string, number, string] {
+  const slot = slotDaEscala(escala);
+  return [escala.data, ORDEM_SLOT_CRONO[slot] ?? 99, escala.missa_horario ?? ""];
+}
+
+export function rotuloDiaSemanaCurto(dataIso: string): string {
+  const d = new Date(`${dataIso}T12:00:00`);
+  const label = d.toLocaleDateString("pt-BR", { weekday: "long" }).toUpperCase();
+  return label.replace("-FEIRA", "");
+}
+
+export function tagCelebracao(escala: Escala): string {
+  const slot = slotDaEscala(escala);
+  if (slot === "ComunidadeDomingo") return "Santo Antônio";
+  if (slot === "QuartaVoluntarios") return "Novena";
+  if (slot === "Dia13") return "Solenidade";
+  if (escala.grupo_numero != null) return `Grupo ${escala.grupo_numero}`;
+  return "";
+}
+
+export function tituloCelebracaoV6(escala: Escala): string {
+  const slot = slotDaEscala(escala);
+  const horario = horarioCelebracao(escala);
+  if (slot === "SabadoNoite") return `${horario} Missa`;
+  if (slot === "DomingoManha") return `${horario} Missa da Manhã`;
+  if (slot === "DomingoNoite") return `${horario} Missa da Noite`;
+  if (slot === "ComunidadeDomingo") return `${horario} Comunidade Santo Antônio`;
+  if (slot === "SextaAdoracao") return `${horario} Adoração + Missa`;
+  if (slot === "QuartaVoluntarios") return "Noite Novena";
+  if (slot === "Dia13") {
+    const hora = parseInt(escala.missa_horario?.slice(0, 2) ?? "0", 10);
+    if (hora === 6) return `${horario} Missa da Aurora`;
+    if (hora === 9) return `${horario} Missa das 9h`;
+    if (hora === 12) return `${horario} Missa do Meio-dia`;
+    return `${horario} Missa da Noite`;
+  }
+  return `${horario} ${escala.missa_nome ?? "Celebração"}`;
+}
+
+export function linhaTituloV6(escala: Escala): string {
+  const titulo = tituloCelebracaoV6(escala);
+  const tag = tagCelebracao(escala);
+  if (slotDaEscala(escala) === "QuartaVoluntarios") {
+    return tag ? `${titulo} ${tag}` : titulo;
+  }
+  if (escala.grupo_numero != null) {
+    return `${titulo} Grupo ${escala.grupo_numero}`;
+  }
+  if (tag) return `${titulo} ${tag}`;
+  return titulo;
+}
+
+export function linhasCoroinhasV6(escala: Escala): string[] {
+  if (escala.voluntarios) return ["01 Participação aberta — Voluntários"];
+  if (escala.itens.length === 0) return ["—"];
+  return escala.itens.map((item, idx) => `${String(idx + 1).padStart(2, "0")} ${item.coroinha_nome}`);
+}
+
+export interface DiaEscalas {
+  id: string;
+  data: string;
+  dia: string;
+  diaSemana: string;
+  escalas: Escala[];
+}
+
+export function agruparEscalasPorDia(escalas: Escala[]): DiaEscalas[] {
+  const porDia = new Map<string, Escala[]>();
+  for (const escala of escalas) {
+    const lista = porDia.get(escala.data) ?? [];
+    lista.push(escala);
+    porDia.set(escala.data, lista);
+  }
+
+  return Array.from(porDia.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([data, lista]) => {
+      lista.sort((a, b) => {
+        const [, ordemA, horaA] = chaveOrdemEscala(a);
+        const [, ordemB, horaB] = chaveOrdemEscala(b);
+        if (ordemA !== ordemB) return ordemA - ordemB;
+        return horaA.localeCompare(horaB);
+      });
+      const d = new Date(`${data}T12:00:00`);
+      return {
+        id: data,
+        data,
+        dia: String(d.getDate()).padStart(2, "0"),
+        diaSemana: rotuloDiaSemanaCurto(data),
+        escalas: lista,
+      };
+    });
 }
 
 /** Sábado de referência do bloco sexta–sábado–domingo. */
@@ -172,6 +290,7 @@ export interface EscalasAgrupadas {
   extras: SecaoEscalas[];
 }
 
+/** @deprecated Prefer agruparEscalasPorDia (template v6) */
 export function agruparEscalasPorSemana(escalas: Escala[]): EscalasAgrupadas {
   const porSemana = new Map<string, Escala[]>();
   const extrasPorSlot = new Map<string, Escala[]>();
@@ -225,7 +344,7 @@ export function agruparEscalasPorSemana(escalas: Escala[]): EscalasAgrupadas {
   return { semanas, extras };
 }
 
-/** @deprecated Use agruparEscalasPorSemana */
+/** @deprecated Use agruparEscalasPorDia */
 export function agruparEscalasPorHorario(escalas: Escala[]): SecaoEscalas[] {
   const { semanas, extras } = agruparEscalasPorSemana(escalas);
   const resultado: SecaoEscalas[] = semanas.map((s) => ({

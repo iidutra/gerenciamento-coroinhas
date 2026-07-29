@@ -6,22 +6,32 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
+    LEGENDA_CATEGORIAS_V6,
     MESES_PT,
+    ORIENTACOES_GERAIS_V6,
+    agrupar_escalas_por_dia,
     carregar_dados_mes,
-    itens_coroinha_escala,
-    linha_coroinha_flowable,
-    separar_escalas_cronologico_pdf,
-    texto_cabecalho_entrada,
+    linhas_coroinhas_v6,
+    linha_titulo_v6,
+    rotulo_dia_semana_curto,
 )
 
 BURGUNDY = colors.HexColor("#5C1C24")
 CREME = colors.HexColor("#FAF8F5")
 CREME_ESCURO = colors.HexColor("#F0EBE3")
 CINZA_TEXTO = colors.HexColor("#333333")
+CINZA_CLARO = colors.HexColor("#666666")
+BORDA = colors.HexColor("#D8D0C8")
 
 
 class RelatorioEscalaService:
@@ -35,94 +45,85 @@ class RelatorioEscalaService:
         base = getSampleStyleSheet()
         return {
             "titulo": ParagraphStyle(
-                "TituloParoquial",
+                "TituloV6",
                 parent=base["Heading1"],
-                fontSize=20,
-                leading=24,
-                alignment=TA_CENTER,
-                textColor=BURGUNDY,
-                spaceAfter=6,
-                fontName="Helvetica-Bold",
-            ),
-            "mes": ParagraphStyle(
-                "MesParoquial",
-                parent=base["Heading1"],
-                fontSize=16,
-                leading=20,
+                fontSize=22,
+                leading=26,
                 alignment=TA_CENTER,
                 textColor=BURGUNDY,
                 spaceAfter=4,
                 fontName="Helvetica-Bold",
             ),
             "subtitulo": ParagraphStyle(
-                "SubParoquial",
-                parent=base["Normal"],
-                fontSize=11,
-                alignment=TA_CENTER,
-                textColor=CINZA_TEXTO,
-                spaceAfter=14,
-            ),
-            "instrucao_titulo": ParagraphStyle(
-                "InstrucaoTitulo",
-                parent=base["Normal"],
-                fontSize=11,
-                fontName="Helvetica-Bold",
-                textColor=BURGUNDY,
-                spaceAfter=4,
-            ),
-            "instrucao": ParagraphStyle(
-                "Instrucao",
-                parent=base["Normal"],
-                fontSize=10,
-                leading=14,
-                textColor=CINZA_TEXTO,
-                leftIndent=4,
-                spaceAfter=2,
-            ),
-            "secao": ParagraphStyle(
-                "SecaoHorario",
-                parent=base["Heading2"],
-                fontSize=14,
-                leading=17,
-                textColor=colors.white,
-                alignment=TA_LEFT,
-                fontName="Helvetica-Bold",
-                spaceBefore=0,
-                spaceAfter=0,
-            ),
-            "secao_sub": ParagraphStyle(
-                "SecaoSub",
-                parent=base["Normal"],
-                fontSize=10,
-                textColor=CINZA_TEXTO,
-                spaceAfter=8,
-                leftIndent=2,
-            ),
-            "grupo_titulo": ParagraphStyle(
-                "GrupoTitulo",
+                "SubV6",
                 parent=base["Normal"],
                 fontSize=12,
+                leading=15,
+                alignment=TA_CENTER,
+                textColor=CINZA_TEXTO,
+                spaceAfter=10,
+            ),
+            "legenda": ParagraphStyle(
+                "LegendaV6",
+                parent=base["Normal"],
+                fontSize=8,
+                leading=10,
+                alignment=TA_CENTER,
+                textColor=CINZA_CLARO,
+                spaceAfter=12,
+            ),
+            "dia_num": ParagraphStyle(
+                "DiaNum",
+                parent=base["Normal"],
+                fontSize=20,
+                leading=22,
                 fontName="Helvetica-Bold",
                 textColor=BURGUNDY,
-                spaceAfter=4,
+                alignment=TA_CENTER,
+            ),
+            "dia_semana": ParagraphStyle(
+                "DiaSemana",
+                parent=base["Normal"],
+                fontSize=9,
+                leading=11,
+                fontName="Helvetica-Bold",
+                textColor=CINZA_TEXTO,
+                alignment=TA_LEFT,
+            ),
+            "celebracao_titulo": ParagraphStyle(
+                "CelebracaoTitulo",
+                parent=base["Normal"],
+                fontSize=10,
+                leading=13,
+                fontName="Helvetica-Bold",
+                textColor=BURGUNDY,
+                spaceAfter=3,
             ),
             "nome": ParagraphStyle(
                 "NomeCoroinha",
                 parent=base["Normal"],
-                fontSize=11,
-                leading=15,
+                fontSize=9,
+                leading=12,
                 textColor=CINZA_TEXTO,
-                leftIndent=6,
-                spaceAfter=3,
+                leftIndent=0,
+                spaceAfter=1,
             ),
-            "data_cab": ParagraphStyle(
-                "DataCab",
+            "orientacoes_titulo": ParagraphStyle(
+                "OrientacoesTitulo",
                 parent=base["Normal"],
-                fontSize=12,
-                leading=15,
+                fontSize=11,
                 fontName="Helvetica-Bold",
                 textColor=BURGUNDY,
-                spaceAfter=4,
+                spaceAfter=6,
+            ),
+            "orientacao": ParagraphStyle(
+                "Orientacao",
+                parent=base["Normal"],
+                fontSize=9,
+                leading=13,
+                textColor=CINZA_TEXTO,
+                leftIndent=8,
+                spaceAfter=3,
             ),
             "normal": ParagraphStyle(
                 "NormalLegivel",
@@ -134,179 +135,135 @@ class RelatorioEscalaService:
         }
 
     @staticmethod
-    def _caixa_instrucoes(estilos) -> Table:
-        linhas = [
-            [Paragraph("Como ler esta escala", estilos["instrucao_titulo"])],
-            [Paragraph("1. Veja abaixo em qual <b>GRUPO</b> você está (fins de semana).", estilos["instrucao"])],
-            [Paragraph("2. Procure a <b>data</b> da sua missa no cronograma abaixo.", estilos["instrucao"])],
-            [Paragraph("3. Cada quadro mostra a data e os coroinhas escalados.", estilos["instrucao"])],
-        ]
-        tabela = Table(linhas, colWidths=[180 * mm])
+    def _desenhar_cabecalho_rodape(canvas, doc, ano: int, mes: int):
+        mes_nome = MESES_PT[mes]
+        canvas.saveState()
+        canvas.setFont("Helvetica", 7.5)
+        canvas.setFillColor(CINZA_CLARO)
+        topo = doc.pagesize[1] - 10 * mm
+        canvas.drawString(doc.leftMargin, topo, f"SANTUÁRIO DE FÁTIMA  Escala de Coroinhas · {mes_nome} de {ano}")
+        canvas.drawRightString(
+            doc.pagesize[0] - doc.rightMargin,
+            topo,
+            f"Documento oficial · Uso interno  Página {canvas.getPageNumber()}",
+        )
+        canvas.restoreState()
+
+    @staticmethod
+    def _faixa_legenda(estilos) -> Table:
+        celulas = [Paragraph(cat, estilos["legenda"]) for cat in LEGENDA_CATEGORIAS_V6]
+        largura = 178 * mm / len(celulas)
+        tabela = Table([celulas], colWidths=[largura] * len(celulas))
         tabela.setStyle(
             TableStyle(
                 [
-                    ("BOX", (0, 0), (-1, -1), 1, BURGUNDY),
                     ("BACKGROUND", (0, 0), (-1, -1), CREME_ESCURO),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                    ("TOPPADDING", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                    ("BOX", (0, 0), (-1, -1), 0.5, BORDA),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.25, BORDA),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ]
             )
         )
         return tabela
 
     @staticmethod
-    def _faixa_secao(titulo: str, estilos) -> Table:
-        tabela = Table([[Paragraph(titulo, estilos["secao"])]], colWidths=[180 * mm])
-        tabela.setStyle(
+    def _linha_celebracao(dia, escala, idx: int, estilos) -> Table:
+        dia_label = f"{dia.day:02d}" if idx == 0 else ""
+        semana_label = rotulo_dia_semana_curto(dia) if idx == 0 else ""
+
+        linhas_conteudo = [[Paragraph(linha_titulo_v6(escala), estilos["celebracao_titulo"])]]
+        for nome in linhas_coroinhas_v6(escala):
+            linhas_conteudo.append([Paragraph(nome, estilos["nome"])])
+        conteudo = Table(linhas_conteudo, colWidths=[140 * mm])
+        conteudo.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, -1), BURGUNDY),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 10),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
                 ]
             )
         )
-        return tabela
-
-    @staticmethod
-    def _celula_grupo(grupo, estilos, largura_col: float) -> Table:
-        linhas = [[Paragraph(f"GRUPO {grupo.numero}", estilos["grupo_titulo"])]]
-        for membro in grupo.membros.all().order_by("ordem"):
-            texto = f"{membro.ordem}. {membro.coroinha.nome}"
-            linhas.append([Paragraph(texto, estilos["nome"])])
-        return Table(linhas, colWidths=[largura_col - 24])
-
-    @staticmethod
-    def _tabela_grupos(escala_mensal, estilos, largura_col: float) -> Table:
-        grupos = list(escala_mensal.grupos.all().order_by("numero"))
-        celulas = [
-            RelatorioEscalaService._celula_grupo(grupo, estilos, largura_col) for grupo in grupos
-        ]
-        while len(celulas) < 4:
-            celulas.append(Table([[Paragraph("", estilos["normal"])]]))
 
         tabela = Table(
-            [[celulas[0], celulas[1]], [celulas[2], celulas[3]]],
-            colWidths=[largura_col, largura_col],
+            [
+                [
+                    Paragraph(dia_label, estilos["dia_num"]),
+                    Paragraph(semana_label, estilos["dia_semana"]),
+                    conteudo,
+                ]
+            ],
+            colWidths=[14 * mm, 22 * mm, 140 * mm],
+            hAlign="LEFT",
         )
         tabela.setStyle(
             TableStyle(
                 [
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("BOX", (0, 0), (-1, -1), 1, BURGUNDY),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
-                    ("BACKGROUND", (0, 0), (-1, -1), CREME),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 10),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                    ("TOPPADDING", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("LINEBELOW", (0, 0), (-1, -1), 0.25, BORDA),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 2),
                 ]
             )
         )
         return tabela
 
     @staticmethod
-    def _caixa_escala(escala, estilos, largura: float):
-        linhas = [[Paragraph(texto_cabecalho_entrada(escala), estilos["data_cab"])]]
-        for texto, coroinha in itens_coroinha_escala(escala):
-            for flow in linha_coroinha_flowable(coroinha, texto, estilos["nome"]):
-                linhas.append([flow])
-
-        tabela = Table(linhas, colWidths=[largura])
-        tabela.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 0.75, BURGUNDY),
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.white),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ]
-            )
-        )
-        return KeepTogether([tabela, Spacer(1, 6)])
-
-    @staticmethod
-    def _render_secao_escalas(elementos, titulo_secao, subtitulo_secao, escalas, estilos, largura_util):
-        if not escalas:
-            return
-        elementos.append(Spacer(1, 10))
-        elementos.append(RelatorioEscalaService._faixa_secao(titulo_secao, estilos))
-        if subtitulo_secao:
-            elementos.append(Spacer(1, 4))
-            elementos.append(Paragraph(subtitulo_secao, estilos["secao_sub"]))
-        elementos.append(Spacer(1, 6))
-        for escala in escalas:
-            elementos.append(RelatorioEscalaService._caixa_escala(escala, estilos, largura_util))
+    def _secao_orientacoes(estilos) -> list:
+        elementos = [
+            Spacer(1, 10),
+            Paragraph("ORIENTAÇÕES GERAIS", estilos["orientacoes_titulo"]),
+        ]
+        for texto in ORIENTACOES_GERAIS_V6:
+            elementos.append(Paragraph(f"• {texto}", estilos["orientacao"]))
+        return elementos
 
     @staticmethod
     def exportar_mes_pdf(ano: int, mes: int) -> bytes:
-        escalas, escala_mensal = carregar_dados_mes(ano, mes)
-        santuario, comunidade = separar_escalas_cronologico_pdf(escalas)
+        escalas, _escala_mensal = carregar_dados_mes(ano, mes)
+        dias = agrupar_escalas_por_dia(escalas)
 
         buffer = io.BytesIO()
+        mes_nome = MESES_PT[mes]
+
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            leftMargin=16 * mm,
-            rightMargin=16 * mm,
-            topMargin=14 * mm,
+            leftMargin=14 * mm,
+            rightMargin=14 * mm,
+            topMargin=18 * mm,
             bottomMargin=14 * mm,
-            title=f"Escala Coroinhas {MESES_PT[mes]}/{ano}",
+            title=f"Escala Coroinhas {mes_nome}/{ano}",
         )
-        largura_util = doc.width
-        largura_col_grupo = largura_util / 2
 
         estilos = RelatorioEscalaService._estilos_pdf()
-        mes_nome = MESES_PT[mes].upper()
+
+        def on_page(canvas, document):
+            RelatorioEscalaService._desenhar_cabecalho_rodape(canvas, document, ano, mes)
 
         elementos = [
-            Paragraph("ESCALA DOS COROINHAS", estilos["titulo"]),
-            Paragraph(f"{mes_nome} de {ano}", estilos["mes"]),
-            Paragraph("Santuário de Fátima — Pastoral dos Coroinhas", estilos["subtitulo"]),
-            RelatorioEscalaService._caixa_instrucoes(estilos),
-            Spacer(1, 12),
+            Paragraph("Escala de Coroinhas", estilos["titulo"]),
+            Paragraph(f"{mes_nome} de {ano} · Santuário de Fátima", estilos["subtitulo"]),
+            RelatorioEscalaService._faixa_legenda(estilos),
+            Spacer(1, 6),
         ]
-
-        if escala_mensal and escala_mensal.grupos.exists():
-            elementos.append(RelatorioEscalaService._faixa_secao("GRUPOS DO MÊS (sábado e domingo)", estilos))
-            elementos.append(Spacer(1, 6))
-            elementos.append(
-                Paragraph(
-                    "Anote o número do seu grupo. Nos fins de semana, sirva com o grupo indicado abaixo.",
-                    estilos["secao_sub"],
-                )
-            )
-            elementos.append(RelatorioEscalaService._tabela_grupos(escala_mensal, estilos, largura_col_grupo))
-            elementos.append(Spacer(1, 14))
 
         if not escalas:
             elementos.append(Paragraph("Nenhuma escala montada neste período.", estilos["normal"]))
         else:
-            elementos.append(PageBreak())
-            elementos.append(RelatorioEscalaService._faixa_secao("CRONOGRAMA DO MÊS — SANTUÁRIO DE FÁTIMA", estilos))
-            elementos.append(Spacer(1, 8))
+            for dia, escalas_dia in dias:
+                for idx, escala in enumerate(escalas_dia):
+                    elementos.append(
+                        RelatorioEscalaService._linha_celebracao(dia, escala, idx, estilos)
+                    )
+            elementos.extend(RelatorioEscalaService._secao_orientacoes(estilos))
 
-            for escala in santuario:
-                elementos.append(RelatorioEscalaService._caixa_escala(escala, estilos, largura_util))
-
-            if comunidade:
-                RelatorioEscalaService._render_secao_escalas(
-                    elementos,
-                    "COMUNIDADE SANTO ANTÔNIO",
-                    "Domingo · 10h30",
-                    comunidade,
-                    estilos,
-                    largura_util,
-                )
-
-        doc.build(elementos)
+        doc.build(elementos, onFirstPage=on_page, onLaterPages=on_page)
         return buffer.getvalue()
 
     @staticmethod

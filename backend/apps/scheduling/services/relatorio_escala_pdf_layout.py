@@ -159,11 +159,23 @@ ORDEM_SLOT_CRONO = {
     TipoSlotMissa.SEXTA_ADORACAO: 1,
     TipoSlotMissa.SABADO_NOITE: 2,
     TipoSlotMissa.DOMINGO_MANHA: 3,
-    TipoSlotMissa.DOMINGO_NOITE: 4,
-    TipoSlotMissa.QUARTA_VOLUNTARIOS: 5,
-    TipoSlotMissa.DIA_13: 6,
-    TipoSlotMissa.OUTRO: 7,
+    TipoSlotMissa.COMUNIDADE_DOMINGO: 4,
+    TipoSlotMissa.DOMINGO_NOITE: 5,
+    TipoSlotMissa.QUARTA_VOLUNTARIOS: 6,
+    TipoSlotMissa.DIA_13: 7,
+    TipoSlotMissa.OUTRO: 8,
 }
+
+LEGENDA_CATEGORIAS_V6 = ["Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "S. Antônio", "Solenidade", "Novena"]
+
+ORIENTACOES_GERAIS_V6 = [
+    "Chegada com 30 minutos de antecedência em todas as celebrações.",
+    "Meninas: cabelos presos e trajes adequados ao ambiente da sacristia.",
+    "Meninos: trajes adequados ao ambiente da sacristia.",
+    "Sapatos preferencialmente pretos e vestes limpas e passadas.",
+    "Em caso de impedimento, avisar com antecedência para reorganização.",
+    "Dúvidas e trocas: falar com Igor ou Giaritssa.",
+]
 
 
 def chave_ordem_escala(escala: Escala) -> tuple:
@@ -175,18 +187,86 @@ def chave_ordem_escala(escala: Escala) -> tuple:
     )
 
 
-def separar_escalas_cronologico_pdf(escalas: list[Escala]) -> tuple[list[Escala], list[Escala]]:
-    """Santuário em ordem de data (como PDF paroquial); comunidade ao final."""
-    santuario: list[Escala] = []
-    comunidade: list[Escala] = []
+def agrupar_escalas_por_dia(escalas: list[Escala]) -> list[tuple[date, list[Escala]]]:
+    """Cronograma v6: todas as celebrações por data (comunidade inline no domingo)."""
+    por_dia: dict[date, list[Escala]] = defaultdict(list)
     for escala in escalas:
-        if slot_da_escala(escala) == TipoSlotMissa.COMUNIDADE_DOMINGO:
-            comunidade.append(escala)
-        else:
-            santuario.append(escala)
-    santuario.sort(key=chave_ordem_escala)
-    comunidade.sort(key=chave_ordem_escala)
-    return santuario, comunidade
+        por_dia[escala.data].append(escala)
+    return [
+        (dia, sorted(lista, key=chave_ordem_escala))
+        for dia, lista in sorted(por_dia.items())
+    ]
+
+
+def rotulo_dia_semana_curto(data: date) -> str:
+    return DIAS_SEMANA_PT[data.weekday()].upper().replace("-FEIRA", "")
+
+
+def tag_celebracao(escala: Escala) -> str:
+    slot = slot_da_escala(escala)
+    if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
+        return "Santo Antônio"
+    if slot == TipoSlotMissa.QUARTA_VOLUNTARIOS:
+        return "Novena"
+    if slot == TipoSlotMissa.DIA_13:
+        return "Solenidade"
+    if escala.grupo_numero is not None:
+        return f"Grupo {escala.grupo_numero}"
+    return ""
+
+
+def titulo_celebracao_v6(escala: Escala) -> str:
+    slot = slot_da_escala(escala)
+    horario = horario_celebracao(escala)
+    if slot == TipoSlotMissa.SABADO_NOITE:
+        return f"{horario} Missa"
+    if slot == TipoSlotMissa.DOMINGO_MANHA:
+        return f"{horario} Missa da Manhã"
+    if slot == TipoSlotMissa.DOMINGO_NOITE:
+        return f"{horario} Missa da Noite"
+    if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
+        return f"{horario} Comunidade Santo Antônio"
+    if slot == TipoSlotMissa.SEXTA_ADORACAO:
+        return f"{horario} Adoração + Missa"
+    if slot == TipoSlotMissa.QUARTA_VOLUNTARIOS:
+        return "Noite Novena"
+    if slot == TipoSlotMissa.DIA_13:
+        hora = escala.missa.horario.hour
+        if hora == 6:
+            return f"{horario} Missa da Aurora"
+        if hora == 9:
+            return f"{horario} Missa das 9h"
+        if hora == 12:
+            return f"{horario} Missa do Meio-dia"
+        return f"{horario} Missa da Noite"
+    return f"{horario} {escala.missa.nome}"
+
+
+def linha_titulo_v6(escala: Escala) -> str:
+    titulo = titulo_celebracao_v6(escala)
+    tag = tag_celebracao(escala)
+    if slot_da_escala(escala) == TipoSlotMissa.QUARTA_VOLUNTARIOS:
+        return f"{titulo} {tag}" if tag else titulo
+    if escala.grupo_numero is not None:
+        return f"{titulo} Grupo {escala.grupo_numero}"
+    if tag:
+        return f"{titulo} {tag}"
+    return titulo
+
+
+def linhas_coroinhas_v6(escala: Escala) -> list[str]:
+    if escala.voluntarios:
+        return ["01 Participação aberta — Voluntários"]
+    itens = list(escala.itens.all())
+    if not itens:
+        return ["—"]
+    return [f"{idx + 1:02d} {item.coroinha.nome}" for idx, item in enumerate(itens)]
+
+
+def separar_escalas_cronologico_pdf(escalas: list[Escala]) -> tuple[list[Escala], list[Escala]]:
+    """Compatibilidade: retorna cronológico com comunidade inline no fluxo principal."""
+    ordenadas = sorted(escalas, key=chave_ordem_escala)
+    return ordenadas, []
 
 
 def linhas_nomes_escala(escala: Escala) -> list[str]:
