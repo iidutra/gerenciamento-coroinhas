@@ -227,7 +227,7 @@ def titulo_celebracao_v6(escala: Escala) -> str:
     if slot == TipoSlotMissa.DOMINGO_NOITE:
         return f"{horario} Missa da Noite"
     if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
-        return f"{horario} Comunidade Santo Antônio"
+        return f"{horario} Comunidade"
     if slot == TipoSlotMissa.SEXTA_ADORACAO:
         return f"{horario} Adoração + Missa"
     if slot == TipoSlotMissa.QUARTA_VOLUNTARIOS:
@@ -251,8 +251,6 @@ def linha_titulo_v6(escala: Escala) -> str:
     if slot == TipoSlotMissa.QUARTA_VOLUNTARIOS:
         return f"{titulo} {tag}" if tag else titulo
     if slot == TipoSlotMissa.DIA_13:
-        return titulo
-    if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
         return titulo
     if escala.grupo_numero is not None:
         return f"{titulo} Grupo {escala.grupo_numero}"

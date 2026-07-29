@@ -169,7 +169,7 @@ export function tituloCelebracaoV6(escala: Escala): string {
   if (slot === "SabadoNoite") return `${horario} Missa`;
   if (slot === "DomingoManha") return `${horario} Missa da Manhã`;
   if (slot === "DomingoNoite") return `${horario} Missa da Noite`;
-  if (slot === "ComunidadeDomingo") return `${horario} Comunidade Santo Antônio`;
+  if (slot === "ComunidadeDomingo") return `${horario} Comunidade`;
   if (slot === "SextaAdoracao") return `${horario} Adoração + Missa`;
   if (slot === "QuartaVoluntarios") return "Noite Novena";
   if (slot === "Dia13") {
@@ -190,7 +190,6 @@ export function linhaTituloV6(escala: Escala): string {
     return tag ? `${titulo} ${tag}` : titulo;
   }
   if (slot === "Dia13") return titulo;
-  if (slot === "ComunidadeDomingo") return titulo;
   if (escala.grupo_numero != null) {
     return `${titulo} Grupo ${escala.grupo_numero}`;
   }
