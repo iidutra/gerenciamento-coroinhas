@@ -356,6 +356,7 @@ export function EscalaRemanejamentoKanban({
 
         <EscalaMesCronologico
           {...cronologicoProps}
+          coroinhas={coroinhas}
           dias={diasAgrupados}
           mes={mes}
           ano={ano}
