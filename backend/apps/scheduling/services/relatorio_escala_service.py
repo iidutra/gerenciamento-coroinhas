@@ -18,8 +18,10 @@ from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     MESES_PT,
     ORIENTACOES_GERAIS_V6,
+    TITULO_SOLENIDADE_DIA_13,
     agrupar_escalas_por_dia,
     carregar_dados_mes,
+    dia_tem_solenidade,
     linhas_coroinhas_v6,
     linha_titulo_v6,
     rotulo_dia_semana_curto,
@@ -86,6 +88,14 @@ class RelatorioEscalaService:
                 textColor=CINZA_CLARO,
                 alignment=TA_CENTER,
                 spaceAfter=8,
+            ),
+            "solenidade_sub": ParagraphStyle(
+                "SolenidadeSubV6",
+                parent=base["Normal"],
+                fontSize=10,
+                fontName="Helvetica-Bold",
+                textColor=BURGUNDY,
+                spaceAfter=6,
             ),
             "dia_num": ParagraphStyle(
                 "DiaNum",
@@ -210,11 +220,16 @@ class RelatorioEscalaService:
         )
 
     @staticmethod
-    def _linha_celebracao(dia, escala, idx: int, estilos) -> Table:
+    def _linha_celebracao(dia, escala, idx: int, estilos, solenidade: bool = False) -> Table:
         dia_label = f"{dia.day:02d}" if idx == 0 else ""
         semana_label = rotulo_dia_semana_curto(dia) if idx == 0 else ""
 
-        linhas_conteudo = [[Paragraph(linha_titulo_v6(escala), estilos["celebracao_titulo"])]]
+        linhas_conteudo = []
+        if solenidade and idx == 0:
+            linhas_conteudo.append(
+                [Paragraph(TITULO_SOLENIDADE_DIA_13, estilos["solenidade_sub"])]
+            )
+        linhas_conteudo.append([Paragraph(linha_titulo_v6(escala), estilos["celebracao_titulo"])])
         for nome in linhas_coroinhas_v6(escala):
             linhas_conteudo.append([Paragraph(nome, estilos["nome"])])
         conteudo = Table(linhas_conteudo, colWidths=[140 * mm])
@@ -308,9 +323,12 @@ class RelatorioEscalaService:
             elementos.append(Paragraph("Nenhuma escala montada neste período.", estilos["normal"]))
         else:
             for dia, escalas_dia in dias:
+                solenidade = dia_tem_solenidade(escalas_dia)
                 for idx, escala in enumerate(escalas_dia):
                     elementos.append(
-                        RelatorioEscalaService._linha_celebracao(dia, escala, idx, estilos)
+                        RelatorioEscalaService._linha_celebracao(
+                            dia, escala, idx, estilos, solenidade=solenidade
+                        )
                     )
             elementos.extend(RelatorioEscalaService._secao_orientacoes(estilos))
 

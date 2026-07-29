@@ -56,6 +56,8 @@ SECOES_EXTRAS_PDF = [
     (TipoSlotMissa.OUTRO, "OUTRAS CELEBRAÇÕES", ""),
 ]
 
+TITULO_SOLENIDADE_DIA_13 = "Solenidade de Nossa Senhora de Fátima"
+
 
 LOCAIS_CELEBRACAO = {
     LocalCelebracao.SANTUARIO: "N. Sra. de Fátima",
@@ -233,25 +235,32 @@ def titulo_celebracao_v6(escala: Escala) -> str:
     if slot == TipoSlotMissa.DIA_13:
         hora = escala.missa.horario.hour
         if hora == 6:
-            return f"{horario} Missa da Aurora"
+            return "Missa das 6h"
         if hora == 9:
-            return f"{horario} Missa das 9h"
+            return "Missa das 9h"
         if hora == 12:
-            return f"{horario} Missa do Meio-dia"
-        return f"{horario} Missa da Noite"
+            return "Missa das 12h"
+        return "Missa das 18h"
     return f"{horario} {escala.missa.nome}"
 
 
 def linha_titulo_v6(escala: Escala) -> str:
     titulo = titulo_celebracao_v6(escala)
+    slot = slot_da_escala(escala)
     tag = tag_celebracao(escala)
-    if slot_da_escala(escala) == TipoSlotMissa.QUARTA_VOLUNTARIOS:
+    if slot == TipoSlotMissa.QUARTA_VOLUNTARIOS:
         return f"{titulo} {tag}" if tag else titulo
+    if slot == TipoSlotMissa.DIA_13:
+        return titulo
     if escala.grupo_numero is not None:
         return f"{titulo} Grupo {escala.grupo_numero}"
     if tag:
         return f"{titulo} {tag}"
     return titulo
+
+
+def dia_tem_solenidade(escalas_dia: list[Escala]) -> bool:
+    return any(slot_da_escala(e) == TipoSlotMissa.DIA_13 for e in escalas_dia)
 
 
 def linhas_coroinhas_v6(escala: Escala) -> list[str]:

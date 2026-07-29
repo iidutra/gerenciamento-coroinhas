@@ -174,25 +174,33 @@ export function tituloCelebracaoV6(escala: Escala): string {
   if (slot === "QuartaVoluntarios") return "Noite Novena";
   if (slot === "Dia13") {
     const hora = parseInt(escala.missa_horario?.slice(0, 2) ?? "0", 10);
-    if (hora === 6) return `${horario} Missa da Aurora`;
-    if (hora === 9) return `${horario} Missa das 9h`;
-    if (hora === 12) return `${horario} Missa do Meio-dia`;
-    return `${horario} Missa da Noite`;
+    if (hora === 6) return "Missa das 6h";
+    if (hora === 9) return "Missa das 9h";
+    if (hora === 12) return "Missa das 12h";
+    return "Missa das 18h";
   }
   return `${horario} ${escala.missa_nome ?? "Celebração"}`;
 }
 
 export function linhaTituloV6(escala: Escala): string {
   const titulo = tituloCelebracaoV6(escala);
+  const slot = slotDaEscala(escala);
   const tag = tagCelebracao(escala);
-  if (slotDaEscala(escala) === "QuartaVoluntarios") {
+  if (slot === "QuartaVoluntarios") {
     return tag ? `${titulo} ${tag}` : titulo;
   }
+  if (slot === "Dia13") return titulo;
   if (escala.grupo_numero != null) {
     return `${titulo} Grupo ${escala.grupo_numero}`;
   }
   if (tag) return `${titulo} ${tag}`;
   return titulo;
+}
+
+export const TITULO_SOLENIDADE_DIA_13 = "Solenidade de Nossa Senhora de Fátima";
+
+export function diaTemSolenidade(escalas: Escala[]): boolean {
+  return escalas.some((e) => slotDaEscala(e) === "Dia13");
 }
 
 export function linhasCoroinhasV6(escala: Escala): string[] {

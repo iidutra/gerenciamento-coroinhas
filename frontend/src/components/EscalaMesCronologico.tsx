@@ -6,6 +6,8 @@ import { GripVertical, Send, Trash2, UserCog, Users } from "lucide-react";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
   ORIENTACOES_GERAIS_V6,
+  TITULO_SOLENIDADE_DIA_13,
+  diaTemSolenidade,
   linhaTituloV6,
   linhasCoroinhasV6,
   nomeMes,
@@ -56,11 +58,7 @@ function BadgeTag({ escala }: { escala: Escala }) {
     );
   }
   if (escala.missa_tipo_slot === "Dia13") {
-    return (
-      <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 bg-violet-500/15 text-violet-800 dark:text-violet-300">
-        Solenidade
-      </span>
-    );
+    return null;
   }
   if (escala.grupo_numero != null) {
     return (
@@ -142,6 +140,7 @@ function CelebracaoDropZone({
 function EscalaCelebracaoCard({
   escala,
   mostrarDia,
+  mostrarSolenidade,
   dia,
   diaSemana,
   kanbanMode,
@@ -166,6 +165,7 @@ function EscalaCelebracaoCard({
 }: {
   escala: Escala;
   mostrarDia: boolean;
+  mostrarSolenidade?: boolean;
   dia: string;
   diaSemana: string;
   kanbanMode?: boolean;
@@ -194,6 +194,9 @@ function EscalaCelebracaoCard({
       </div>
 
       <CelebracaoDropZone escala={escala} kanbanMode={kanbanMode}>
+        {mostrarSolenidade && (
+          <p className="text-sm font-display font-semibold text-burgundy mb-2">{TITULO_SOLENIDADE_DIA_13}</p>
+        )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -375,6 +378,7 @@ export function EscalaMesCronologico(props: EscalaMesCronologicoProps) {
                 key={escala.id}
                 escala={escala}
                 mostrarDia={idx === 0}
+                mostrarSolenidade={idx === 0 && diaTemSolenidade(dia.escalas)}
                 dia={dia.dia}
                 diaSemana={dia.diaSemana}
                 kanbanMode={props.kanbanMode}

@@ -16,6 +16,7 @@ from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     agrupar_escalas_por_dia,
     linha_titulo_v6,
+    titulo_celebracao_v6,
 )
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
 
@@ -104,6 +105,24 @@ class TestPdfParoquial:
             modo=ModoEscala.SELECAO_MANUAL,
         )
         assert linha_titulo_v6(escala) == "10h30 Comunidade Santo Antônio Santo Antônio"
+
+    def test_titulo_missa_dia_13(self, db):
+        for hora, esperado in [(6, "Missa das 6h"), (9, "Missa das 9h"), (12, "Missa das 12h"), (18, "Missa das 18h")]:
+            missa = Missa.objects.create(
+                nome=f"Dia 13 — {hora:02d}h",
+                dia_mes=13,
+                horario=time(hora, 0),
+                ativa=True,
+                tipo_slot=TipoSlotMissa.DIA_13,
+                local=LocalCelebracao.SANTUARIO,
+            )
+            escala = Escala.objects.create(
+                data=date(2026, 8, 13),
+                missa=missa,
+                modo=ModoEscala.SELECAO_MANUAL,
+            )
+            assert titulo_celebracao_v6(escala) == esperado
+            assert linha_titulo_v6(escala) == esperado
 
     def test_pdf_contem_estrutura_paroquial(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)
