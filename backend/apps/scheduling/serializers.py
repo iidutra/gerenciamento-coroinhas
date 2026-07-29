@@ -166,6 +166,22 @@ class DefinirMembrosSerializer(serializers.Serializer):
     coroinha_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=True)
 
 
+class RemanejarGrupoSerializer(serializers.Serializer):
+    ano = serializers.IntegerField(min_value=2020, max_value=2100)
+    mes = serializers.IntegerField(min_value=1, max_value=12)
+    coroinha_id = serializers.IntegerField()
+    grupo_destino = serializers.IntegerField(min_value=1, max_value=4)
+
+
+class MoverCoroinhaCelebracaoSerializer(serializers.Serializer):
+    coroinha_id = serializers.IntegerField()
+    escala_destino_id = serializers.IntegerField(required=False, allow_null=True)
+
+
+class AtribuirGrupoCelebracaoSerializer(serializers.Serializer):
+    grupo_numero = serializers.IntegerField(min_value=1, max_value=4)
+
+
 class GrupoMensalMembroSerializer(serializers.ModelSerializer):
     coroinha_id = serializers.IntegerField(source="coroinha.id", read_only=True)
     coroinha_nome = serializers.CharField(source="coroinha.nome", read_only=True)

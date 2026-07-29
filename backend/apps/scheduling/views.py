@@ -10,17 +10,21 @@ from apps.identity.permissions import IsGestorCoroinhas, IsStaffPastoral
 from apps.scheduling.models import Escala, EscalaMensal, Missa
 from apps.scheduling.serializers import (
     AtribuirFuncoesSerializer,
+    AtribuirGrupoCelebracaoSerializer,
     DefinirMembrosSerializer,
     EscalaMensalSerializer,
     EscalaSerializer,
     GerarEscalaMesSerializer,
     MissaSerializer,
     MontarEscalaSerializer,
+    MoverCoroinhaCelebracaoSerializer,
     NotificarEscalaSerializer,
+    RemanejarGrupoSerializer,
 )
 from apps.scheduling.services.escala_service import EscalaService
 from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscalaMensalService
 from apps.scheduling.services.notificacao_escala_service import NotificacaoEscalaService
+from apps.scheduling.services.remanejamento_escala_service import RemanejamentoEscalaService
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
 
 
@@ -57,6 +61,52 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         escala = Escala.objects.prefetch_related("itens__coroinha").get(pk=escala.pk)
         return Response(EscalaSerializer(escala, context={"request": request}).data)
 
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="mover-coroinha",
+        permission_classes=[IsGestorCoroinhas],
+    )
+    def mover_coroinha(self, request, pk=None):
+        escala = self.get_object()
+        serializer = MoverCoroinhaCelebracaoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            origem, destino = RemanejamentoEscalaService.mover_celebracao(
+                coroinha_id=data["coroinha_id"],
+                escala_origem_id=escala.pk,
+                escala_destino_id=data.get("escala_destino_id"),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        payload = {
+            "origem": EscalaSerializer(origem, context={"request": request}).data,
+        }
+        if destino:
+            payload["destino"] = EscalaSerializer(destino, context={"request": request}).data
+        return Response(payload)
+
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="atribuir-grupo",
+        permission_classes=[IsGestorCoroinhas],
+    )
+    def atribuir_grupo(self, request, pk=None):
+        escala = self.get_object()
+        serializer = AtribuirGrupoCelebracaoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            escala = RemanejamentoEscalaService.atribuir_grupo_celebracao(
+                escala.pk,
+                serializer.validated_data["grupo_numero"],
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        escala = Escala.objects.prefetch_related("itens__coroinha").get(pk=escala.pk)
+        return Response(EscalaSerializer(escala, context={"request": request}).data)
+
     @action(detail=False, methods=["get", "delete"], url_path="mensal", permission_classes=[IsStaffPastoral])
     def mensal(self, request):
         try:
@@ -85,6 +135,40 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         if not escala_mensal:
             return Response({"detail": "Escala mensal não encontrada."}, status=status.HTTP_404_NOT_FOUND)
         return Response(EscalaMensalSerializer(escala_mensal).data)
+
+    @action(
+        detail=False,
+        methods=["patch"],
+        url_path="mensal/remanejar-grupo",
+        permission_classes=[IsGestorCoroinhas],
+    )
+    def remanejar_grupo(self, request):
+        serializer = RemanejarGrupoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        escala_mensal = EscalaMensal.objects.filter(ano=data["ano"], mes=data["mes"]).first()
+        if not escala_mensal:
+            return Response({"detail": "Escala mensal não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            RemanejamentoEscalaService.mover_grupo(
+                escala_mensal,
+                data["coroinha_id"],
+                data["grupo_destino"],
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        escala_mensal = (
+            EscalaMensal.objects.filter(pk=escala_mensal.pk)
+            .prefetch_related("grupos__membros__coroinha")
+            .first()
+        )
+        escalas = Escala.objects.filter(escala_mensal=escala_mensal).prefetch_related("itens__coroinha")
+        return Response(
+            {
+                "escala_mensal": EscalaMensalSerializer(escala_mensal).data,
+                "escalas": EscalaSerializer(escalas, many=True, context={"request": request}).data,
+            }
+        )
 
     @action(detail=False, methods=["post"], url_path="gerar-mes", permission_classes=[IsGestorCoroinhas])
     def gerar_mes(self, request):

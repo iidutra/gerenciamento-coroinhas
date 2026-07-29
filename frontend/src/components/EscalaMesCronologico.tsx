@@ -1,6 +1,8 @@
 "use client";
 
-import { Send, Trash2, UserCog, Users } from "lucide-react";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Send, Trash2, UserCog, Users } from "lucide-react";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
   LEGENDA_CATEGORIAS_V6,
@@ -10,13 +12,16 @@ import {
   nomeMes,
   type DiaEscalas,
 } from "@/lib/escala-layout";
-import type { Coroinha, Escala, FuncaoEscala } from "@/types";
+import { kanbanDragId, kanbanDropId, type KanbanDragItem } from "@/lib/escala-kanban";
+import type { FuncaoEscala } from "@/lib/scheduling";
+import type { Coroinha, Escala } from "@/types";
 
 interface EscalaMesCronologicoProps {
   dias: DiaEscalas[];
   mes: number;
   ano: number;
   podeEditar: boolean;
+  kanbanMode?: boolean;
   coroinhas: Coroinha[];
   editandoMembrosId: number | null;
   editandoFuncoesId: number | null;
@@ -68,11 +73,79 @@ function BadgeTag({ escala }: { escala: Escala }) {
   return null;
 }
 
+function DraggableCoroinhaLinha({
+  escala,
+  coroinhaId,
+  coroinhaNome,
+  linha,
+}: {
+  escala: Escala;
+  coroinhaId: number;
+  coroinhaNome: string;
+  linha: string;
+}) {
+  const item: KanbanDragItem = {
+    coroinhaId,
+    coroinhaNome,
+    source: { kind: "escala", escalaId: escala.id },
+  };
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: kanbanDragId(item),
+    data: item,
+  });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.5 : 1 }}
+      className="text-sm text-foreground font-mono tabular-nums flex items-center gap-1.5"
+    >
+      <button
+        type="button"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-burgundy touch-none shrink-0"
+        aria-label={`Arrastar ${coroinhaNome}`}
+        {...listeners}
+        {...attributes}
+      >
+        <GripVertical className="size-3.5" aria-hidden />
+      </button>
+      {linha}
+    </li>
+  );
+}
+
+function CelebracaoDropZone({
+  escala,
+  kanbanMode,
+  children,
+}: {
+  escala: Escala;
+  kanbanMode?: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: kanbanDropId({ kind: "escala", escalaId: escala.id }),
+    disabled: !kanbanMode,
+  });
+
+  return (
+    <div
+      ref={kanbanMode ? setNodeRef : undefined}
+      className={`min-w-0 flex-1 rounded-lg transition-colors ${
+        kanbanMode && isOver ? "ring-2 ring-burgundy/30 bg-burgundy/5" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 function EscalaCelebracaoCard({
   escala,
   mostrarDia,
   dia,
   diaSemana,
+  kanbanMode,
   podeEditar,
   coroinhas,
   editandoMembros,
@@ -96,8 +169,15 @@ function EscalaCelebracaoCard({
   mostrarDia: boolean;
   dia: string;
   diaSemana: string;
-} & Omit<EscalaMesCronologicoProps, "dias" | "mes" | "ano">) {
+  kanbanMode?: boolean;
+  editandoMembros: boolean;
+  editandoFuncoes: boolean;
+} & Omit<
+  EscalaMesCronologicoProps,
+  "dias" | "mes" | "ano" | "kanbanMode" | "editandoMembrosId" | "editandoFuncoesId"
+>) {
   const nomes = linhasCoroinhasV6(escala);
+  const itensArrastaveis = !escala.voluntarios && escala.itens.length > 0;
 
   return (
     <div className="flex gap-3 sm:gap-4 border-b border-border/60 last:border-b-0 py-4 first:pt-0">
@@ -114,7 +194,7 @@ function EscalaCelebracaoCard({
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <CelebracaoDropZone escala={escala} kanbanMode={kanbanMode}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -189,11 +269,21 @@ function EscalaCelebracaoCard({
         </div>
 
         <ul className="mt-2 space-y-0.5">
-          {nomes.map((linha) => (
-            <li key={linha} className="text-sm text-foreground font-mono tabular-nums">
-              {linha}
-            </li>
-          ))}
+          {kanbanMode && itensArrastaveis
+            ? escala.itens.map((item, idx) => (
+                <DraggableCoroinhaLinha
+                  key={item.id}
+                  escala={escala}
+                  coroinhaId={item.coroinha_id}
+                  coroinhaNome={item.coroinha_nome}
+                  linha={`${String(idx + 1).padStart(2, "0")} ${item.coroinha_nome}`}
+                />
+              ))
+            : nomes.map((linha) => (
+                <li key={linha} className="text-sm text-foreground font-mono tabular-nums">
+                  {linha}
+                </li>
+              ))}
         </ul>
 
         {editandoMembros && (
@@ -244,7 +334,7 @@ function EscalaCelebracaoCard({
             </div>
           </div>
         )}
-      </div>
+      </CelebracaoDropZone>
     </div>
   );
 }
@@ -282,6 +372,7 @@ export function EscalaMesCronologico(props: EscalaMesCronologicoProps) {
                 mostrarDia={idx === 0}
                 dia={dia.dia}
                 diaSemana={dia.diaSemana}
+                kanbanMode={props.kanbanMode}
                 {...props}
                 editandoMembros={props.editandoMembrosId === escala.id}
                 editandoFuncoes={props.editandoFuncoesId === escala.id}

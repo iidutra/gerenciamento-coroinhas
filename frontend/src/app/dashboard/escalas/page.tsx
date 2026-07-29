@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Calendar, Download, Pencil, Plus, Shuffle, Trash2 } from "lucide-react";
+import { Calendar, CalendarRange, Download, Pencil, Plus, Shuffle, Trash2 } from "lucide-react";
 import { EscalaMesCronologico } from "@/components/EscalaMesCronologico";
+import { EscalaRemanejamentoKanban } from "@/components/EscalaRemanejamentoKanban";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { GruposMensaisPanel } from "@/components/GruposMensaisPanel";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
@@ -316,6 +317,26 @@ export default function EscalasPage() {
     } finally {
       setExportandoPdf(false);
     }
+  }
+
+  function handleKanbanAtualizado(
+    escalaMensal: EscalaMensal,
+    escalasAtualizadas: Escala[],
+    substituirMes = false,
+  ) {
+    setEscalaMensalView(escalaMensal);
+    setEscalas((prev) => {
+      if (substituirMes) {
+        const foraMes = prev.filter((e) => {
+          const [y, m] = e.data.split("-").map(Number);
+          return y !== anoVisualizar || m !== mesVisualizar;
+        });
+        return [...foraMes, ...escalasAtualizadas];
+      }
+      const map = new Map(prev.map((e) => [e.id, e]));
+      for (const e of escalasAtualizadas) map.set(e.id, e);
+      return Array.from(map.values());
+    });
   }
 
   async function excluirEscalaMensal() {
@@ -721,7 +742,9 @@ export default function EscalasPage() {
           </div>
         </div>
 
-        {escalaMensalExibir && <GruposMensaisPanel escalaMensal={escalaMensalExibir} />}
+        {escalaMensalExibir && !podeEditar && (
+          <GruposMensaisPanel escalaMensal={escalaMensalExibir} />
+        )}
 
         {escalasDoMes.length === 0 ? (
           <div className="card-liturgical p-10 text-center">
@@ -735,6 +758,32 @@ export default function EscalasPage() {
               </p>
             )}
           </div>
+        ) : escalaMensalExibir && podeEditar ? (
+          <EscalaRemanejamentoKanban
+            escalaMensal={escalaMensalExibir}
+            escalas={escalasDoMes}
+            mes={mesVisualizar}
+            ano={anoVisualizar}
+            podeEditar={podeEditar}
+            coroinhas={coroinhas}
+            onAtualizado={handleKanbanAtualizado}
+            editandoMembrosId={editandoMembrosId}
+            editandoFuncoesId={editandoFuncoesId}
+            membrosEdicao={membrosEdicao}
+            funcoesEdicao={funcoesEdicao}
+            notificandoId={notificandoId}
+            excluindoEscalaId={excluindoEscalaId}
+            onAbrirEdicaoMembros={abrirEdicaoMembros}
+            onAbrirEdicaoFuncoes={abrirEdicaoFuncoes}
+            onFecharEdicaoMembros={() => setEditandoMembrosId(null)}
+            onFecharEdicaoFuncoes={() => setEditandoFuncoesId(null)}
+            onToggleMembro={toggleMembro}
+            onSalvarMembros={salvarMembros}
+            onSalvarFuncoes={salvarFuncoes}
+            onNotificar={notificarEscala}
+            onExcluir={excluirEscala}
+            onFuncoesChange={setFuncoesEdicao}
+          />
         ) : (
           <EscalaMesCronologico
             dias={diasAgrupados}
