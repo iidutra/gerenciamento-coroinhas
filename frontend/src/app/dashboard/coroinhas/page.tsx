@@ -572,8 +572,8 @@ export default function CoroinhasPage() {
                     ))}
                   </select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Coroinhas de comunidade fixa não entram na geração automática de grupos do
-                    santuário.
+                    Coroinhas da paróquia entram na geração automática de grupos do
+                    santuário. Coroinhas de comunidade fixa ficam fora dessa rotação.
                   </p>
                 </div>
 

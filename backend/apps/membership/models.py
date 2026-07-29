@@ -28,7 +28,7 @@ class EtapaCatequese(models.TextChoices):
 class ComunidadeFixa(models.TextChoices):
     """Coroinhas fixos em comunidades — não entram na escala rotativa do santuário."""
 
-    NENHUMA = "", "Santuário (escala rotativa)"
+    NENHUMA = "", "Paróquia (escala rotativa)"
     SANTA_TEREZINHA = "SantaTerezinha", "Santa Terezinha"
     NOSSA_SENHORA_AUXILIADORA = "NossaSenhoraAuxiliadora", "Nossa Senhora Auxiliadora"
 

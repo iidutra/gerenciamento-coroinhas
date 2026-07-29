@@ -122,8 +122,8 @@ export function PainelCoroinhasRemanejamento({
         <div className="px-4 pb-4 border-t border-border space-y-3">
           <p className="text-xs text-muted-foreground pt-3">
             Coroinhas de comunidade fixa (Santa Terezinha / N. Sra. Auxiliadora) não entram na
-            geração automática. Ao remover alguém do remanejamento, ele sai de todas as celebrações
-            do mês abaixo.
+            geração automática da paróquia. Coroinhas da paróquia aparecem nos grupos rotativos.
+            Ao remover alguém do remanejamento, ele sai de todas as celebrações do mês abaixo.
           </p>
 
           {erro && (
