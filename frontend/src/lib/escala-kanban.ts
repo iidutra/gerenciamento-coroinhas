@@ -65,3 +65,7 @@ export function parseKanbanDragId(
 
   return null;
 }
+
+export function destinoAceitaTransferenciaDoGrupo(missaTipoSlot?: string): boolean {
+  return missaTipoSlot === "ComunidadeDomingo" || missaTipoSlot === "SextaAdoracao";
+}

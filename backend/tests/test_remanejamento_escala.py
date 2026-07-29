@@ -1,6 +1,6 @@
 """Testes de remanejamento Kanban da escala mensal."""
 
-from datetime import date, time
+from datetime import date, time, timedelta
 
 import pytest
 from rest_framework import status
@@ -17,6 +17,7 @@ from apps.scheduling.models import (
     Missa,
     TipoSlotMissa,
 )
+from apps.scheduling.services.escala_service import EscalaService
 from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscalaMensalService
 from apps.scheduling.services.remanejamento_escala_service import RemanejamentoEscalaService
 
@@ -120,10 +121,14 @@ class TestRemanejamentoCelebracao:
     def test_mover_coroinha_entre_celebracoes(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador, tamanho_grupo=9)
         escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
-        origem = Escala.objects.filter(escala_mensal=escala_mensal, grupo_numero=1).first()
         destino = Escala.objects.filter(
             escala_mensal=escala_mensal,
             missa__tipo_slot=TipoSlotMissa.SEXTA_ADORACAO,
+        ).first()
+        origem = Escala.objects.filter(
+            escala_mensal=escala_mensal,
+            missa__tipo_slot=TipoSlotMissa.DOMINGO_NOITE,
+            data=destino.data + timedelta(days=2),
         ).first()
         coroinha_id = origem.itens.first().coroinha_id
 
@@ -173,3 +178,83 @@ class TestRemanejamentoCelebracao:
         assert res.status_code == status.HTTP_200_OK
         assert "origem" in res.data
         assert "destino" in res.data
+
+
+class TestTransferenciaComunidadeAdoracao:
+    def test_mover_para_comunidade_reduz_domingo_manha(
+        self, coordenador, missas_mensais, coroinhas_grupo
+    ):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador, tamanho_grupo=9)
+        escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
+        dom_manha = Escala.objects.filter(
+            escala_mensal=escala_mensal,
+            missa__tipo_slot=TipoSlotMissa.DOMINGO_MANHA,
+        ).first()
+        comunidade = Escala.objects.filter(
+            escala_mensal=escala_mensal,
+            missa__tipo_slot=TipoSlotMissa.COMUNIDADE_DOMINGO,
+            data=dom_manha.data,
+        ).first()
+        assert dom_manha.itens.count() == 9
+
+        coroinha_id = dom_manha.itens.first().coroinha_id
+        RemanejamentoEscalaService.transferir_para_celebracao(
+            escala_mensal, coroinha_id, comunidade.id, grupo_numero=dom_manha.grupo_numero
+        )
+
+        dom_manha.refresh_from_db()
+        comunidade.refresh_from_db()
+        assert dom_manha.itens.count() == 8
+        assert comunidade.itens.filter(coroinha_id=coroinha_id).exists()
+
+    def test_mover_para_sexta_reduz_domingo_noite(
+        self, coordenador, missas_mensais, coroinhas_grupo
+    ):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador, tamanho_grupo=9)
+        escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
+        dom_noite = Escala.objects.filter(
+            escala_mensal=escala_mensal,
+            missa__tipo_slot=TipoSlotMissa.DOMINGO_NOITE,
+        ).first()
+        sexta = Escala.objects.filter(
+            escala_mensal=escala_mensal,
+            missa__tipo_slot=TipoSlotMissa.SEXTA_ADORACAO,
+            data=dom_noite.data - timedelta(days=2),
+        ).first()
+        assert dom_noite.itens.count() == 9
+
+        coroinha_id = dom_noite.itens.first().coroinha_id
+        RemanejamentoEscalaService.transferir_para_celebracao(
+            escala_mensal, coroinha_id, sexta.id, grupo_numero=dom_noite.grupo_numero
+        )
+
+        dom_noite.refresh_from_db()
+        sexta.refresh_from_db()
+        assert dom_noite.itens.count() == 8
+        assert sexta.itens.filter(coroinha_id=coroinha_id).exists()
+
+    def test_sincronizar_grupo_respeita_comunidade(
+        self, coordenador, missas_mensais, coroinhas_grupo
+    ):
+        GeradorEscalaMensalService.gerar(ano=2026, mes=8, usuario=coordenador, tamanho_grupo=9)
+        escala_mensal = EscalaMensal.objects.get(ano=2026, mes=8)
+        dom_manha = Escala.objects.filter(
+            escala_mensal=escala_mensal,
+            missa__tipo_slot=TipoSlotMissa.DOMINGO_MANHA,
+        ).first()
+        comunidade = Escala.objects.filter(
+            escala_mensal=escala_mensal,
+            missa__tipo_slot=TipoSlotMissa.COMUNIDADE_DOMINGO,
+            data=dom_manha.data,
+        ).first()
+        ids_transferir = list(dom_manha.itens.values_list("coroinha_id", flat=True)[:2])
+        EscalaService.definir_membros(comunidade, ids_transferir)
+
+        RemanejamentoEscalaService.sincronizar_escalas_grupo(
+            escala_mensal, dom_manha.grupo_numero
+        )
+        dom_manha.refresh_from_db()
+        assert dom_manha.itens.count() == 7
+        for cid in ids_transferir:
+            assert comunidade.itens.filter(coroinha_id=cid).exists()
+            assert not dom_manha.itens.filter(coroinha_id=cid).exists()

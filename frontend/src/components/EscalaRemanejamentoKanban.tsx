@@ -20,6 +20,7 @@ import { agruparEscalasPorDia, nomeMes } from "@/lib/escala-layout";
 import {
   kanbanDragId,
   kanbanDropId,
+  destinoAceitaTransferenciaDoGrupo,
   parseKanbanDragId,
   parseKanbanDropId,
   type KanbanDragItem,
@@ -191,10 +192,29 @@ export function EscalaRemanejamentoKanban({
       const origemId = item.source.kind === "escala" ? item.source.escalaId : null;
 
       if (!origemId && item.source.kind === "grupo" && alvo.kind === "escala") {
-        const escala = escalas.find((e) => e.id === alvo.escalaId);
-        if (!escala) return;
-        const ids = [...escala.itens.map((i) => i.coroinha_id), item.coroinhaId];
-        const atualizada = await apiFetch<Escala>(`/escalas/${escala.id}/membros/`, {
+        const destino = escalas.find((e) => e.id === alvo.escalaId);
+        if (!destino) return;
+
+        if (destinoAceitaTransferenciaDoGrupo(destino.missa_tipo_slot)) {
+          const res = await apiFetch<{ origem: Escala; destino: Escala }>(
+            "/escalas/mensal/transferir-celebracao/",
+            {
+              method: "PATCH",
+              body: JSON.stringify({
+                ano,
+                mes,
+                coroinha_id: item.coroinhaId,
+                escala_destino_id: destino.id,
+                grupo_numero: item.source.numero,
+              }),
+            },
+          );
+          onAtualizado(escalaMensal, [res.origem, res.destino]);
+          return;
+        }
+
+        const ids = [...destino.itens.map((i) => i.coroinha_id), item.coroinhaId];
+        const atualizada = await apiFetch<Escala>(`/escalas/${destino.id}/membros/`, {
           method: "PATCH",
           body: JSON.stringify({ coroinha_ids: ids }),
         });
@@ -270,7 +290,8 @@ export function EscalaRemanejamentoKanban({
                 Remanejamento — {nomeMes(mes)} {ano}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Arraste coroinhas entre grupos ou celebrações. Irmãos/gêmeos movem juntos nos grupos.
+                Arraste do grupo para Comunidade (domingo) ou Adoração (sexta): o cronograma atualiza
+                (ex.: 9 → 7 na missa da manhã). Irmãos/gêmeos movem juntos nos grupos.
               </p>
             </div>
             {salvando && (
