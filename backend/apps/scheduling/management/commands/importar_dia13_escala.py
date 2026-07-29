@@ -5,13 +5,14 @@ from django.core.management.base import BaseCommand, CommandError
 
 from apps.identity.models import Usuario
 from apps.membership.models import Coroinha, StatusCoroinha
+from apps.membership.services.gemeos_service import GemeosService
 from apps.scheduling.models import Escala, Missa, ModoEscala, TipoSlotMissa
 from apps.scheduling.services.escala_service import EscalaService
 
 # Escala manual do dia 13/08/2026 — nomes parciais; "?" = vaga em aberto
 ESCALA_DIA13_AGOSTO_2026: dict[int, list[str]] = {
     6: [
-        "Luís victor",
+        "Luíz Victor",
         "Daiana",
         "Maria Julia",
         "Davi Lucca",
@@ -31,7 +32,7 @@ ESCALA_DIA13_AGOSTO_2026: dict[int, list[str]] = {
         "Anna Clara Barbosa",
         "Fabrine",
         "Ana Cecília",
-        "Lohana Beatriz",
+        "Lohanna Beatriz",
         "Esther Damazio",
         "Valentina Damázio",
     ],
@@ -69,6 +70,12 @@ def buscar_coroinha(nome_busca: str, coroinhas: list[Coroinha]) -> Coroinha | No
         ]
         if len(candidatos) == 1:
             return candidatos[0]
+        if len(candidatos) > 1 and tokens:
+            primeiro = tokens[0]
+            for c in candidatos:
+                norm = normalizar(c.nome)
+                if norm.startswith(primeiro) or norm.split()[0].startswith(primeiro[:4]):
+                    return c
 
     return None
 
@@ -147,16 +154,25 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"{missa.nome}: nenhum coroinha encontrado."))
                 continue
 
+            selecionados = [c for c in coroinhas if c.id in ids]
+            selecionados = GemeosService.completar_selecao(selecionados, coroinhas)
+            ids_finais = [c.id for c in selecionados]
+            extras = len(ids_finais) - len(ids)
+            if extras:
+                self.stdout.write(
+                    f"  +{extras} irmão(ã)/gêmeo(s) incluído(s) automaticamente"
+                )
+
             EscalaService.montar(
                 data=dia,
                 missa_id=missa.id,
                 modo=ModoEscala.SELECAO_MANUAL,
-                quantidade=len(ids),
+                quantidade=len(ids_finais),
                 usuario=usuario,
-                coroinha_ids=ids,
+                coroinha_ids=ids_finais,
             )
             criadas += 1
-            self.stdout.write(self.style.SUCCESS(f"{missa.nome}: {len(ids)} coroinha(s)"))
+            self.stdout.write(self.style.SUCCESS(f"{missa.nome}: {len(ids_finais)} coroinha(s)"))
             for nome in nao_encontrados:
                 self.stdout.write(self.style.WARNING(f"  Não encontrado: {nome}"))
 
