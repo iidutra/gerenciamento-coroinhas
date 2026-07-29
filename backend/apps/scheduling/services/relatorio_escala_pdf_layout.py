@@ -252,6 +252,8 @@ def linha_titulo_v6(escala: Escala) -> str:
         return f"{titulo} {tag}" if tag else titulo
     if slot == TipoSlotMissa.DIA_13:
         return titulo
+    if slot == TipoSlotMissa.COMUNIDADE_DOMINGO:
+        return titulo
     if escala.grupo_numero is not None:
         return f"{titulo} Grupo {escala.grupo_numero}"
     if tag:

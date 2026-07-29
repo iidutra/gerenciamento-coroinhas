@@ -104,7 +104,7 @@ class TestPdfParoquial:
             missa=missa,
             modo=ModoEscala.SELECAO_MANUAL,
         )
-        assert linha_titulo_v6(escala) == "10h30 Comunidade Santo Antônio Santo Antônio"
+        assert linha_titulo_v6(escala) == "10h30 Comunidade Santo Antônio"
 
     def test_titulo_missa_dia_13(self, db):
         for hora, esperado in [(6, "Missa das 6h"), (9, "Missa das 9h"), (12, "Missa das 12h"), (18, "Missa das 18h")]:

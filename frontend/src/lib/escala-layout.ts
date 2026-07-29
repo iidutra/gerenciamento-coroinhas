@@ -190,6 +190,7 @@ export function linhaTituloV6(escala: Escala): string {
     return tag ? `${titulo} ${tag}` : titulo;
   }
   if (slot === "Dia13") return titulo;
+  if (slot === "ComunidadeDomingo") return titulo;
   if (escala.grupo_numero != null) {
     return `${titulo} Grupo ${escala.grupo_numero}`;
   }
