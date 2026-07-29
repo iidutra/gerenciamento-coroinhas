@@ -5,7 +5,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Send, Trash2, UserCog, Users } from "lucide-react";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
-  LEGENDA_CATEGORIAS_V6,
   ORIENTACOES_GERAIS_V6,
   linhaTituloV6,
   linhasCoroinhasV6,
@@ -340,27 +339,33 @@ function EscalaCelebracaoCard({
 }
 
 export function EscalaMesCronologico(props: EscalaMesCronologicoProps) {
-  const { dias, mes, ano } = props;
+  const { dias, mes, ano, kanbanMode } = props;
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="font-display text-xl sm:text-2xl font-bold text-burgundy">Escala de Coroinhas</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {nomeMes(mes)} de {ano} · Santuário de Fátima
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1 rounded-lg border border-border bg-muted/20 p-2">
-        {LEGENDA_CATEGORIAS_V6.map((cat) => (
-          <div
-            key={cat}
-            className="text-[10px] sm:text-xs text-center text-muted-foreground font-medium py-1 px-1"
-          >
-            {cat}
+      {!kanbanMode && (
+        <>
+          <div className="text-center">
+            <h2 className="font-display text-xl sm:text-2xl font-bold text-burgundy">Escala de Coroinhas</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {nomeMes(mes)} de {ano} · Santuário de Fátima
+            </p>
           </div>
-        ))}
-      </div>
+
+          <p className="text-xs text-center text-muted-foreground px-2">
+            Legenda: S. Antônio = comunidade · Solenidade = dia 13 · Novena = quarta voluntários
+          </p>
+        </>
+      )}
+
+      {kanbanMode && (
+        <div className="flex items-center gap-2 pb-1 border-b border-border">
+          <h2 className="font-display text-lg font-semibold text-burgundy">Cronograma do mês</h2>
+          <span className="text-xs text-muted-foreground">
+            Arraste coroinhas para outra celebração ou para remover
+          </span>
+        </div>
+      )}
 
       <div className="card-liturgical p-4 sm:p-6">
         {dias.map((dia) => (

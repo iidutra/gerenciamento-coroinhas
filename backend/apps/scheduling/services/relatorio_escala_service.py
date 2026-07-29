@@ -16,7 +16,6 @@ from reportlab.platypus import (
 
 from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
-    LEGENDA_CATEGORIAS_V6,
     MESES_PT,
     ORIENTACOES_GERAIS_V6,
     agrupar_escalas_por_dia,
@@ -70,7 +69,23 @@ class RelatorioEscalaService:
                 leading=10,
                 alignment=TA_CENTER,
                 textColor=CINZA_CLARO,
-                spaceAfter=12,
+                spaceAfter=8,
+            ),
+            "grupo_titulo": ParagraphStyle(
+                "GrupoTituloV6",
+                parent=base["Normal"],
+                fontSize=10,
+                fontName="Helvetica-Bold",
+                textColor=BURGUNDY,
+                spaceAfter=4,
+            ),
+            "secao_sub": ParagraphStyle(
+                "SecaoSubV6",
+                parent=base["Normal"],
+                fontSize=9,
+                textColor=CINZA_CLARO,
+                alignment=TA_CENTER,
+                spaceAfter=8,
             ),
             "dia_num": ParagraphStyle(
                 "DiaNum",
@@ -150,23 +165,49 @@ class RelatorioEscalaService:
         canvas.restoreState()
 
     @staticmethod
-    def _faixa_legenda(estilos) -> Table:
-        celulas = [Paragraph(cat, estilos["legenda"]) for cat in LEGENDA_CATEGORIAS_V6]
-        largura = 178 * mm / len(celulas)
-        tabela = Table([celulas], colWidths=[largura] * len(celulas))
+    def _celula_grupo(grupo, estilos, largura_col: float) -> Table:
+        linhas = [[Paragraph(f"Grupo {grupo.numero}", estilos["grupo_titulo"])]]
+        for membro in grupo.membros.all().order_by("ordem"):
+            linhas.append([Paragraph(f"{membro.ordem:02d}. {membro.coroinha.nome}", estilos["nome"])])
+        if len(linhas) == 1:
+            linhas.append([Paragraph("—", estilos["nome"])])
+        return Table(linhas, colWidths=[largura_col - 8])
+
+    @staticmethod
+    def _tabela_grupos(escala_mensal, estilos, largura_util: float) -> Table:
+        grupos = list(escala_mensal.grupos.all().order_by("numero"))
+        largura_col = largura_util / 2
+        celulas = [RelatorioEscalaService._celula_grupo(g, estilos, largura_col) for g in grupos]
+        while len(celulas) < 4:
+            celulas.append(Table([[Paragraph("", estilos["normal"])]]))
+
+        tabela = Table(
+            [[celulas[0], celulas[1]], [celulas[2], celulas[3]]],
+            colWidths=[largura_col, largura_col],
+        )
         tabela.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, -1), CREME_ESCURO),
-                    ("BOX", (0, 0), (-1, -1), 0.5, BORDA),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BOX", (0, 0), (-1, -1), 0.75, BURGUNDY),
                     ("INNERGRID", (0, 0), (-1, -1), 0.25, BORDA),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("BACKGROUND", (0, 0), (-1, -1), CREME),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                 ]
             )
         )
         return tabela
+
+    @staticmethod
+    def _nota_legenda_celebracoes(estilos) -> Paragraph:
+        return Paragraph(
+            "Nas missas: <b>S. Antônio</b> = comunidade · <b>Solenidade</b> = dia 13 · "
+            "<b>Novena</b> = quarta voluntários",
+            estilos["legenda"],
+        )
 
     @staticmethod
     def _linha_celebracao(dia, escala, idx: int, estilos) -> Table:
@@ -225,7 +266,7 @@ class RelatorioEscalaService:
 
     @staticmethod
     def exportar_mes_pdf(ano: int, mes: int) -> bytes:
-        escalas, _escala_mensal = carregar_dados_mes(ano, mes)
+        escalas, escala_mensal = carregar_dados_mes(ano, mes)
         dias = agrupar_escalas_por_dia(escalas)
 
         buffer = io.BytesIO()
@@ -240,6 +281,7 @@ class RelatorioEscalaService:
             bottomMargin=14 * mm,
             title=f"Escala Coroinhas {mes_nome}/{ano}",
         )
+        largura_util = doc.width
 
         estilos = RelatorioEscalaService._estilos_pdf()
 
@@ -249,9 +291,18 @@ class RelatorioEscalaService:
         elementos = [
             Paragraph("Escala de Coroinhas", estilos["titulo"]),
             Paragraph(f"{mes_nome} de {ano} · Santuário de Fátima", estilos["subtitulo"]),
-            RelatorioEscalaService._faixa_legenda(estilos),
-            Spacer(1, 6),
         ]
+
+        if escala_mensal and escala_mensal.grupos.exists():
+            elementos.append(
+                Paragraph("Grupos do mês (sábado e domingo)", estilos["secao_sub"])
+            )
+            elementos.append(RelatorioEscalaService._tabela_grupos(escala_mensal, estilos, largura_util))
+            elementos.append(RelatorioEscalaService._nota_legenda_celebracoes(estilos))
+            elementos.append(Spacer(1, 10))
+
+        elementos.append(Paragraph("Cronograma do mês", estilos["grupo_titulo"]))
+        elementos.append(Spacer(1, 4))
 
         if not escalas:
             elementos.append(Paragraph("Nenhuma escala montada neste período.", estilos["normal"]))
