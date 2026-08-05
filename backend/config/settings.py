@@ -197,6 +197,17 @@ NOTIFICACAO_ESCALA_CORPO = os.getenv(
     "Olá {nome}, você está escalado para servir em {data} — {missa} ({horario}). Função: {funcao}.",
 )
 
+# Lembrete diário de aniversário dos coroinhas (WhatsApp para o coordenador)
+NOTIFICACAO_ANIVERSARIO_ATIVO = os.getenv("NOTIFICACAO_ANIVERSARIO_ATIVO", "True").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+# Número (com DDD) que recebe o lembrete. Vazio = não envia.
+NOTIFICACAO_ANIVERSARIO_DESTINO = os.getenv("NOTIFICACAO_ANIVERSARIO_DESTINO", "")
+# Hora do dia (0-23, fuso America/Sao_Paulo) em que o lembrete é disparado.
+NOTIFICACAO_ANIVERSARIO_HORA = int(os.getenv("NOTIFICACAO_ANIVERSARIO_HORA", "8"))
+
 # Celery
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)

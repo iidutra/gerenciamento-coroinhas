@@ -4,5 +4,5 @@ dockerfilePath = "Dockerfile"
 watchPatterns = ["backend/**"]
 
 [deploy]
-startCommand = "celery -A config worker -l info --concurrency=${CELERY_CONCURRENCY:-1}"
+startCommand = "celery -A config worker --beat --schedule /tmp/celerybeat-schedule -l info --concurrency=${CELERY_CONCURRENCY:-1}"
 restartPolicyType = "ON_FAILURE"
