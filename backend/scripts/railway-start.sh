@@ -2,6 +2,7 @@
 set -e
 python manage.py setup_media
 python manage.py migrate --noinput
+python manage.py normalizar_missas_dia13
 python manage.py collectstatic --noinput
 exec gunicorn config.wsgi:application \
   --bind "0.0.0.0:${PORT:-8000}" \
