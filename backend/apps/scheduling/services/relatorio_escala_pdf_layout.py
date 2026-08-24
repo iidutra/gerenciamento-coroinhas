@@ -184,8 +184,8 @@ def chave_ordem_escala(escala: Escala) -> tuple:
     slot = slot_da_escala(escala)
     return (
         escala.data,
-        ORDEM_SLOT_CRONO.get(slot, 99),
         escala.missa.horario,
+        ORDEM_SLOT_CRONO.get(slot, 99),
     )
 
 

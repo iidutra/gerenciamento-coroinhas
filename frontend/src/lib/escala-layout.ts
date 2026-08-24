@@ -143,9 +143,9 @@ function slotDaEscala(escala: Escala): string {
   return "Outro";
 }
 
-function chaveOrdemEscala(escala: Escala): [string, number, string] {
+function chaveOrdemEscala(escala: Escala): [string, string, number] {
   const slot = slotDaEscala(escala);
-  return [escala.data, ORDEM_SLOT_CRONO[slot] ?? 99, escala.missa_horario ?? ""];
+  return [escala.data, escala.missa_horario ?? "", ORDEM_SLOT_CRONO[slot] ?? 99];
 }
 
 export function rotuloDiaSemanaCurto(dataIso: string): string {
@@ -229,10 +229,10 @@ export function agruparEscalasPorDia(escalas: Escala[]): DiaEscalas[] {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([data, lista]) => {
       lista.sort((a, b) => {
-        const [, ordemA, horaA] = chaveOrdemEscala(a);
-        const [, ordemB, horaB] = chaveOrdemEscala(b);
-        if (ordemA !== ordemB) return ordemA - ordemB;
-        return horaA.localeCompare(horaB);
+        const [, horaA, ordemA] = chaveOrdemEscala(a);
+        const [, horaB, ordemB] = chaveOrdemEscala(b);
+        if (horaA !== horaB) return horaA.localeCompare(horaB);
+        return ordemA - ordemB;
       });
       const d = new Date(`${data}T12:00:00`);
       return {

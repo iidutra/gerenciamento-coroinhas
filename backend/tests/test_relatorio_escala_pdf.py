@@ -159,3 +159,45 @@ class TestPdfParoquial:
             assert TipoSlotMissa.COMUNIDADE_DOMINGO not in ordem or ordem.index(
                 TipoSlotMissa.COMUNIDADE_DOMINGO
             ) < ordem.index(TipoSlotMissa.DOMINGO_NOITE) if TipoSlotMissa.DOMINGO_NOITE in ordem else True
+
+    def test_dia_13_domingo_ordem_por_horario(self, missas_mensais):
+        """13/setembro/2026 é domingo: missas da solenidade intercalam com as do domingo."""
+        dia = date(2026, 9, 13)
+        missas_dia13 = []
+        for hora in (6, 9, 12, 18):
+            missas_dia13.append(
+                Missa.objects.create(
+                    nome=f"Dia 13 — {hora:02d}h",
+                    dia_mes=13,
+                    horario=time(hora, 0),
+                    ativa=True,
+                    tipo_slot=TipoSlotMissa.DIA_13,
+                    local=LocalCelebracao.SANTUARIO,
+                )
+            )
+        missas_domingo = {
+            TipoSlotMissa.DOMINGO_MANHA: Missa.objects.get(tipo_slot=TipoSlotMissa.DOMINGO_MANHA),
+            TipoSlotMissa.COMUNIDADE_DOMINGO: Missa.objects.get(tipo_slot=TipoSlotMissa.COMUNIDADE_DOMINGO),
+            TipoSlotMissa.DOMINGO_NOITE: Missa.objects.get(tipo_slot=TipoSlotMissa.DOMINGO_NOITE),
+        }
+        escalas = []
+        for missa in [*missas_dia13, *missas_domingo.values()]:
+            escalas.append(
+                Escala.objects.create(
+                    data=dia,
+                    missa=missa,
+                    modo=ModoEscala.SELECAO_MANUAL,
+                )
+            )
+        _, escalas_dia = agrupar_escalas_por_dia(escalas)[0]
+        horarios = [e.missa.horario for e in escalas_dia]
+        assert horarios == sorted(horarios)
+        assert [e.missa.tipo_slot for e in escalas_dia] == [
+            TipoSlotMissa.DIA_13,
+            TipoSlotMissa.DOMINGO_MANHA,
+            TipoSlotMissa.DIA_13,
+            TipoSlotMissa.COMUNIDADE_DOMINGO,
+            TipoSlotMissa.DIA_13,
+            TipoSlotMissa.DIA_13,
+            TipoSlotMissa.DOMINGO_NOITE,
+        ]
