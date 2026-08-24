@@ -16,6 +16,7 @@ from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     agrupar_escalas_por_dia,
     linha_titulo_v6,
+    slot_da_escala,
     titulo_celebracao_v6,
 )
 from apps.scheduling.services.relatorio_escala_service import RelatorioEscalaService
@@ -163,41 +164,47 @@ class TestPdfParoquial:
     def test_dia_13_domingo_ordem_por_horario(self, missas_mensais):
         """13/setembro/2026 é domingo: missas da solenidade intercalam com as do domingo."""
         dia = date(2026, 9, 13)
-        missas_dia13 = []
-        for hora in (6, 9, 12, 18):
-            missas_dia13.append(
-                Missa.objects.create(
-                    nome=f"Dia 13 — {hora:02d}h",
-                    dia_mes=13,
-                    horario=time(hora, 0),
-                    ativa=True,
-                    tipo_slot=TipoSlotMissa.DIA_13,
-                    local=LocalCelebracao.SANTUARIO,
-                )
-            )
+        missa_6h_outro = Missa.objects.create(
+            nome="Santuário — Dia 13 (06h)",
+            dia_mes=13,
+            horario=time(6, 0),
+            ativa=True,
+            tipo_slot=TipoSlotMissa.OUTRO,
+            local=LocalCelebracao.SANTUARIO,
+        )
+        missa_12h = Missa.objects.create(
+            nome="Dia 13 — 12h",
+            dia_mes=13,
+            horario=time(12, 0),
+            ativa=True,
+            tipo_slot=TipoSlotMissa.DIA_13,
+            local=LocalCelebracao.SANTUARIO,
+        )
         missas_domingo = {
             TipoSlotMissa.DOMINGO_MANHA: Missa.objects.get(tipo_slot=TipoSlotMissa.DOMINGO_MANHA),
             TipoSlotMissa.COMUNIDADE_DOMINGO: Missa.objects.get(tipo_slot=TipoSlotMissa.COMUNIDADE_DOMINGO),
             TipoSlotMissa.DOMINGO_NOITE: Missa.objects.get(tipo_slot=TipoSlotMissa.DOMINGO_NOITE),
         }
-        escalas = []
-        for missa in [*missas_dia13, *missas_domingo.values()]:
-            escalas.append(
-                Escala.objects.create(
-                    data=dia,
-                    missa=missa,
-                    modo=ModoEscala.SELECAO_MANUAL,
-                )
-            )
-        _, escalas_dia = agrupar_escalas_por_dia(escalas)[0]
-        horarios = [e.missa.horario for e in escalas_dia]
-        assert horarios == sorted(horarios)
-        assert [e.missa.tipo_slot for e in escalas_dia] == [
-            TipoSlotMissa.DIA_13,
-            TipoSlotMissa.DOMINGO_MANHA,
-            TipoSlotMissa.DIA_13,
-            TipoSlotMissa.COMUNIDADE_DOMINGO,
-            TipoSlotMissa.DIA_13,
-            TipoSlotMissa.DIA_13,
-            TipoSlotMissa.DOMINGO_NOITE,
+        # Ordem propositalmente errada (como aparece na UI antes da correção)
+        for missa in [
+            missas_domingo[TipoSlotMissa.DOMINGO_MANHA],
+            missas_domingo[TipoSlotMissa.COMUNIDADE_DOMINGO],
+            missas_domingo[TipoSlotMissa.DOMINGO_NOITE],
+            missa_12h,
+            missa_6h_outro,
+        ]:
+            Escala.objects.create(data=dia, missa=missa, modo=ModoEscala.SELECAO_MANUAL)
+
+        _, escalas_dia = agrupar_escalas_por_dia(
+            list(Escala.objects.filter(data=dia).select_related("missa"))
+        )[0]
+        assert [e.missa.horario for e in escalas_dia] == [
+            time(6, 0),
+            time(8, 0),
+            time(10, 30),
+            time(12, 0),
+            time(18, 30),
         ]
+        assert titulo_celebracao_v6(escalas_dia[0]) == "Missa das 6h"
+        assert titulo_celebracao_v6(escalas_dia[3]) == "Missa das 12h"
+        assert all(slot_da_escala(e) == TipoSlotMissa.DIA_13 for e in (escalas_dia[0], escalas_dia[3]))

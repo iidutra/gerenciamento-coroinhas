@@ -10,6 +10,7 @@ from apps.scheduling.models import (
     Missa,
     ModoEscala,
     FuncaoEscala,
+    TipoSlotMissa,
 )
 
 
@@ -18,7 +19,8 @@ class MissaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Missa
-        fields = ("id", "nome", "dia_semana", "dia_mes", "horario", "ativa", "recorrencia")
+        fields = ("id", "nome", "dia_semana", "dia_mes", "horario", "ativa", "recorrencia", "tipo_slot")
+        read_only_fields = ("tipo_slot",)
 
     def validate(self, attrs):
         dia_semana = attrs.get("dia_semana", getattr(self.instance, "dia_semana", None))
@@ -36,6 +38,8 @@ class MissaSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Use dia da semana ou dia do mês, não ambos.")
         if dia_mes is not None and not (1 <= dia_mes <= 31):
             raise serializers.ValidationError({"dia_mes": "Dia do mês deve ser entre 1 e 31."})
+        if dia_mes == 13:
+            attrs["tipo_slot"] = TipoSlotMissa.DIA_13
         return attrs
 
     def create(self, validated_data):
@@ -98,6 +102,7 @@ class EscalaSerializer(serializers.ModelSerializer):
     missa_nome = serializers.CharField(source="missa.nome", read_only=True)
     missa_horario = serializers.TimeField(source="missa.horario", format="%H:%M", read_only=True)
     missa_tipo_slot = serializers.CharField(source="missa.tipo_slot", read_only=True)
+    missa_dia_mes = serializers.IntegerField(source="missa.dia_mes", read_only=True)
     missa_local = serializers.CharField(source="missa.local", read_only=True)
     itens = EscalaItemSerializer(many=True, read_only=True)
     notificacao_enviada = serializers.SerializerMethodField()
@@ -111,6 +116,7 @@ class EscalaSerializer(serializers.ModelSerializer):
             "missa_nome",
             "missa_horario",
             "missa_tipo_slot",
+            "missa_dia_mes",
             "missa_local",
             "modo",
             "criado_em",

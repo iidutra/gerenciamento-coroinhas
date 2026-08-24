@@ -101,6 +101,21 @@ export function formatarHorarioCurto(horario: string): string {
   return `${h}h${String(m).padStart(2, "0")}`;
 }
 
+function minutosHorario(horario?: string): number {
+  if (!horario) return 9999;
+  const [hRaw, mRaw] = horario.slice(0, 5).split(":");
+  const h = parseInt(hRaw, 10);
+  const m = parseInt(mRaw, 10);
+  if (Number.isNaN(h)) return 9999;
+  return h * 60 + (Number.isNaN(m) ? 0 : m);
+}
+
+function ehMissaDia13(escala: Escala): boolean {
+  if (escala.missa_tipo_slot === "Dia13") return true;
+  if (escala.missa_dia_mes === 13) return true;
+  return /dia\s*13/i.test(escala.missa_nome ?? "");
+}
+
 function localCelebracao(escala: Escala): string {
   if (escala.missa_tipo_slot === "ComunidadeDomingo" || escala.missa_local === "Comunidade") {
     return "Santo Antônio";
@@ -139,13 +154,14 @@ export function filtrarEscalasDoMes(escalas: Escala[], ano: number, mes: number)
 }
 
 function slotDaEscala(escala: Escala): string {
+  if (ehMissaDia13(escala)) return "Dia13";
   if (escala.missa_tipo_slot) return escala.missa_tipo_slot;
   return "Outro";
 }
 
-function chaveOrdemEscala(escala: Escala): [string, string, number] {
+function chaveOrdemEscala(escala: Escala): [string, number, number] {
   const slot = slotDaEscala(escala);
-  return [escala.data, escala.missa_horario ?? "", ORDEM_SLOT_CRONO[slot] ?? 99];
+  return [escala.data, minutosHorario(escala.missa_horario), ORDEM_SLOT_CRONO[slot] ?? 99];
 }
 
 export function rotuloDiaSemanaCurto(dataIso: string): string {
@@ -229,9 +245,9 @@ export function agruparEscalasPorDia(escalas: Escala[]): DiaEscalas[] {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([data, lista]) => {
       lista.sort((a, b) => {
-        const [, horaA, ordemA] = chaveOrdemEscala(a);
-        const [, horaB, ordemB] = chaveOrdemEscala(b);
-        if (horaA !== horaB) return horaA.localeCompare(horaB);
+        const [, minA, ordemA] = chaveOrdemEscala(a);
+        const [, minB, ordemB] = chaveOrdemEscala(b);
+        if (minA !== minB) return minA - minB;
         return ordemA - ordemB;
       });
       const d = new Date(`${data}T12:00:00`);

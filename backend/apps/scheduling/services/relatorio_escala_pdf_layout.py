@@ -1,12 +1,20 @@
 """Layout paroquial da escala mensal (PDF)."""
 
+import re
 from collections import defaultdict
 from datetime import date, time, timedelta
 
 from reportlab.platypus import Paragraph
 
 from apps.membership.models import Coroinha
-from apps.scheduling.models import Escala, EscalaItem, EscalaMensal, LocalCelebracao, TipoSlotMissa
+from apps.scheduling.models import (
+    Escala,
+    EscalaItem,
+    EscalaMensal,
+    LocalCelebracao,
+    Missa,
+    TipoSlotMissa,
+)
 
 MESES_PT = [
     "",
@@ -98,7 +106,17 @@ def agrupar_escalas_por_slot(escalas: list[Escala]) -> dict[str, list[Escala]]:
     return por_slot
 
 
+def eh_missa_dia13(missa: Missa) -> bool:
+    if missa.tipo_slot == TipoSlotMissa.DIA_13:
+        return True
+    if missa.dia_mes == 13:
+        return True
+    return bool(re.search(r"dia\s*13", missa.nome or "", re.I))
+
+
 def slot_da_escala(escala: Escala) -> str:
+    if eh_missa_dia13(escala.missa):
+        return TipoSlotMissa.DIA_13
     return escala.missa.tipo_slot or TipoSlotMissa.OUTRO
 
 
