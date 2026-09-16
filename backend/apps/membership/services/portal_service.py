@@ -1,3 +1,5 @@
+import unicodedata
+
 from django.utils import timezone
 
 from apps.attendance.models import Presenca, StatusPresenca
@@ -9,6 +11,16 @@ from apps.training.models import Formacao, FormacaoConclusao
 from apps.membership.utils.media import build_foto_url
 
 
+def _chave_nome(nome: str | None) -> str:
+    """Normaliza um nome para comparação (sem acento, minúsculo, sem espaços extras)."""
+    if not nome:
+        return ""
+    sem_acento = "".join(
+        c for c in unicodedata.normalize("NFD", nome) if unicodedata.category(c) != "Mn"
+    )
+    return " ".join(sem_acento.lower().split())
+
+
 class PortalService:
     @staticmethod
     def pode_ver_coroinha(usuario: Usuario, coroinha_id: int) -> bool:
@@ -16,14 +28,7 @@ class PortalService:
             from apps.membership.models import Coroinha
 
             return Coroinha.objects.filter(id=coroinha_id).exists()
-        if usuario.tipo_perfil == TipoPerfil.COROINHA:
-            return usuario.coroinha_id == coroinha_id
-        if usuario.tipo_perfil == TipoPerfil.PAI:
-            return (
-                usuario.responsavel is not None
-                and usuario.responsavel.coroinhas.filter(id=coroinha_id).exists()
-            )
-        return False
+        return PortalService.coroinhas_acessiveis(usuario).filter(id=coroinha_id).exists()
 
     @staticmethod
     def coroinhas_acessiveis(usuario: Usuario):
@@ -34,7 +39,25 @@ class PortalService:
         if usuario.tipo_perfil == TipoPerfil.COROINHA and usuario.coroinha_id:
             return Coroinha.objects.filter(id=usuario.coroinha_id)
         if usuario.tipo_perfil == TipoPerfil.PAI and usuario.responsavel_id:
-            return usuario.responsavel.coroinhas.all()
+            responsavel = usuario.responsavel
+            ids = set(responsavel.coroinhas.values_list("id", flat=True))
+
+            # Muitos coroinhas foram cadastrados diretamente pela equipe pastoral
+            # (sem passar pela inscrição on-line), então nunca ficam vinculados a um
+            # Responsavel via CPF. Para não obrigar o mesmo pai/mãe a ter um login
+            # por filho, cobrimos esse caso comparando o nome do pai/mãe informado
+            # no cadastro de cada coroinha com o nome do responsável logado.
+            nomes = {
+                _chave_nome(n)
+                for n in (responsavel.nome_pai, responsavel.nome_mae, responsavel.nome)
+            }
+            nomes.discard("")
+            if nomes:
+                for c in Coroinha.objects.exclude(id__in=ids).only("id", "nome_pai", "nome_mae"):
+                    if _chave_nome(c.nome_pai) in nomes or _chave_nome(c.nome_mae) in nomes:
+                        ids.add(c.id)
+
+            return Coroinha.objects.filter(id__in=ids).order_by("nome")
         return Coroinha.objects.none()
 
     @classmethod
