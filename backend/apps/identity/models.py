@@ -98,6 +98,10 @@ class AuditAcao(models.TextChoices):
     INSCRICAO_APROVADA = "inscricao_aprovada", "Inscrição aprovada"
     INSCRICAO_REJEITADA = "inscricao_rejeitada", "Inscrição rejeitada"
     MENSAGEM_ENVIADA = "mensagem_enviada", "Mensagem enviada"
+    PORTAL_VINCULO_HEURISTICO = (
+        "portal_vinculo_heuristico",
+        "Portal: acesso a coroinha vinculado por nome/telefone (sem CPF)",
+    )
 
 
 class AuditLog(models.Model):
