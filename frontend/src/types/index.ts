@@ -218,6 +218,12 @@ export interface CoroinhaResumo extends Coroinha {
   formacoes: { titulo: string; data: string; descricao: string }[];
 }
 
+export interface CoroinhaEscalasAno {
+  ano: number;
+  anos_disponiveis: number[];
+  escalas: { data: string; missa: string; presenca: string | null }[];
+}
+
 export interface DashboardStats {
   total_coroinhas: number;
   ativos: number;

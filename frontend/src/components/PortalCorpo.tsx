@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { CoroinhaAvatar } from "@/components/CoroinhaAvatar";
+import { EscalasAnoModal } from "@/components/EscalasAnoModal";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { NoticiaCard } from "@/components/NoticiaCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -29,6 +30,8 @@ interface PortalCorpoProps {
 }
 
 function ResumoFilhoCard({ resumo }: { resumo: CoroinhaResumo }) {
+  const [historicoAberto, setHistoricoAberto] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="card-liturgical p-6 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -52,14 +55,35 @@ function ResumoFilhoCard({ resumo }: { resumo: CoroinhaResumo }) {
           { label: "Presenças", value: resumo.presencas_total, icon: CheckCircle2, accent: "text-emerald-700" },
           { label: "Faltas", value: resumo.faltas_total, icon: XCircle, accent: "text-destructive" },
           { label: "Formações", value: resumo.formacoes_concluidas, icon: GraduationCap, accent: "text-amber-700" },
-        ].map((item) => (
-          <div key={item.label} className="card-liturgical p-4 text-center">
-            <item.icon className={`size-5 mx-auto mb-2 ${item.accent}`} aria-hidden />
-            <p className="stat-value">{item.value}</p>
-            <p className="text-sm text-muted-foreground mt-1">{item.label}</p>
-          </div>
-        ))}
+        ].map((item) =>
+          item.label === "Escalas" ? (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => setHistoricoAberto(true)}
+              className="card-liturgical p-4 text-center hover:border-gold transition-colors cursor-pointer"
+            >
+              <item.icon className={`size-5 mx-auto mb-2 ${item.accent}`} aria-hidden />
+              <p className="stat-value">{item.value}</p>
+              <p className="text-sm text-muted-foreground mt-1">{item.label}</p>
+            </button>
+          ) : (
+            <div key={item.label} className="card-liturgical p-4 text-center">
+              <item.icon className={`size-5 mx-auto mb-2 ${item.accent}`} aria-hidden />
+              <p className="stat-value">{item.value}</p>
+              <p className="text-sm text-muted-foreground mt-1">{item.label}</p>
+            </div>
+          ),
+        )}
       </div>
+
+      {historicoAberto && (
+        <EscalasAnoModal
+          coroinhaId={resumo.id}
+          nome={resumo.nome}
+          onClose={() => setHistoricoAberto(false)}
+        />
+      )}
 
       <div className="card-liturgical p-6">
         <div className="flex items-center gap-2 mb-3">

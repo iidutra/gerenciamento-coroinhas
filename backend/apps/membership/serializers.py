@@ -125,6 +125,12 @@ class CoroinhaResumoPortalSerializer(serializers.Serializer):
     formacoes = serializers.ListField()
 
 
+class CoroinhaEscalasAnoSerializer(serializers.Serializer):
+    ano = serializers.IntegerField()
+    anos_disponiveis = serializers.ListField(child=serializers.IntegerField())
+    escalas = serializers.ListField()
+
+
 class AniversarianteSerializer(serializers.ModelSerializer):
     idade = serializers.IntegerField(read_only=True)
     foto_url = serializers.SerializerMethodField()

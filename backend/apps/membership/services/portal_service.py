@@ -27,6 +27,23 @@ def _chave_telefone(telefone: str | None) -> str:
     return normalizar_telefone_whatsapp(telefone or "")
 
 
+def _serializar_escalas(itens_queryset) -> list[dict]:
+    escalas_list = []
+    for item in itens_queryset.order_by("-escala__data"):
+        try:
+            pres = item.presenca
+        except Presenca.DoesNotExist:
+            pres = None
+        escalas_list.append(
+            {
+                "data": item.escala.data.isoformat(),
+                "missa": item.escala.missa.nome,
+                "presenca": pres.status if pres else None,
+            }
+        )
+    return escalas_list
+
+
 def _ids_irmaos_por_nome_e_telefone(
     nomes_referencia, telefones_referencia, ids_conhecidos: set[int]
 ) -> set[int]:
@@ -155,21 +172,7 @@ class PortalService:
         itens_mes_atual = itens.filter(
             escala__data__year=hoje.year, escala__data__month=hoje.month
         )
-
-        escalas_list = []
-        for item in itens_mes_atual.order_by("-escala__data"):
-            pres = getattr(item, "presenca", None)
-            try:
-                pres = item.presenca
-            except Presenca.DoesNotExist:
-                pres = None
-            escalas_list.append(
-                {
-                    "data": item.escala.data.isoformat(),
-                    "missa": item.escala.missa.nome,
-                    "presenca": pres.status if pres else None,
-                }
-            )
+        escalas_list = _serializar_escalas(itens_mes_atual)
 
         formacoes_list = [
             {
@@ -199,6 +202,33 @@ class PortalService:
             "proxima_escala": proxima_escala,
             "escalas": escalas_list,
             "formacoes": formacoes_list,
+        }
+
+    @classmethod
+    def get_escalas_ano(cls, usuario: Usuario, coroinha_id: int, ano: int | None = None) -> dict:
+        if not cls.pode_ver_coroinha(usuario, coroinha_id):
+            raise PermissionError("Sem permissão para ver este coroinha.")
+
+        from apps.membership.models import Coroinha
+
+        coroinha = Coroinha.objects.get(id=coroinha_id)
+        hoje = timezone.now().date()
+
+        itens = EscalaItem.objects.filter(coroinha=coroinha).select_related(
+            "escala", "escala__missa"
+        )
+        anos_disponiveis = sorted(
+            {d.year for d in itens.values_list("escala__data", flat=True)}, reverse=True
+        )
+        ano = ano or (anos_disponiveis[0] if anos_disponiveis else hoje.year)
+        if ano not in anos_disponiveis:
+            anos_disponiveis = sorted({*anos_disponiveis, ano}, reverse=True)
+
+        itens_ano = itens.filter(escala__data__year=ano)
+        return {
+            "ano": ano,
+            "anos_disponiveis": anos_disponiveis,
+            "escalas": _serializar_escalas(itens_ano),
         }
 
     @staticmethod

@@ -12,6 +12,7 @@ from apps.identity.permissions import IsFamilia, IsGestorCoroinhas, IsStaffPasto
 from apps.membership.models import Coroinha, Inscricao, StatusInscricao
 from apps.membership.serializers import (
     AniversarianteSerializer,
+    CoroinhaEscalasAnoSerializer,
     CoroinhaResumoPortalSerializer,
     CoroinhaSerializer,
     InscricaoPublicaSerializer,
@@ -159,6 +160,26 @@ class PortalCoroinhaView(APIView):
         except Coroinha.DoesNotExist:
             return Response({"detail": "Coroinha não encontrado."}, status=status.HTTP_404_NOT_FOUND)
         serializer = CoroinhaResumoPortalSerializer(resumo)
+        return Response(serializer.data)
+
+
+class PortalCoroinhaEscalasView(APIView):
+    permission_classes = [IsFamiliaOuStaff]
+
+    def get(self, request, coroinha_id):
+        ano_param = request.query_params.get("ano")
+        try:
+            ano = int(ano_param) if ano_param else None
+        except ValueError:
+            return Response({"detail": "Ano inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            dados = PortalService.get_escalas_ano(request.user, coroinha_id, ano=ano)
+        except PermissionError:
+            return Response({"detail": "Sem permissão."}, status=status.HTTP_403_FORBIDDEN)
+        except Coroinha.DoesNotExist:
+            return Response({"detail": "Coroinha não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CoroinhaEscalasAnoSerializer(dados)
         return Response(serializer.data)
 
 
