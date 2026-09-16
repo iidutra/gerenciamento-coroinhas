@@ -27,21 +27,22 @@ def _chave_telefone(telefone: str | None) -> str:
     return normalizar_telefone_whatsapp(telefone or "")
 
 
-def _ids_irmaos_por_nome_e_telefone(responsavel, ids_conhecidos: set[int]) -> set[int]:
+def _ids_irmaos_por_nome_e_telefone(
+    nomes_referencia, telefones_referencia, ids_conhecidos: set[int]
+) -> set[int]:
     """Fallback para coroinhas cadastrados direto pela equipe pastoral (sem passar
-    pela inscrição on-line), que por isso nunca ficam vinculados a um Responsavel
-    via CPF. Nome sozinho não é identificador forte o suficiente para autorizar
-    acesso aos dados de uma criança (dois "José Silva" podem ser pessoas
-    diferentes), então só consideramos irmão quando NOME e TELEFONE do pai/mãe
-    batem com o cadastro do responsável logado.
+    pela inscrição on-line), que por isso nunca ficam vinculados entre si por CPF
+    -- seja porque não têm Responsavel algum, seja porque cada um logou com o
+    próprio CPF em vez de um CPF de responsável compartilhado. Nome sozinho não é
+    identificador forte o suficiente para autorizar acesso aos dados de uma
+    criança (dois "José Silva" podem ser pessoas diferentes), então só
+    consideramos irmão quando NOME e TELEFONE do pai/mãe batem.
     """
     from apps.membership.models import Coroinha
 
-    nomes = {
-        _chave_nome(n) for n in (responsavel.nome_pai, responsavel.nome_mae, responsavel.nome)
-    }
+    nomes = {_chave_nome(n) for n in nomes_referencia}
     nomes.discard("")
-    telefones = {_chave_telefone(t) for t in (responsavel.telefone, responsavel.whatsapp)}
+    telefones = {_chave_telefone(t) for t in telefones_referencia}
     telefones.discard("")
     if not nomes or not telefones:
         return set()
@@ -77,11 +78,34 @@ class PortalService:
         if usuario.is_staff_pastoral:
             return Coroinha.objects.all().order_by("nome")
         if usuario.tipo_perfil == TipoPerfil.COROINHA and usuario.coroinha_id:
-            return Coroinha.objects.filter(id=usuario.coroinha_id)
+            coroinha = usuario.coroinha
+            # Boa parte das famílias nunca teve um login de Pai/Responsável --
+            # cada coroinha loga com o próprio CPF. Sem isso, dois irmãos
+            # cadastrados assim nunca se enxergariam um ao outro no portal.
+            ids_verificados = {usuario.coroinha_id}
+            ids_heuristica = _ids_irmaos_por_nome_e_telefone(
+                (coroinha.nome_pai, coroinha.nome_mae),
+                (coroinha.telefone_pai, coroinha.telefone_mae),
+                ids_verificados,
+            )
+            if ids_heuristica:
+                AuditService.registrar(
+                    AuditAcao.PORTAL_VINCULO_HEURISTICO,
+                    usuario=usuario,
+                    detalhes={
+                        "coroinha_id": coroinha.id,
+                        "irmaos_ids": sorted(ids_heuristica),
+                    },
+                )
+            return Coroinha.objects.filter(id__in=ids_verificados | ids_heuristica).order_by("nome")
         if usuario.tipo_perfil == TipoPerfil.PAI and usuario.responsavel_id:
             responsavel = usuario.responsavel
             ids_verificados = set(responsavel.coroinhas.values_list("id", flat=True))
-            ids_heuristica = _ids_irmaos_por_nome_e_telefone(responsavel, ids_verificados)
+            ids_heuristica = _ids_irmaos_por_nome_e_telefone(
+                (responsavel.nome_pai, responsavel.nome_mae, responsavel.nome),
+                (responsavel.telefone, responsavel.whatsapp),
+                ids_verificados,
+            )
             if ids_heuristica:
                 AuditService.registrar(
                     AuditAcao.PORTAL_VINCULO_HEURISTICO,

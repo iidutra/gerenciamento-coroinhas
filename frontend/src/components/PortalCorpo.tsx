@@ -138,36 +138,28 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Um pai/responsável pode ter mais de um filho na pastoral (irmãos vinculados ao
-  // mesmo cadastro de Responsável). Nesse caso mostramos o resumo de todos de uma vez,
-  // em vez de obrigar a trocar de filho num seletor. No modo preview (equipe pastoral
-  // navegando por todos os coroinhas) mantemos o seletor único.
-  const mostrarTodosFilhos = !modoPreview && usuario.tipo_perfil === "Pai" && filhos.length > 1;
+  // Um pai/responsável -- ou um coroinha logando com o próprio CPF -- pode ter
+  // mais de um filho/irmão na pastoral. Nesse caso mostramos o resumo de todos de
+  // uma vez, em vez de obrigar a trocar num seletor. No modo preview (equipe
+  // pastoral navegando por todos os coroinhas) mantemos o seletor único.
+  const mostrarTodosFilhos = !modoPreview && filhos.length > 1;
 
   const precisaSeletor = modoPreview;
 
   useEffect(() => {
     async function load() {
       try {
-        if (usuario.tipo_perfil === "Coroinha" && usuario.coroinha_id) {
-          setSelecionado(usuario.coroinha_id);
-          const r = await apiFetch<CoroinhaResumo>(
-            `/portal/coroinhas/${usuario.coroinha_id}/resumo`,
+        const lista = await apiFetch<Coroinha[]>("/portal/filhos");
+        setFilhos(lista);
+        if (!modoPreview && lista.length > 1) {
+          const todos = await Promise.all(
+            lista.map((f) => apiFetch<CoroinhaResumo>(`/portal/coroinhas/${f.id}/resumo`)),
           );
+          setResumos(todos);
+        } else if (lista.length === 1) {
+          setSelecionado(lista[0].id);
+          const r = await apiFetch<CoroinhaResumo>(`/portal/coroinhas/${lista[0].id}/resumo`);
           setResumo(r);
-        } else {
-          const lista = await apiFetch<Coroinha[]>("/portal/filhos");
-          setFilhos(lista);
-          if (!modoPreview && usuario.tipo_perfil === "Pai" && lista.length > 1) {
-            const todos = await Promise.all(
-              lista.map((f) => apiFetch<CoroinhaResumo>(`/portal/coroinhas/${f.id}/resumo`)),
-            );
-            setResumos(todos);
-          } else if (lista.length === 1) {
-            setSelecionado(lista[0].id);
-            const r = await apiFetch<CoroinhaResumo>(`/portal/coroinhas/${lista[0].id}/resumo`);
-            setResumo(r);
-          }
         }
         const n = await apiFetch<{ results?: Noticia[] } | Noticia[]>("/noticias/");
         setNoticias(asList(n));
