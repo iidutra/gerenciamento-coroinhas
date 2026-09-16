@@ -71,8 +71,12 @@ class PortalService:
                 "missa": proxima_item.escala.missa.nome,
             }
 
+        itens_mes_atual = itens.filter(
+            escala__data__year=hoje.year, escala__data__month=hoje.month
+        )
+
         escalas_list = []
-        for item in itens.order_by("-escala__data")[:10]:
+        for item in itens_mes_atual.order_by("-escala__data"):
             pres = getattr(item, "presenca", None)
             try:
                 pres = item.presenca
