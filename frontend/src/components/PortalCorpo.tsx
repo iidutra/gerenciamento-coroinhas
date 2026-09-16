@@ -28,18 +28,123 @@ interface PortalCorpoProps {
   modoPreview?: boolean;
 }
 
+function ResumoFilhoCard({ resumo }: { resumo: CoroinhaResumo }) {
+  return (
+    <div className="space-y-6">
+      <div className="card-liturgical p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+        <CoroinhaAvatar nome={resumo.nome} fotoUrl={mediaUrl(resumo.foto_url)} size="lg" />
+        <div>
+          <h2 className="font-display text-2xl font-semibold">{resumo.nome}</h2>
+          <p className="text-muted-foreground mt-1">
+            {resumo.idade} anos
+            {resumo.escola ? ` · ${resumo.escola}` : ""}
+            {resumo.serie ? ` · ${resumo.serie}` : ""}
+          </p>
+          <div className="mt-2">
+            <StatusBadge status={resumo.status} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Escalas", value: resumo.escalas_total, icon: Calendar, accent: "text-burgundy" },
+          { label: "Presenças", value: resumo.presencas_total, icon: CheckCircle2, accent: "text-emerald-700" },
+          { label: "Faltas", value: resumo.faltas_total, icon: XCircle, accent: "text-destructive" },
+          { label: "Formações", value: resumo.formacoes_concluidas, icon: GraduationCap, accent: "text-amber-700" },
+        ].map((item) => (
+          <div key={item.label} className="card-liturgical p-4 text-center">
+            <item.icon className={`size-5 mx-auto mb-2 ${item.accent}`} aria-hidden />
+            <p className="stat-value">{item.value}</p>
+            <p className="text-sm text-muted-foreground mt-1">{item.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="card-liturgical p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="size-5 text-gold" aria-hidden />
+          <h3 className="font-display text-lg font-semibold">Próxima escala</h3>
+        </div>
+        <p className="text-muted-foreground text-sm">
+          {resumo.proxima_escala
+            ? `${new Date(resumo.proxima_escala.data + "T12:00:00").toLocaleDateString("pt-BR")} · ${resumo.proxima_escala.missa}`
+            : "Sem escalas futuras no momento."}
+        </p>
+      </div>
+
+      {resumo.escalas.length > 0 && (
+        <div className="card-liturgical p-6">
+          <h3 className="font-display text-lg font-semibold mb-3">Minhas escalas do mês</h3>
+          <ul className="space-y-2 text-sm">
+            {resumo.escalas.map((e, i) => (
+              <li key={i} className="flex justify-between border-b border-border pb-2">
+                <span>
+                  {new Date(e.data + "T12:00:00").toLocaleDateString("pt-BR")} · {e.missa}
+                </span>
+                <span
+                  className={
+                    e.presenca === "Presente"
+                      ? "text-emerald-700"
+                      : e.presenca === "Ausente"
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                  }
+                >
+                  {e.presenca ?? "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {resumo.formacoes.length > 0 && (
+        <div className="card-liturgical p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="size-5 text-gold" aria-hidden />
+            <h3 className="font-display text-lg font-semibold">Formações concluídas</h3>
+          </div>
+          <ul className="space-y-3">
+            {resumo.formacoes.map((f, i) => (
+              <li key={i}>
+                <p className="font-medium">{f.titulo}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR")}
+                </p>
+                {f.descricao && <p className="text-sm text-muted-foreground mt-1">{f.descricao}</p>}
+              </li>
+            ))}
+          </ul>
+          {resumo.formacoes_total != null && (
+            <p className="text-xs text-muted-foreground mt-4">
+              Total disponíveis: {resumo.formacoes_total} · Concluídas: {resumo.formacoes_concluidas}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) {
   const [filhos, setFilhos] = useState<Coroinha[]>([]);
   const [selecionado, setSelecionado] = useState<number | null>(null);
   const [resumo, setResumo] = useState<CoroinhaResumo | null>(null);
+  const [resumos, setResumos] = useState<CoroinhaResumo[]>([]);
   const [erro, setErro] = useState("");
   const [noticias, setNoticias] = useState<Noticia[]>([]);
   const [aniversariantes, setAniversariantes] = useState<Aniversariante[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const precisaSeletor =
-    modoPreview || (usuario.tipo_perfil === "Pai" && filhos.length > 1);
+  // Um pai/responsável pode ter mais de um filho na pastoral (irmãos vinculados ao
+  // mesmo cadastro de Responsável). Nesse caso mostramos o resumo de todos de uma vez,
+  // em vez de obrigar a trocar de filho num seletor. No modo preview (equipe pastoral
+  // navegando por todos os coroinhas) mantemos o seletor único.
+  const mostrarTodosFilhos = !modoPreview && usuario.tipo_perfil === "Pai" && filhos.length > 1;
+
+  const precisaSeletor = modoPreview;
 
   useEffect(() => {
     async function load() {
@@ -53,7 +158,12 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
         } else {
           const lista = await apiFetch<Coroinha[]>("/portal/filhos");
           setFilhos(lista);
-          if (lista.length === 1) {
+          if (!modoPreview && usuario.tipo_perfil === "Pai" && lista.length > 1) {
+            const todos = await Promise.all(
+              lista.map((f) => apiFetch<CoroinhaResumo>(`/portal/coroinhas/${f.id}/resumo`)),
+            );
+            setResumos(todos);
+          } else if (lista.length === 1) {
             setSelecionado(lista[0].id);
             const r = await apiFetch<CoroinhaResumo>(`/portal/coroinhas/${lista[0].id}/resumo`);
             setResumo(r);
@@ -74,7 +184,7 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
       }
     }
     load();
-  }, [usuario]);
+  }, [usuario, modoPreview]);
 
   async function selecionarFilho(id: number) {
     setSelecionado(id);
@@ -99,6 +209,8 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
         .slice(-5),
     [noticias, principalDoMes],
   );
+
+  const temConteudo = mostrarTodosFilhos ? resumos.length > 0 : resumo != null;
 
   return (
     <>
@@ -142,101 +254,18 @@ export function PortalCorpo({ usuario, modoPreview = false }: PortalCorpoProps) 
         </div>
       )}
 
-      {loading && !resumo ? (
+      {loading && !temConteudo ? (
         <LoadingScreen message="Carregando dados..." />
-      ) : resumo ? (
+      ) : temConteudo ? (
         <div className="space-y-6">
-          <div className="card-liturgical p-6 flex flex-col sm:flex-row sm:items-center gap-4">
-            <CoroinhaAvatar nome={resumo.nome} fotoUrl={mediaUrl(resumo.foto_url)} size="lg" />
-            <div>
-              <h2 className="font-display text-2xl font-semibold">{resumo.nome}</h2>
-              <p className="text-muted-foreground mt-1">
-                {resumo.idade} anos
-                {resumo.escola ? ` · ${resumo.escola}` : ""}
-                {resumo.serie ? ` · ${resumo.serie}` : ""}
-              </p>
-              <div className="mt-2">
-                <StatusBadge status={resumo.status} />
-              </div>
+          {mostrarTodosFilhos ? (
+            <div className="space-y-10">
+              {resumos.map((r) => (
+                <ResumoFilhoCard key={r.id} resumo={r} />
+              ))}
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Escalas", value: resumo.escalas_total, icon: Calendar, accent: "text-burgundy" },
-              { label: "Presenças", value: resumo.presencas_total, icon: CheckCircle2, accent: "text-emerald-700" },
-              { label: "Faltas", value: resumo.faltas_total, icon: XCircle, accent: "text-destructive" },
-              { label: "Formações", value: resumo.formacoes_concluidas, icon: GraduationCap, accent: "text-amber-700" },
-            ].map((item) => (
-              <div key={item.label} className="card-liturgical p-4 text-center">
-                <item.icon className={`size-5 mx-auto mb-2 ${item.accent}`} aria-hidden />
-                <p className="stat-value">{item.value}</p>
-                <p className="text-sm text-muted-foreground mt-1">{item.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="card-liturgical p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="size-5 text-gold" aria-hidden />
-              <h3 className="font-display text-lg font-semibold">Próxima escala</h3>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              {resumo.proxima_escala
-                ? `${new Date(resumo.proxima_escala.data + "T12:00:00").toLocaleDateString("pt-BR")} · ${resumo.proxima_escala.missa}`
-                : "Sem escalas futuras no momento."}
-            </p>
-          </div>
-
-          {resumo.escalas.length > 0 && (
-            <div className="card-liturgical p-6">
-              <h3 className="font-display text-lg font-semibold mb-3">Minhas escalas</h3>
-              <ul className="space-y-2 text-sm">
-                {resumo.escalas.map((e, i) => (
-                  <li key={i} className="flex justify-between border-b border-border pb-2">
-                    <span>
-                      {new Date(e.data + "T12:00:00").toLocaleDateString("pt-BR")} · {e.missa}
-                    </span>
-                    <span
-                      className={
-                        e.presenca === "Presente"
-                          ? "text-emerald-700"
-                          : e.presenca === "Ausente"
-                            ? "text-destructive"
-                            : "text-muted-foreground"
-                      }
-                    >
-                      {e.presenca ?? "—"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {resumo.formacoes.length > 0 && (
-            <div className="card-liturgical p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <BookOpen className="size-5 text-gold" aria-hidden />
-                <h3 className="font-display text-lg font-semibold">Formações concluídas</h3>
-              </div>
-              <ul className="space-y-3">
-                {resumo.formacoes.map((f, i) => (
-                  <li key={i}>
-                    <p className="font-medium">{f.titulo}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR")}
-                    </p>
-                    {f.descricao && <p className="text-sm text-muted-foreground mt-1">{f.descricao}</p>}
-                  </li>
-                ))}
-              </ul>
-              {resumo.formacoes_total != null && (
-                <p className="text-xs text-muted-foreground mt-4">
-                  Total disponíveis: {resumo.formacoes_total} · Concluídas: {resumo.formacoes_concluidas}
-                </p>
-              )}
-            </div>
+          ) : (
+            resumo && <ResumoFilhoCard resumo={resumo} />
           )}
 
           {aniversariantes.length > 0 && (
