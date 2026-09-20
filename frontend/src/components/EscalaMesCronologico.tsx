@@ -71,16 +71,27 @@ function BadgeTag({ escala }: { escala: Escala }) {
   return null;
 }
 
+function AssessorTag({ funcao }: { funcao?: string | null }) {
+  if (funcao !== "Assessor") return null;
+  return (
+    <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 bg-blue-500/15 text-blue-800 dark:text-blue-300">
+      Assessor
+    </span>
+  );
+}
+
 function DraggableCoroinhaLinha({
   escala,
   coroinhaId,
   coroinhaNome,
   linha,
+  funcao,
 }: {
   escala: Escala;
   coroinhaId: number;
   coroinhaNome: string;
   linha: string;
+  funcao?: string | null;
 }) {
   const item: KanbanDragItem = {
     coroinhaId,
@@ -108,6 +119,7 @@ function DraggableCoroinhaLinha({
         <GripVertical className="size-3.5" aria-hidden />
       </button>
       {linha}
+      <AssessorTag funcao={funcao} />
     </li>
   );
 }
@@ -280,13 +292,24 @@ function EscalaCelebracaoCard({
                   coroinhaId={item.coroinha_id}
                   coroinhaNome={item.coroinha_nome}
                   linha={linhaCoroinhaV6(item, idx)}
+                  funcao={item.funcao}
                 />
               ))
-            : nomes.map((linha) => (
-                <li key={linha} className="text-sm text-foreground font-mono tabular-nums">
-                  {linha}
-                </li>
-              ))}
+            : escala.voluntarios || escala.itens.length === 0
+              ? nomes.map((linha) => (
+                  <li key={linha} className="text-sm text-foreground font-mono tabular-nums">
+                    {linha}
+                  </li>
+                ))
+              : escala.itens.map((item, idx) => (
+                  <li
+                    key={item.id}
+                    className="text-sm text-foreground font-mono tabular-nums flex items-center gap-1.5"
+                  >
+                    {linhaCoroinhaV6(item, idx)}
+                    <AssessorTag funcao={item.funcao} />
+                  </li>
+                ))}
         </ul>
 
         {editandoMembros && (

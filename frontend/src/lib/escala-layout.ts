@@ -220,8 +220,7 @@ export function diaTemSolenidade(escalas: Escala[]): boolean {
 }
 
 export function linhaCoroinhaV6(item: EscalaItem, idx: number): string {
-  const sufixo = item.funcao === "Assessor" ? " (Assessor)" : "";
-  return `${String(idx + 1).padStart(2, "0")} ${item.coroinha_nome}${sufixo}`;
+  return `${String(idx + 1).padStart(2, "0")} ${item.coroinha_nome}`;
 }
 
 export function linhasCoroinhasV6(escala: Escala): string[] {

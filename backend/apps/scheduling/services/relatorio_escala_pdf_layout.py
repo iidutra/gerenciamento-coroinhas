@@ -17,6 +17,10 @@ from apps.scheduling.models import (
     TipoSlotMissa,
 )
 
+TAG_ASSESSOR_PDF = (
+    '&nbsp;<font backColor="#2563EB" color="white" size="7">&nbsp;ASSESSOR&nbsp;</font>'
+)
+
 MESES_PT = [
     "",
     "Janeiro",
@@ -290,7 +294,7 @@ def linhas_coroinhas_v6(escala: Escala) -> list[str]:
         return ["—"]
     return [
         f"{idx + 1:02d} {item.coroinha.nome}"
-        + (" (Assessor)" if item.funcao == FuncaoEscala.ASSESSOR else "")
+        + (TAG_ASSESSOR_PDF if item.funcao == FuncaoEscala.ASSESSOR else "")
         for idx, item in enumerate(itens)
     ]
 
