@@ -11,6 +11,7 @@ from apps.scheduling.models import (
     Escala,
     EscalaItem,
     EscalaMensal,
+    FuncaoEscala,
     LocalCelebracao,
     Missa,
     TipoSlotMissa,
@@ -287,7 +288,11 @@ def linhas_coroinhas_v6(escala: Escala) -> list[str]:
     itens = list(escala.itens.all())
     if not itens:
         return ["—"]
-    return [f"{idx + 1:02d} {item.coroinha.nome}" for idx, item in enumerate(itens)]
+    return [
+        f"{idx + 1:02d} {item.coroinha.nome}"
+        + (" (Assessor)" if item.funcao == FuncaoEscala.ASSESSOR else "")
+        for idx, item in enumerate(itens)
+    ]
 
 
 def separar_escalas_cronologico_pdf(escalas: list[Escala]) -> tuple[list[Escala], list[Escala]]:

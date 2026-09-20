@@ -1,4 +1,4 @@
-import type { Escala } from "@/types";
+import type { Escala, EscalaItem } from "@/types";
 
 const LOCAIS_CELEBRACAO: Record<string, string> = {
   Santuario: "N. Sra. de Fátima",
@@ -219,10 +219,15 @@ export function diaTemSolenidade(escalas: Escala[]): boolean {
   return escalas.some((e) => slotDaEscala(e) === "Dia13");
 }
 
+export function linhaCoroinhaV6(item: EscalaItem, idx: number): string {
+  const sufixo = item.funcao === "Assessor" ? " (Assessor)" : "";
+  return `${String(idx + 1).padStart(2, "0")} ${item.coroinha_nome}${sufixo}`;
+}
+
 export function linhasCoroinhasV6(escala: Escala): string[] {
   if (escala.voluntarios) return ["01 Participação aberta — Voluntários"];
   if (escala.itens.length === 0) return ["—"];
-  return escala.itens.map((item, idx) => `${String(idx + 1).padStart(2, "0")} ${item.coroinha_nome}`);
+  return escala.itens.map(linhaCoroinhaV6);
 }
 
 export interface DiaEscalas {

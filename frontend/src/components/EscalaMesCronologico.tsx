@@ -8,6 +8,7 @@ import {
   ORIENTACOES_GERAIS_V6,
   TITULO_SOLENIDADE_DIA_13,
   diaTemSolenidade,
+  linhaCoroinhaV6,
   linhaTituloV6,
   linhasCoroinhasV6,
   nomeMes,
@@ -278,7 +279,7 @@ function EscalaCelebracaoCard({
                   escala={escala}
                   coroinhaId={item.coroinha_id}
                   coroinhaNome={item.coroinha_nome}
-                  linha={`${String(idx + 1).padStart(2, "0")} ${item.coroinha_nome}`}
+                  linha={linhaCoroinhaV6(item, idx)}
                 />
               ))
             : nomes.map((linha) => (
