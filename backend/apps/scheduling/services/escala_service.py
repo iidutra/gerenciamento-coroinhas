@@ -132,6 +132,12 @@ class EscalaService:
         cls.definir_membros(escala, ids, todos_coroinhas=True)
         return escala
 
+    @classmethod
+    def remover_todos_membros(cls, escala: Escala) -> Escala:
+        """Remove todos os coroinhas da escala e desativa o modo «todos»."""
+        cls.definir_membros(escala, [], todos_coroinhas=False)
+        return escala
+
     @staticmethod
     def definir_membros(
         escala: Escala,

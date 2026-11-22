@@ -58,7 +58,9 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         try:
-            if data.get("todos_coroinhas"):
+            if data.get("remover_todos"):
+                EscalaService.remover_todos_membros(escala)
+            elif data.get("todos_coroinhas"):
                 EscalaService.marcar_todos_coroinhas(escala)
             else:
                 EscalaService.definir_membros(

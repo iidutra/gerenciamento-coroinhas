@@ -8,6 +8,7 @@ import { FuncaoEscalaTags } from "@/components/FuncaoEscalaTag";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
   OBS_OFERTORIO_ASSESSOR,
+  observacoesCelebracao,
   ORIENTACOES_GERAIS_V6,
   TITULO_SOLENIDADE_DIA_13,
   diaTemSolenidade,
@@ -43,6 +44,7 @@ interface EscalaMesCronologicoProps {
   onToggleMembro: (id: number) => void;
   onSalvarMembros: (escalaId: number) => void;
   onMarcarTodosCoroinhas: (escalaId: number) => void;
+  onRemoverTodosCoroinhas: (escalaId: number) => void;
   onSalvarFuncoes: (escalaId: number) => void;
   onNotificar: (escalaId: number) => void;
   onExcluir: (escalaId: number) => void;
@@ -178,6 +180,7 @@ function EscalaCelebracaoCard({
   onToggleMembro,
   onSalvarMembros,
   onMarcarTodosCoroinhas,
+  onRemoverTodosCoroinhas,
   onSalvarFuncoes,
   onNotificar,
   onExcluir,
@@ -244,7 +247,9 @@ function EscalaCelebracaoCard({
             </div>
             <div className="text-xs text-muted-foreground italic mt-1 space-y-0.5">
               <p>{OBS_OFERTORIO_ASSESSOR}</p>
-              {escala.observacao ? <p>{escala.observacao}</p> : null}
+              {observacoesCelebracao(escala).map((texto) => (
+                <p key={texto}>{texto}</p>
+              ))}
             </div>
           </div>
 
@@ -364,13 +369,22 @@ function EscalaCelebracaoCard({
               selecionados={membrosEdicao}
               onToggle={onToggleMembro}
             />
-            <button
-              type="button"
-              onClick={() => onMarcarTodosCoroinhas(escala.id)}
-              className="mt-3 text-sm text-burgundy hover:underline font-medium"
-            >
-              Adicionar todos os coroinhas
-            </button>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+              <button
+                type="button"
+                onClick={() => onMarcarTodosCoroinhas(escala.id)}
+                className="text-sm text-burgundy hover:underline font-medium"
+              >
+                Adicionar todos os coroinhas
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemoverTodosCoroinhas(escala.id)}
+                className="text-sm text-destructive hover:underline font-medium"
+              >
+                Remover todos
+              </button>
+            </div>
             <div className="flex gap-2 mt-3">
               <button type="button" onClick={() => onSalvarMembros(escala.id)} className="btn-primary text-sm">
                 Salvar coroinhas

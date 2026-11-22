@@ -290,6 +290,21 @@ export default function EscalasPage() {
     }
   }
 
+  async function removerTodosCoroinhas(escalaId: number) {
+    setErro("");
+    try {
+      await apiFetch(`/escalas/${escalaId}/membros/`, {
+        method: "PATCH",
+        body: JSON.stringify({ remover_todos: true }),
+      });
+      setMembrosEdicao([]);
+      setEditandoMembrosId(null);
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao remover todos os coroinhas");
+    }
+  }
+
   async function gerarEscalaMes(ev: FormEvent) {
     ev.preventDefault();
     setErro("");
@@ -788,6 +803,7 @@ export default function EscalasPage() {
             onToggleMembro={toggleMembro}
             onSalvarMembros={salvarMembros}
             onMarcarTodosCoroinhas={marcarTodosCoroinhas}
+            onRemoverTodosCoroinhas={removerTodosCoroinhas}
             onSalvarFuncoes={salvarFuncoes}
             onNotificar={notificarEscala}
             onExcluir={excluirEscala}
@@ -813,6 +829,7 @@ export default function EscalasPage() {
             onToggleMembro={toggleMembro}
             onSalvarMembros={salvarMembros}
             onMarcarTodosCoroinhas={marcarTodosCoroinhas}
+            onRemoverTodosCoroinhas={removerTodosCoroinhas}
             onSalvarFuncoes={salvarFuncoes}
             onNotificar={notificarEscala}
             onExcluir={excluirEscala}
