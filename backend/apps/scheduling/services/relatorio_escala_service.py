@@ -18,6 +18,7 @@ from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     MESES_PT,
     OBS_OFERTORIO_ASSESSOR,
+    exibir_observacoes_celebracao,
     limpar_observacao_escala,
     ORIENTACOES_GERAIS_V6,
     TITULO_NATAL,
@@ -247,11 +248,12 @@ class RelatorioEscalaService:
         elif natal and idx == 0:
             linhas_conteudo.append([Paragraph(TITULO_NATAL, estilos["solenidade_sub"])])
         linhas_conteudo.append([Paragraph(linha_titulo_v6(escala), estilos["celebracao_titulo"])])
-        linhas_conteudo.append([Paragraph(OBS_OFERTORIO_ASSESSOR, estilos["observacao_celebracao"])])
-        if escala.observacao:
-            obs = limpar_observacao_escala(escala.observacao)
-            if obs:
-                linhas_conteudo.append([Paragraph(obs, estilos["observacao_celebracao"])])
+        if exibir_observacoes_celebracao(escala):
+            linhas_conteudo.append([Paragraph(OBS_OFERTORIO_ASSESSOR, estilos["observacao_celebracao"])])
+            if escala.observacao:
+                obs = limpar_observacao_escala(escala.observacao)
+                if obs:
+                    linhas_conteudo.append([Paragraph(obs, estilos["observacao_celebracao"])])
         for nome in linhas_coroinhas_v6(escala):
             linhas_conteudo.append([Paragraph(nome, estilos["nome"])])
         conteudo = Table(linhas_conteudo, colWidths=[140 * mm])

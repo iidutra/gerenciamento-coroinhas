@@ -8,6 +8,7 @@ import { FuncaoEscalaTags } from "@/components/FuncaoEscalaTag";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
   OBS_OFERTORIO_ASSESSOR,
+  exibirObservacoesCelebracao,
   observacaoCelebracao,
   ORIENTACOES_GERAIS_V6,
   TITULO_NATAL,
@@ -261,12 +262,14 @@ function EscalaCelebracaoCard({
                 </span>
               )}
             </div>
-            <div className="text-xs text-muted-foreground italic mt-1 space-y-0.5">
-              <p>{OBS_OFERTORIO_ASSESSOR}</p>
-              {observacaoCelebracao(escala) ? (
-                <p>{observacaoCelebracao(escala)}</p>
-              ) : null}
-            </div>
+            {exibirObservacoesCelebracao(escala) ? (
+              <div className="text-xs text-muted-foreground italic mt-1 space-y-0.5">
+                <p>{OBS_OFERTORIO_ASSESSOR}</p>
+                {observacaoCelebracao(escala) ? (
+                  <p>{observacaoCelebracao(escala)}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {podeEditar && (
