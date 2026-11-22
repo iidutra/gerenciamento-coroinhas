@@ -153,6 +153,21 @@ class TestEscalaService:
 
 
 class TestEscalaAPI:
+    def test_montar_todos_coroinhas_via_api(self, client_coordenador, missa_domingo, coroinha):
+        res = client_coordenador.post(
+            "/api/v1/escalas/montar/",
+            {
+                "data": "2026-12-24",
+                "missa_id": missa_domingo.id,
+                "modo": "SelecaoManual",
+                "todos_coroinhas": True,
+            },
+            format="json",
+        )
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.data["todos_coroinhas"] is True
+        assert len(res.data["itens"]) >= 1
+
     def test_montar_via_api(self, client_coordenador, missa_domingo, coroinha):
         res = client_coordenador.post(
             "/api/v1/escalas/montar/",

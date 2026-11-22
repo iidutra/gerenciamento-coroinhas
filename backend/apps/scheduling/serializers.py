@@ -151,8 +151,9 @@ class MontarEscalaSerializer(serializers.Serializer):
     data = serializers.DateField()
     missa_id = serializers.IntegerField()
     modo = serializers.ChoiceField(choices=ModoEscala.choices)
-    quantidade = serializers.IntegerField(min_value=1, max_value=20)
+    quantidade = serializers.IntegerField(min_value=1, max_value=200, required=False)
     coroinha_ids = serializers.ListField(child=serializers.IntegerField(), required=False)
+    todos_coroinhas = serializers.BooleanField(required=False, default=False)
     funcoes = serializers.DictField(required=False, allow_empty=True)
     notificar = serializers.BooleanField(required=False, default=None, allow_null=True)
 
@@ -164,8 +165,16 @@ class MontarEscalaSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        if attrs.get("todos_coroinhas"):
+            attrs.setdefault("quantidade", 1)
+            return attrs
         if attrs["modo"] == ModoEscala.SELECAO_MANUAL and not attrs.get("coroinha_ids"):
             raise serializers.ValidationError({"coroinha_ids": "Obrigatório para seleção manual."})
+        if "quantidade" not in attrs:
+            if attrs["modo"] == ModoEscala.SELECAO_MANUAL and attrs.get("coroinha_ids"):
+                attrs["quantidade"] = len(attrs["coroinha_ids"])
+            else:
+                raise serializers.ValidationError({"quantidade": "Informe a quantidade."})
         return attrs
 
 

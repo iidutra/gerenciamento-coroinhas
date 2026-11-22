@@ -282,6 +282,7 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
                 coroinha_ids=data.get("coroinha_ids"),
                 funcoes=data.get("funcoes"),
                 notificar=data.get("notificar"),
+                todos_coroinhas=bool(data.get("todos_coroinhas")),
             )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
