@@ -77,6 +77,15 @@ SECOES_EXTRAS_PDF = [
 ]
 
 TITULO_SOLENIDADE_DIA_13 = "Solenidade de Nossa Senhora de Fátima"
+TITULO_NATAL = "Missa do Natal"
+
+
+def eh_natal(escala: Escala) -> bool:
+    return escala.data.month == 12 and escala.data.day == 25
+
+
+def dia_tem_natal(escalas_dia: list[Escala]) -> bool:
+    return any(eh_natal(e) for e in escalas_dia)
 
 
 LOCAIS_CELEBRACAO = {
@@ -263,6 +272,9 @@ def tag_celebracao(escala: Escala) -> str:
 
 
 def titulo_celebracao_v6(escala: Escala) -> str:
+    if eh_natal(escala):
+        horario = horario_celebracao(escala)
+        return f"{horario} {TITULO_NATAL}" if horario else TITULO_NATAL
     slot = slot_da_escala(escala)
     horario = horario_celebracao(escala)
     if slot == TipoSlotMissa.SABADO_NOITE:
@@ -290,6 +302,8 @@ def titulo_celebracao_v6(escala: Escala) -> str:
 
 
 def linha_titulo_v6(escala: Escala) -> str:
+    if eh_natal(escala):
+        return titulo_celebracao_v6(escala)
     titulo = titulo_celebracao_v6(escala)
     slot = slot_da_escala(escala)
     tag = tag_celebracao(escala)

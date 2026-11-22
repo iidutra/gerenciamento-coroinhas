@@ -127,11 +127,23 @@ function minutosHorario(horario?: string): number {
   return h * 60 + (Number.isNaN(m) ? 0 : m);
 }
 
+function partesDataEscala(dataIso: string): { mes: number; dia: number } {
+  const [y, m, d] = dataIso.slice(0, 10).split("-").map(Number);
+  return { mes: m ?? 0, dia: d ?? 0 };
+}
+
 function ehMissaDia13(escala: Escala): boolean {
   if (escala.missa_tipo_slot === "Dia13") return true;
   if (escala.missa_dia_mes === 13) return true;
   return /dia\s*13/i.test(escala.missa_nome ?? "");
 }
+
+export function ehNatal(escala: Escala): boolean {
+  const { mes, dia } = partesDataEscala(escala.data);
+  return mes === 12 && dia === 25;
+}
+
+export const TITULO_NATAL = "Missa do Natal";
 
 function localCelebracao(escala: Escala): string {
   if (escala.missa_tipo_slot === "ComunidadeDomingo" || escala.missa_local === "Comunidade") {
@@ -197,6 +209,10 @@ export function tagCelebracao(escala: Escala): string {
 }
 
 export function tituloCelebracaoV6(escala: Escala): string {
+  if (ehNatal(escala)) {
+    const horario = horarioCelebracao(escala);
+    return horario ? `${horario} ${TITULO_NATAL}` : TITULO_NATAL;
+  }
   const slot = slotDaEscala(escala);
   const horario = horarioCelebracao(escala);
   if (slot === "SabadoNoite") return `${horario} Missa`;
@@ -216,6 +232,7 @@ export function tituloCelebracaoV6(escala: Escala): string {
 }
 
 export function linhaTituloV6(escala: Escala): string {
+  if (ehNatal(escala)) return tituloCelebracaoV6(escala);
   const titulo = tituloCelebracaoV6(escala);
   const slot = slotDaEscala(escala);
   const tag = tagCelebracao(escala);
@@ -234,6 +251,10 @@ export const TITULO_SOLENIDADE_DIA_13 = "Solenidade de Nossa Senhora de Fátima"
 
 export function diaTemSolenidade(escalas: Escala[]): boolean {
   return escalas.some((e) => slotDaEscala(e) === "Dia13");
+}
+
+export function diaTemNatal(escalas: Escala[]): boolean {
+  return escalas.some((e) => ehNatal(e));
 }
 
 export function linhaCoroinhaV6(item: EscalaItem, idx: number): string {
