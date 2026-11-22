@@ -10,7 +10,9 @@ import {
   OBS_OFERTORIO_ASSESSOR,
   observacaoCelebracao,
   ORIENTACOES_GERAIS_V6,
+  TITULO_NATAL,
   TITULO_SOLENIDADE_DIA_13,
+  diaTemNatal,
   diaTemSolenidade,
   escalaTodosDestaqueVermelho,
   itensComFuncaoNaEscala,
@@ -52,6 +54,13 @@ interface EscalaMesCronologicoProps {
 }
 
 function BadgeTag({ escala }: { escala: Escala }) {
+  if (escala.data?.slice(5, 10) === "12-25") {
+    return (
+      <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 bg-emerald-600/15 text-emerald-900 dark:text-emerald-300">
+        Natal
+      </span>
+    );
+  }
   if (escala.todos_coroinhas) {
     return (
       <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 bg-slate-500/15 text-slate-800 dark:text-slate-200">
@@ -162,6 +171,7 @@ function EscalaCelebracaoCard({
   escala,
   mostrarDia,
   mostrarSolenidade,
+  mostrarNatal,
   dia,
   diaSemana,
   kanbanMode,
@@ -189,6 +199,7 @@ function EscalaCelebracaoCard({
   escala: Escala;
   mostrarDia: boolean;
   mostrarSolenidade?: boolean;
+  mostrarNatal?: boolean;
   dia: string;
   diaSemana: string;
   kanbanMode?: boolean;
@@ -226,6 +237,11 @@ function EscalaCelebracaoCard({
       <CelebracaoDropZone escala={escala} kanbanMode={kanbanMode}>
         {mostrarSolenidade && (
           <p className="text-sm font-display font-semibold text-burgundy mb-2">{TITULO_SOLENIDADE_DIA_13}</p>
+        )}
+        {mostrarNatal && (
+          <p className="text-sm font-display font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
+            {TITULO_NATAL}
+          </p>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -457,6 +473,7 @@ export function EscalaMesCronologico(props: EscalaMesCronologicoProps) {
                 escala={escala}
                 mostrarDia={idx === 0}
                 mostrarSolenidade={idx === 0 && diaTemSolenidade(dia.escalas)}
+                mostrarNatal={idx === 0 && diaTemNatal(dia.escalas) && !diaTemSolenidade(dia.escalas)}
                 dia={dia.dia}
                 diaSemana={dia.diaSemana}
                 kanbanMode={props.kanbanMode}

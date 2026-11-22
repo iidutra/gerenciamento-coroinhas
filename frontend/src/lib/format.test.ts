@@ -7,7 +7,13 @@ import {
   funcoesParaPayload,
   funcoesVazias,
 } from "./scheduling";
-import { escalaTodosDestaqueVermelho, limparObservacaoEscala, observacaoCelebracao } from "./escala-layout";
+import {
+  escalaTodosDestaqueVermelho,
+  limparObservacaoEscala,
+  linhaTituloV6,
+  observacaoCelebracao,
+  TITULO_NATAL,
+} from "./escala-layout";
 import type { Escala } from "@/types";
 
 describe("formatarCpf", () => {
@@ -90,6 +96,17 @@ describe("scheduling helpers", () => {
       { coroinha_id: 8, funcao: "Assessor" },
     ]);
     expect(funcoesEscalaCompletas(completa)).toBe(true);
+  });
+
+  it("linhaTituloV6 usa Missa do Natal em 25/12", () => {
+    const escala = {
+      data: "2026-12-25",
+      missa_horario: "18:30",
+      missa_tipo_slot: "DomingoNoite",
+      grupo_numero: 2,
+      itens: [],
+    } as Escala;
+    expect(linhaTituloV6(escala)).toBe(`18h30 ${TITULO_NATAL}`);
   });
 
   it("limparObservacaoEscala remove frase descontinuada", () => {

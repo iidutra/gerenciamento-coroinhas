@@ -91,6 +91,23 @@ class TestPdfParoquial:
         )
         assert linha_titulo_v6(escala) == "8h Missa da Manhã Grupo 2"
 
+    def test_titulo_natal_25_dezembro(self, db):
+        missa = Missa.objects.create(
+            nome="Domingo 08h",
+            dia_semana=DiaSemana.DOMINGO,
+            horario=time(8, 0),
+            ativa=True,
+            tipo_slot=TipoSlotMissa.DOMINGO_MANHA,
+            local=LocalCelebracao.SANTUARIO,
+        )
+        escala = Escala.objects.create(
+            data=date(2026, 12, 25),
+            missa=missa,
+            modo=ModoEscala.GRUPO_MENSAL,
+            grupo_numero=1,
+        )
+        assert linha_titulo_v6(escala) == "8h Missa do Natal"
+
     def test_texto_cabecalho_comunidade_santo_antonio(self, db):
         missa = Missa.objects.create(
             nome="Comunidade — Domingo 10h30",

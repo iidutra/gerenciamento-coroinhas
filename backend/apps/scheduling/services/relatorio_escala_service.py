@@ -20,7 +20,9 @@ from apps.scheduling.services.relatorio_escala_pdf_layout import (
     OBS_OFERTORIO_ASSESSOR,
     limpar_observacao_escala,
     ORIENTACOES_GERAIS_V6,
+    TITULO_NATAL,
     TITULO_SOLENIDADE_DIA_13,
+    dia_tem_natal,
     agrupar_escalas_por_dia,
     carregar_dados_mes,
     dia_tem_solenidade,
@@ -231,7 +233,9 @@ class RelatorioEscalaService:
         )
 
     @staticmethod
-    def _linha_celebracao(dia, escala, idx: int, estilos, solenidade: bool = False) -> Table:
+    def _linha_celebracao(
+        dia, escala, idx: int, estilos, solenidade: bool = False, natal: bool = False
+    ) -> Table:
         dia_label = f"{dia.day:02d}" if idx == 0 else ""
         semana_label = rotulo_dia_semana_curto(dia) if idx == 0 else ""
 
@@ -240,6 +244,8 @@ class RelatorioEscalaService:
             linhas_conteudo.append(
                 [Paragraph(TITULO_SOLENIDADE_DIA_13, estilos["solenidade_sub"])]
             )
+        elif natal and idx == 0:
+            linhas_conteudo.append([Paragraph(TITULO_NATAL, estilos["solenidade_sub"])])
         linhas_conteudo.append([Paragraph(linha_titulo_v6(escala), estilos["celebracao_titulo"])])
         linhas_conteudo.append([Paragraph(OBS_OFERTORIO_ASSESSOR, estilos["observacao_celebracao"])])
         if escala.observacao:
@@ -340,10 +346,11 @@ class RelatorioEscalaService:
         else:
             for dia, escalas_dia in dias:
                 solenidade = dia_tem_solenidade(escalas_dia)
+                natal = dia_tem_natal(escalas_dia) and not solenidade
                 for idx, escala in enumerate(escalas_dia):
                     elementos.append(
                         RelatorioEscalaService._linha_celebracao(
-                            dia, escala, idx, estilos, solenidade=solenidade
+                            dia, escala, idx, estilos, solenidade=solenidade, natal=natal
                         )
                     )
             elementos.extend(RelatorioEscalaService._secao_orientacoes(estilos))
