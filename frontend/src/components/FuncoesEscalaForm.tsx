@@ -1,8 +1,14 @@
 "use client";
 
 import { CoroinhaSearchSelect } from "@/components/CoroinhaSearchSelect";
+import { CoroinhaSelecaoLista } from "@/components/CoroinhaSelecaoLista";
 import type { Coroinha } from "@/types";
-import { FUNCAO_ENTRE_OS_DOIS, FUNCOES_ESCALA, type FuncoesEscalaState } from "@/lib/scheduling";
+import {
+  FUNCAO_ENTRE_OS_DOIS,
+  FUNCOES_ESCALA,
+  MAX_COROINHAS_ENTRE_OS_DOIS,
+  type FuncoesEscalaState,
+} from "@/lib/scheduling";
 
 interface FuncoesEscalaFormProps {
   coroinhas: Coroinha[];
@@ -11,39 +17,39 @@ interface FuncoesEscalaFormProps {
   compact?: boolean;
 }
 
+function toggleEntreOsDois(valores: FuncoesEscalaState, id: number, onChange: (v: FuncoesEscalaState) => void) {
+  const atual = valores.entreOsDoisIds ?? [];
+  if (atual.includes(id)) {
+    onChange({ ...valores, entreOsDoisIds: atual.filter((x) => x !== id) });
+    return;
+  }
+  if (atual.length >= MAX_COROINHAS_ENTRE_OS_DOIS) return;
+  onChange({ ...valores, entreOsDoisIds: [...atual, id] });
+}
+
 export function FuncoesEscalaForm({ coroinhas, valores, onChange, compact }: FuncoesEscalaFormProps) {
   return (
     <div className={`space-y-2 ${compact ? "" : "p-3 rounded-lg border border-border bg-muted/30"}`}>
       {!compact && (
         <p className="text-xs text-muted-foreground">
-          Funções litúrgicas (opcional) — busque o nome e selecione. &quot;Entre os dois&quot; aceita até 2
-          coroinhas.
+          Funções litúrgicas (opcional). Em &quot;Entre os dois&quot;, marque até 2 coroinhas na lista.
         </p>
       )}
       <div className="grid sm:grid-cols-2 gap-3">
         {FUNCOES_ESCALA.map((f) => {
           if (f.value === FUNCAO_ENTRE_OS_DOIS) {
-            const primeiro = valores.EntreOsDois;
-            const segundo = valores.EntreOsDois2 ?? "";
             return (
-              <div key={f.value} className="sm:col-span-2 space-y-2 rounded-lg border border-border/60 p-2">
+              <div key={f.value} className="sm:col-span-2 space-y-2 rounded-lg border border-border/60 p-3">
                 <span className="text-muted-foreground text-xs font-medium block">{f.label}</span>
-                <div className="grid sm:grid-cols-2 gap-2">
-                  <CoroinhaSearchSelect
-                    coroinhas={coroinhas}
-                    value={primeiro}
-                    excluirIds={segundo ? [Number(segundo)] : []}
-                    onChange={(id) => onChange({ ...valores, EntreOsDois: id })}
-                    placeholder="1º coroinha"
-                  />
-                  <CoroinhaSearchSelect
-                    coroinhas={coroinhas}
-                    value={segundo}
-                    excluirIds={primeiro ? [Number(primeiro)] : []}
-                    onChange={(id) => onChange({ ...valores, EntreOsDois2: id })}
-                    placeholder="2º coroinha (opcional)"
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Selecione 1 ou 2 coroinhas (marque na lista abaixo).
+                </p>
+                <CoroinhaSelecaoLista
+                  coroinhas={coroinhas}
+                  selecionados={valores.entreOsDoisIds ?? []}
+                  maxSelecionados={MAX_COROINHAS_ENTRE_OS_DOIS}
+                  onToggle={(id) => toggleEntreOsDois(valores, id, onChange)}
+                />
               </div>
             );
           }

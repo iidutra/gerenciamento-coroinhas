@@ -15,9 +15,9 @@ export const FUNCOES_ESCALA = [
 
 export type FuncaoEscala = (typeof FUNCOES_ESCALA)[number]["value"];
 
-/** Valor por função: id único ou, em EntreOsDois, até dois ids. */
+/** Valor por função; `entreOsDoisIds` guarda até 2 coroinhas para Entre os dois. */
 export type FuncoesEscalaState = Record<FuncaoEscala, number | ""> & {
-  EntreOsDois2?: number | "";
+  entreOsDoisIds: number[];
 };
 
 export function funcaoEscalaLabel(funcao: string | null | undefined): string {
@@ -32,7 +32,7 @@ export function funcoesVazias(): FuncoesEscalaState {
       acc[f.value] = "";
       return acc;
     },
-    { EntreOsDois2: "" } as FuncoesEscalaState,
+    { entreOsDoisIds: [] } as FuncoesEscalaState,
   );
 }
 
@@ -51,8 +51,7 @@ export function funcoesFromItens(
       base[item.funcao as FuncaoEscala] = item.coroinha_id;
     }
   }
-  if (entre[0]) base.EntreOsDois = entre[0];
-  if (entre[1]) base.EntreOsDois2 = entre[1];
+  base.entreOsDoisIds = entre.slice(0, MAX_COROINHAS_ENTRE_OS_DOIS);
   return base;
 }
 
@@ -62,7 +61,7 @@ export function funcoesParaPayload(map: FuncoesEscalaState): FuncoesEscalaPayloa
   const out: FuncoesEscalaPayload = {};
   for (const f of FUNCOES_ESCALA) {
     if (f.value === FUNCAO_ENTRE_OS_DOIS) {
-      const ids = [map.EntreOsDois, map.EntreOsDois2].filter((id): id is number => Boolean(id));
+      const ids = map.entreOsDoisIds.filter((id) => id > 0);
       if (ids.length) out[FUNCAO_ENTRE_OS_DOIS] = ids;
       continue;
     }
