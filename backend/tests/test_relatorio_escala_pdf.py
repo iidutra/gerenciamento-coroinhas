@@ -106,7 +106,7 @@ class TestPdfParoquial:
             modo=ModoEscala.GRUPO_MENSAL,
             grupo_numero=1,
         )
-        assert linha_titulo_v6(escala) == "8h Missa do Natal"
+        assert linha_titulo_v6(escala) == "19h Missa do Natal"
 
     def test_texto_cabecalho_comunidade_santo_antonio(self, db):
         missa = Missa.objects.create(

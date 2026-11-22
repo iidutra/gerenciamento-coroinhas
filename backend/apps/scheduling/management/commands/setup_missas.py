@@ -32,6 +32,8 @@ MISSAS_PADRAO = [
     ("Dia 13 — 09h", None, 13, time(9, 0), TipoSlotMissa.DIA_13, LocalCelebracao.SANTUARIO),
     ("Dia 13 — 12h", None, 13, time(12, 0), TipoSlotMissa.DIA_13, LocalCelebracao.SANTUARIO),
     ("Dia 13 — 18h", None, 13, time(18, 0), TipoSlotMissa.DIA_13, LocalCelebracao.SANTUARIO),
+    # 25 de dezembro — escala avulsa / Natal (não entra na geração automática)
+    ("Missa do Natal", None, 25, time(19, 0), TipoSlotMissa.OUTRO, LocalCelebracao.SANTUARIO),
 ]
 
 

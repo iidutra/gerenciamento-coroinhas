@@ -106,7 +106,7 @@ describe("scheduling helpers", () => {
       grupo_numero: 2,
       itens: [],
     } as Escala;
-    expect(linhaTituloV6(escala)).toBe(`18h30 ${TITULO_NATAL}`);
+    expect(linhaTituloV6(escala)).toBe(`19h ${TITULO_NATAL}`);
   });
 
   it("limparObservacaoEscala remove frase descontinuada", () => {
