@@ -30,26 +30,17 @@ export const LEGENDA_CATEGORIAS_V6 = [
 export const OBS_OFERTORIO_ASSESSOR =
   "Observação: quem irá organizar o ofertório é o assessor." as const;
 
-export const OBS_SEXTA_DIA_11 = "Após a adoração teremos um momento especial." as const;
+const FRASE_MOMENTO_ESPECIAL_REMOVIDA = /Após a adoração teremos um momento especial\.?\s*/gi;
 
-function diaDoCalendario(dataIso: string): number {
-  const parte = dataIso.slice(0, 10);
-  const dia = parseInt(parte.split("-")[2] ?? "", 10);
-  return Number.isNaN(dia) ? 0 : dia;
+export function limparObservacaoEscala(texto: string): string {
+  return texto.replace(FRASE_MOMENTO_ESPECIAL_REMOVIDA, "").trim();
 }
 
-/** Linhas de observação exibidas na celebração (escala + regras fixas do dia 11). */
-export function observacoesCelebracao(escala: Escala): string[] {
-  const linhas: string[] = [];
-  if (escala.observacao?.trim()) linhas.push(escala.observacao.trim());
-  if (
-    escala.missa_tipo_slot === "SextaAdoracao" &&
-    diaDoCalendario(escala.data) === 11 &&
-    !linhas.some((l) => l.toLowerCase().includes("momento especial"))
-  ) {
-    linhas.push(OBS_SEXTA_DIA_11);
-  }
-  return linhas;
+/** Texto de observação da escala (sem a frase descontinuada do dia 11). */
+export function observacaoCelebracao(escala: Escala): string | null {
+  if (!escala.observacao?.trim()) return null;
+  const limpo = limparObservacaoEscala(escala.observacao);
+  return limpo || null;
 }
 
 export const ORIENTACOES_GERAIS_V6 = [

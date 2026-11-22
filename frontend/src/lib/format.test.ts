@@ -7,7 +7,7 @@ import {
   funcoesParaPayload,
   funcoesVazias,
 } from "./scheduling";
-import { escalaTodosDestaqueVermelho, observacoesCelebracao, OBS_SEXTA_DIA_11 } from "./escala-layout";
+import { escalaTodosDestaqueVermelho, limparObservacaoEscala, observacaoCelebracao } from "./escala-layout";
 import type { Escala } from "@/types";
 
 describe("formatarCpf", () => {
@@ -92,14 +92,15 @@ describe("scheduling helpers", () => {
     expect(funcoesEscalaCompletas(completa)).toBe(true);
   });
 
-  it("observacoesCelebracao inclui momento especial na sexta dia 11", () => {
+  it("limparObservacaoEscala remove frase descontinuada", () => {
+    const texto =
+      "Adoração ao Santíssimo seguida de Missa Após a adoração teremos um momento especial.";
+    expect(limparObservacaoEscala(texto)).toBe("Adoração ao Santíssimo seguida de Missa");
     const escala = {
-      data: "2026-09-11",
-      missa_tipo_slot: "SextaAdoracao",
-      observacao: "Adoração ao Santíssimo seguida de Missa",
+      observacao: texto,
       itens: [],
     } as Escala;
-    expect(observacoesCelebracao(escala)).toContain(OBS_SEXTA_DIA_11);
+    expect(observacaoCelebracao(escala)).toBe("Adoração ao Santíssimo seguida de Missa");
   });
 
   it("escalaTodosDestaqueVermelho quando todos sem funções completas", () => {

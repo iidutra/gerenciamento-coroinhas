@@ -24,15 +24,7 @@ from apps.scheduling.services.grupo_montagem_service import (
 )
 
 OBS_SEXTA = "Adoração ao Santíssimo seguida de Missa"
-OBS_SEXTA_DIA_11 = "Após a adoração teremos um momento especial."
 OBS_QUARTA = "Voluntários"
-
-
-def observacao_sexta(data: date) -> str:
-    texto = OBS_SEXTA
-    if data.day == 11:
-        texto = f"{texto} {OBS_SEXTA_DIA_11}"
-    return texto
 
 
 class GeradorEscalaMensalService:
@@ -208,7 +200,7 @@ class GeradorEscalaMensalService:
                 escala_mensal=escala_mensal,
                 coroinhas=selecionados,
                 controle=controle,
-                observacao=observacao_sexta(d),
+                observacao=OBS_SEXTA,
             )
 
     @classmethod

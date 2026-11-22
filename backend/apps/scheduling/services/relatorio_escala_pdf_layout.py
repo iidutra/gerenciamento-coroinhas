@@ -201,21 +201,19 @@ ORDEM_SLOT_CRONO = {
 LEGENDA_CATEGORIAS_V6 = ["Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "S. Antônio", "Solenidade", "Novena"]
 
 OBS_OFERTORIO_ASSESSOR = "Observação: quem irá organizar o ofertório é o assessor."
-OBS_SEXTA_DIA_11 = "Após a adoração teremos um momento especial."
+FRASE_MOMENTO_ESPECIAL_REMOVIDA = "Após a adoração teremos um momento especial."
 
 
-def observacoes_celebracao(escala: Escala) -> list[str]:
-    linhas: list[str] = []
-    if escala.observacao and escala.observacao.strip():
-        linhas.append(escala.observacao.strip())
-    slot = slot_da_escala(escala)
-    if (
-        slot == TipoSlotMissa.SEXTA_ADORACAO
-        and escala.data.day == 11
-        and not any("momento especial" in t.lower() for t in linhas)
-    ):
-        linhas.append(OBS_SEXTA_DIA_11)
-    return linhas
+def limpar_observacao_escala(texto: str) -> str:
+    import re
+
+    limpo = re.sub(
+        re.escape(FRASE_MOMENTO_ESPECIAL_REMOVIDA) + r"\.?\s*",
+        "",
+        texto,
+        flags=re.IGNORECASE,
+    ).strip()
+    return limpo
 
 ORIENTACOES_GERAIS_V6 = [
     "Chegada com 30 minutos de antecedência em todas as celebrações.",
