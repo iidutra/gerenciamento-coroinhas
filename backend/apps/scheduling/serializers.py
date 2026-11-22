@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.communication.models import CanalMensagem
+from apps.scheduling.funcoes_payload import expandir_funcoes
 from apps.scheduling.models import (
     Escala,
     EscalaItem,
@@ -137,14 +138,14 @@ class MontarEscalaSerializer(serializers.Serializer):
     modo = serializers.ChoiceField(choices=ModoEscala.choices)
     quantidade = serializers.IntegerField(min_value=1, max_value=20)
     coroinha_ids = serializers.ListField(child=serializers.IntegerField(), required=False)
-    funcoes = serializers.DictField(child=serializers.IntegerField(), required=False, allow_empty=True)
+    funcoes = serializers.DictField(required=False, allow_empty=True)
     notificar = serializers.BooleanField(required=False, default=None, allow_null=True)
 
     def validate_funcoes(self, value):
-        validas = {c.value for c in FuncaoEscala}
-        for chave in value:
-            if chave not in validas:
-                raise serializers.ValidationError(f"Função inválida: {chave}")
+        try:
+            expandir_funcoes(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
         return value
 
     def validate(self, attrs):
@@ -158,13 +159,13 @@ class NotificarEscalaSerializer(serializers.Serializer):
 
 
 class AtribuirFuncoesSerializer(serializers.Serializer):
-    funcoes = serializers.DictField(child=serializers.IntegerField(allow_null=True), allow_empty=True)
+    funcoes = serializers.DictField(allow_empty=True)
 
     def validate_funcoes(self, value):
-        validas = {c.value for c in FuncaoEscala}
-        for chave in value:
-            if chave not in validas:
-                raise serializers.ValidationError(f"Função inválida: {chave}")
+        try:
+            expandir_funcoes(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
         return value
 
 

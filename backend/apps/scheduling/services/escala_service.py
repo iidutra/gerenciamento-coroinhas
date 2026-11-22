@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from apps.membership.models import Coroinha, StatusCoroinha
 from apps.membership.services.gemeos_service import GemeosService
+from apps.scheduling.funcoes_payload import expandir_funcoes
 from apps.scheduling.models import Escala, EscalaItem, FuncaoEscala, ModoEscala
 
 
@@ -153,16 +154,12 @@ class EscalaService:
         return escala
 
     @staticmethod
-    def atribuir_funcoes(escala: Escala, funcoes: dict[str, int | None]) -> Escala:
-        validas = {c.value for c in FuncaoEscala}
+    def atribuir_funcoes(escala: Escala, funcoes: dict) -> Escala:
         escala.itens.update(funcao=None)
 
+        pares = expandir_funcoes(funcoes)
         coroinhas_atribuidas: set[int] = set()
-        for funcao, coroinha_id in funcoes.items():
-            if not coroinha_id:
-                continue
-            if funcao not in validas:
-                raise ValueError(f"Função inválida: {funcao}")
+        for funcao, coroinha_id in pares:
             if coroinha_id in coroinhas_atribuidas:
                 raise ValueError("O mesmo coroinha não pode ter duas funções na mesma missa.")
             coroinhas_atribuidas.add(coroinha_id)
