@@ -7,6 +7,7 @@ import { CoroinhaSelecaoLista } from "@/components/CoroinhaSelecaoLista";
 import { FuncaoEscalaTag } from "@/components/FuncaoEscalaTag";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
+  OBS_OFERTORIO_ASSESSOR,
   ORIENTACOES_GERAIS_V6,
   TITULO_SOLENIDADE_DIA_13,
   diaTemSolenidade,
@@ -217,9 +218,10 @@ function EscalaCelebracaoCard({
                 </span>
               )}
             </div>
-            {escala.observacao && (
-              <p className="text-xs text-muted-foreground italic mt-1">{escala.observacao}</p>
-            )}
+            <div className="text-xs text-muted-foreground italic mt-1 space-y-0.5">
+              <p>{OBS_OFERTORIO_ASSESSOR}</p>
+              {escala.observacao ? <p>{escala.observacao}</p> : null}
+            </div>
           </div>
 
           {podeEditar && (

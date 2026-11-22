@@ -9,7 +9,7 @@ export const FUNCOES_ESCALA = [
   { value: "Turibulo", label: "Turíbulo" },
   { value: "Naveta", label: "Naveta" },
   { value: "Missal", label: "Missal" },
-  { value: FUNCAO_ENTRE_OS_DOIS, label: "Entre os dois", multi: true as const, max: 2 as const },
+  { value: FUNCAO_ENTRE_OS_DOIS, label: "Altar", multi: true as const, max: 2 as const },
   { value: "Ofertorio", label: "Ofertório" },
   { value: FUNCAO_ASSESSOR, label: "Assessor", multi: true as const },
 ] as const;

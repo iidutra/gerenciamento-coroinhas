@@ -39,8 +39,8 @@ export function FuncoesEscalaForm({ coroinhas, valores, onChange, compact }: Fun
     <div className={`space-y-2 ${compact ? "" : "p-3 rounded-lg border border-border bg-muted/30"}`}>
       {!compact && (
         <p className="text-xs text-muted-foreground">
-          Funções litúrgicas (opcional). &quot;Entre os dois&quot; (até 2) e &quot;Assessor&quot; (um ou mais) usam
-          lista com busca.
+          Funções litúrgicas (opcional). &quot;Altar&quot; (até 2) e &quot;Assessor&quot; (um ou mais) usam lista com
+          busca.
         </p>
       )}
       <div className="grid sm:grid-cols-2 gap-3">
@@ -49,7 +49,7 @@ export function FuncoesEscalaForm({ coroinhas, valores, onChange, compact }: Fun
             return (
               <div key={f.value} className="sm:col-span-2 space-y-2 rounded-lg border border-border/60 p-3">
                 <span className="text-muted-foreground text-xs font-medium block">{f.label}</span>
-                <p className="text-xs text-muted-foreground">Até 2 coroinhas.</p>
+                <p className="text-xs text-muted-foreground">Até 2 coroinhas no altar.</p>
                 <CoroinhaSelecaoLista
                   coroinhas={coroinhas}
                   selecionados={valores.entreOsDoisIds ?? []}

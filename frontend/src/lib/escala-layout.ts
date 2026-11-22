@@ -26,6 +26,9 @@ export const LEGENDA_CATEGORIAS_V6 = [
   "Novena",
 ] as const;
 
+export const OBS_OFERTORIO_ASSESSOR =
+  "Observação: quem irá organizar o ofertório é o assessor." as const;
+
 export const ORIENTACOES_GERAIS_V6 = [
   "Chegada com 30 minutos de antecedência em todas as celebrações.",
   "Meninas: cabelos presos e trajes adequados ao ambiente da sacristia.",
