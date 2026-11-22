@@ -143,9 +143,12 @@ def slot_da_escala(escala: Escala) -> str:
 
 
 SLOTS_SEM_OBS_OFERTORIO = {
+    TipoSlotMissa.COMUNIDADE_DOMINGO,
+}
+
+SLOTS_SEM_OBSERVACAO_EXTRA = {
     TipoSlotMissa.SEXTA_ADORACAO,
     TipoSlotMissa.QUARTA_VOLUNTARIOS,
-    TipoSlotMissa.COMUNIDADE_DOMINGO,
 }
 
 
@@ -155,6 +158,10 @@ def exibir_observacao_ofertorio_assessor(escala: Escala) -> bool:
     if escala.missa.local == LocalCelebracao.COMUNIDADE:
         return False
     return True
+
+
+def exibir_observacao_extra_escala(escala: Escala) -> bool:
+    return slot_da_escala(escala) not in SLOTS_SEM_OBSERVACAO_EXTRA
 
 
 def chave_fim_de_semana(data: date) -> date:

@@ -18,6 +18,7 @@ from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     MESES_PT,
     OBS_OFERTORIO_ASSESSOR,
+    exibir_observacao_extra_escala,
     exibir_observacao_ofertorio_assessor,
     limpar_observacao_escala,
     ORIENTACOES_GERAIS_V6,
@@ -250,7 +251,7 @@ class RelatorioEscalaService:
         linhas_conteudo.append([Paragraph(linha_titulo_v6(escala), estilos["celebracao_titulo"])])
         if exibir_observacao_ofertorio_assessor(escala):
             linhas_conteudo.append([Paragraph(OBS_OFERTORIO_ASSESSOR, estilos["observacao_celebracao"])])
-        if escala.observacao:
+        if exibir_observacao_extra_escala(escala) and escala.observacao:
             obs = limpar_observacao_escala(escala.observacao)
             if obs:
                 linhas_conteudo.append([Paragraph(obs, estilos["observacao_celebracao"])])
