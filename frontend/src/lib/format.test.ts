@@ -9,7 +9,7 @@ import {
 } from "./scheduling";
 import {
   escalaTodosDestaqueVermelho,
-  exibirObservacoesCelebracao,
+  exibirObservacaoOfertorioAssessor,
   limparObservacaoEscala,
   linhaTituloV6,
   observacaoCelebracao,
@@ -110,9 +110,10 @@ describe("scheduling helpers", () => {
     expect(linhaTituloV6(escala)).toBe(`19h ${TITULO_NATAL}`);
   });
 
-  it("exibirObservacoesCelebracao desliga sexta, quarta e comunidade", () => {
+  it("exibirObservacaoOfertorioAssessor desliga só ofertório na sexta, quarta e comunidade", () => {
     const sexta = {
       missa_tipo_slot: "SextaAdoracao",
+      observacao: "Adoração ao Santíssimo seguida de Missa",
       itens: [],
     } as Escala;
     const comunidade = {
@@ -121,9 +122,10 @@ describe("scheduling helpers", () => {
       itens: [],
     } as Escala;
     const domingo = { missa_tipo_slot: "DomingoManha", itens: [] } as Escala;
-    expect(exibirObservacoesCelebracao(sexta)).toBe(false);
-    expect(exibirObservacoesCelebracao(comunidade)).toBe(false);
-    expect(exibirObservacoesCelebracao(domingo)).toBe(true);
+    expect(exibirObservacaoOfertorioAssessor(sexta)).toBe(false);
+    expect(exibirObservacaoOfertorioAssessor(comunidade)).toBe(false);
+    expect(exibirObservacaoOfertorioAssessor(domingo)).toBe(true);
+    expect(observacaoCelebracao(sexta)).toBe("Adoração ao Santíssimo seguida de Missa");
   });
 
   it("limparObservacaoEscala remove frase descontinuada", () => {

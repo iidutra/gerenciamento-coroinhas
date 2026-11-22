@@ -142,15 +142,15 @@ def slot_da_escala(escala: Escala) -> str:
     return escala.missa.tipo_slot or TipoSlotMissa.OUTRO
 
 
-SLOTS_SEM_OBSERVACOES = {
+SLOTS_SEM_OBS_OFERTORIO = {
     TipoSlotMissa.SEXTA_ADORACAO,
     TipoSlotMissa.QUARTA_VOLUNTARIOS,
     TipoSlotMissa.COMUNIDADE_DOMINGO,
 }
 
 
-def exibir_observacoes_celebracao(escala: Escala) -> bool:
-    if slot_da_escala(escala) in SLOTS_SEM_OBSERVACOES:
+def exibir_observacao_ofertorio_assessor(escala: Escala) -> bool:
+    if slot_da_escala(escala) in SLOTS_SEM_OBS_OFERTORIO:
         return False
     if escala.missa.local == LocalCelebracao.COMUNIDADE:
         return False

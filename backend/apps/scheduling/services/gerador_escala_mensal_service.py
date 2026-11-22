@@ -23,6 +23,8 @@ from apps.scheduling.services.grupo_montagem_service import (
     GrupoMontagemService,
 )
 
+OBS_SEXTA = "Adoração ao Santíssimo seguida de Missa"
+OBS_QUARTA = "Voluntários"
 
 
 class GeradorEscalaMensalService:
@@ -198,6 +200,7 @@ class GeradorEscalaMensalService:
                 escala_mensal=escala_mensal,
                 coroinhas=selecionados,
                 controle=controle,
+                observacao=OBS_SEXTA,
             )
 
     @classmethod
@@ -215,6 +218,7 @@ class GeradorEscalaMensalService:
                 usuario=usuario,
                 escala_mensal=escala_mensal,
                 coroinhas=[],
+                observacao=OBS_QUARTA,
                 voluntarios=True,
             )
 
