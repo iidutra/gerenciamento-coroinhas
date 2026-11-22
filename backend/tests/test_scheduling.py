@@ -63,6 +63,29 @@ class TestEscalaService:
         funcoes = set(escala.itens.exclude(funcao__isnull=True).values_list("funcao", flat=True))
         assert funcoes == {FuncaoEscala.VELA_1, FuncaoEscala.VELA_2}
 
+    def test_assessor_aceita_varios_coroinhas(self, coordenador, missa_domingo, coroinha):
+        coroinha2 = coroinha.__class__.objects.create(
+            nome="Assessor 2",
+            data_nascimento=date(2013, 7, 10),
+            turma=coroinha.turma,
+            status=coroinha.status,
+        )
+        escala = EscalaService.montar(
+            data=date(2026, 6, 19),
+            missa_id=missa_domingo.id,
+            modo="SorteioAutomatico",
+            quantidade=2,
+            usuario=coordenador,
+        )
+        EscalaService.atribuir_funcoes(
+            escala,
+            {FuncaoEscala.ASSESSOR.value: [coroinha.id, coroinha2.id]},
+        )
+        assessores = list(
+            escala.itens.filter(funcao=FuncaoEscala.ASSESSOR).values_list("coroinha_id", flat=True)
+        )
+        assert sorted(assessores) == sorted([coroinha.id, coroinha2.id])
+
     def test_entre_os_dois_aceita_dois_coroinhas(self, coordenador, missa_domingo, coroinha):
         coroinha2 = coroinha.__class__.objects.create(
             nome="Pedro Teste",
