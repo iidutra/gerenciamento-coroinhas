@@ -144,6 +144,8 @@ export function ehNatal(escala: Escala): boolean {
 }
 
 export const TITULO_NATAL = "Missa do Natal";
+/** Horário fixo da celebração de 25/12 na escala paroquial. */
+export const HORARIO_NATAL = "19h";
 
 function localCelebracao(escala: Escala): string {
   if (escala.missa_tipo_slot === "ComunidadeDomingo" || escala.missa_local === "Comunidade") {
@@ -210,8 +212,7 @@ export function tagCelebracao(escala: Escala): string {
 
 export function tituloCelebracaoV6(escala: Escala): string {
   if (ehNatal(escala)) {
-    const horario = horarioCelebracao(escala);
-    return horario ? `${horario} ${TITULO_NATAL}` : TITULO_NATAL;
+    return `${HORARIO_NATAL} ${TITULO_NATAL}`;
   }
   const slot = slotDaEscala(escala);
   const horario = horarioCelebracao(escala);

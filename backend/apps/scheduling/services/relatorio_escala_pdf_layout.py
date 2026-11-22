@@ -78,6 +78,7 @@ SECOES_EXTRAS_PDF = [
 
 TITULO_SOLENIDADE_DIA_13 = "Solenidade de Nossa Senhora de Fátima"
 TITULO_NATAL = "Missa do Natal"
+HORARIO_NATAL = "19h"
 
 
 def eh_natal(escala: Escala) -> bool:
@@ -273,8 +274,7 @@ def tag_celebracao(escala: Escala) -> str:
 
 def titulo_celebracao_v6(escala: Escala) -> str:
     if eh_natal(escala):
-        horario = horario_celebracao(escala)
-        return f"{horario} {TITULO_NATAL}" if horario else TITULO_NATAL
+        return f"{HORARIO_NATAL} {TITULO_NATAL}"
     slot = slot_da_escala(escala)
     horario = horario_celebracao(escala)
     if slot == TipoSlotMissa.SABADO_NOITE:
