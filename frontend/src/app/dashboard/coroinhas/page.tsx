@@ -119,6 +119,20 @@ export default function CoroinhasPage() {
     return counts;
   }, [coroinhas]);
 
+  const totalPorStatus: Record<string, number> = useMemo(
+    () => ({
+      Ativo: contagemPorStatus.Ativo,
+      EmFormacao: contagemPorStatus.EmFormacao,
+      Inativo: contagemPorStatus.Inativo,
+    }),
+    [contagemPorStatus],
+  );
+
+  const totalNoFiltroAtual = useMemo(
+    () => (statusFiltro ? (totalPorStatus[statusFiltro] ?? 0) : coroinhas.length),
+    [coroinhas.length, statusFiltro, totalPorStatus],
+  );
+
   const filtrados = useMemo(() => {
     const termo = normalizarBusca(busca);
     return coroinhas.filter((c) => {
@@ -662,27 +676,46 @@ export default function CoroinhasPage() {
                 className="input-field input-field--icon-left"
               />
             </div>
-            <div className="relative sm:w-48">
-              <Filter
-                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-                aria-hidden
-              />
-              <select
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value)}
-                className="input-field input-field--icon-left appearance-none"
-              >
-                <option value="">Todos ({contagemPorStatus.total})</option>
-                <option value="Ativo">Ativo ({contagemPorStatus.Ativo})</option>
-                <option value="EmFormacao">Em formação ({contagemPorStatus.EmFormacao})</option>
-                <option value="Inativo">Inativo ({contagemPorStatus.Inativo})</option>
-              </select>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:w-auto">
+              <div className="relative sm:w-48">
+                <Filter
+                  className="absolute left-3 top-1/2 z-10 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+                  aria-hidden
+                />
+                <select
+                  value={statusFiltro}
+                  onChange={(e) => setStatusFiltro(e.target.value)}
+                  className="input-field input-field--icon-left appearance-none w-full"
+                  aria-label="Filtrar por status"
+                >
+                  <option value="">Todos ({contagemPorStatus.total})</option>
+                  <option value="Ativo">Ativo ({contagemPorStatus.Ativo})</option>
+                  <option value="EmFormacao">Em formação ({contagemPorStatus.EmFormacao})</option>
+                  <option value="Inativo">Inativo ({contagemPorStatus.Inativo})</option>
+                </select>
+              </div>
+              {statusFiltro ? (
+                <span className="text-sm font-medium text-burgundy whitespace-nowrap tabular-nums">
+                  Total {STATUS_OPCOES.find((s) => s.value === statusFiltro)?.label ?? statusFiltro}:{" "}
+                  {totalPorStatus[statusFiltro] ?? 0}
+                </span>
+              ) : (
+                <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
+                  Total cadastrados: {contagemPorStatus.total}
+                </span>
+              )}
             </div>
           </div>
           {coroinhas.length > 0 && (
             <p className="px-4 md:px-6 pb-3 text-xs text-muted-foreground border-b border-border">
-              Exibindo {filtrados.length} de {coroinhas.length} coroinha(s)
-              {statusFiltro ? ` · filtro: ${STATUS_OPCOES.find((s) => s.value === statusFiltro)?.label ?? statusFiltro}` : ""}
+              Exibindo <span className="font-medium text-foreground">{filtrados.length}</span> de{" "}
+              <span className="font-medium text-foreground">{totalNoFiltroAtual}</span>
+              {statusFiltro
+                ? ` ${STATUS_OPCOES.find((s) => s.value === statusFiltro)?.label.toLowerCase() ?? statusFiltro}${
+                    totalNoFiltroAtual === 1 ? "" : "s"
+                  }`
+                : " coroinha(s) no cadastro"}
+              {busca.trim() ? " (com busca por nome)" : ""}
             </p>
           )}
           {filtrados.length === 0 ? (
