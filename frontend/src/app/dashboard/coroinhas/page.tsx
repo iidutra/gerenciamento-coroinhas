@@ -109,6 +109,16 @@ export default function CoroinhasPage() {
     return () => clearTimeout(t);
   }, [feedback]);
 
+  const contagemPorStatus = useMemo(() => {
+    const counts = { Ativo: 0, EmFormacao: 0, Inativo: 0, total: coroinhas.length };
+    for (const c of coroinhas) {
+      if (c.status === "Ativo") counts.Ativo += 1;
+      else if (c.status === "EmFormacao") counts.EmFormacao += 1;
+      else if (c.status === "Inativo") counts.Inativo += 1;
+    }
+    return counts;
+  }, [coroinhas]);
+
   const filtrados = useMemo(() => {
     const termo = normalizarBusca(busca);
     return coroinhas.filter((c) => {
@@ -662,13 +672,19 @@ export default function CoroinhasPage() {
                 onChange={(e) => setStatusFiltro(e.target.value)}
                 className="input-field input-field--icon-left appearance-none"
               >
-                <option value="">Todos os status</option>
-                <option value="Ativo">Ativo</option>
-                <option value="EmFormacao">Em formação</option>
-                <option value="Inativo">Inativo</option>
+                <option value="">Todos ({contagemPorStatus.total})</option>
+                <option value="Ativo">Ativo ({contagemPorStatus.Ativo})</option>
+                <option value="EmFormacao">Em formação ({contagemPorStatus.EmFormacao})</option>
+                <option value="Inativo">Inativo ({contagemPorStatus.Inativo})</option>
               </select>
             </div>
           </div>
+          {coroinhas.length > 0 && (
+            <p className="px-4 md:px-6 pb-3 text-xs text-muted-foreground border-b border-border">
+              Exibindo {filtrados.length} de {coroinhas.length} coroinha(s)
+              {statusFiltro ? ` · filtro: ${STATUS_OPCOES.find((s) => s.value === statusFiltro)?.label ?? statusFiltro}` : ""}
+            </p>
+          )}
           {filtrados.length === 0 ? (
             <EmptyState
               icon={Users}

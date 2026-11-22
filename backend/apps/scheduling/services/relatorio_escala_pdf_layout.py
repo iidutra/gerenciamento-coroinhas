@@ -17,9 +17,16 @@ from apps.scheduling.models import (
     TipoSlotMissa,
 )
 
-TAG_ASSESSOR_PDF = (
-    '&nbsp;<font backColor="#2563EB" color="white" size="7">&nbsp;ASSESSOR&nbsp;</font>'
-)
+def tag_funcao_pdf_html(funcao: str | None) -> str:
+    if not funcao:
+        return ""
+    try:
+        label = FuncaoEscala(funcao).label.upper()
+    except ValueError:
+        label = funcao.upper()
+    return (
+        f'&nbsp;<font backColor="#2563EB" color="white" size="7">&nbsp;{label}&nbsp;</font>'
+    )
 
 MESES_PT = [
     "",
@@ -293,8 +300,7 @@ def linhas_coroinhas_v6(escala: Escala) -> list[str]:
     if not itens:
         return ["—"]
     return [
-        f"{idx + 1:02d} {item.coroinha.nome}"
-        + (TAG_ASSESSOR_PDF if item.funcao == FuncaoEscala.ASSESSOR else "")
+        f"{idx + 1:02d} {item.coroinha.nome}" + tag_funcao_pdf_html(item.funcao)
         for idx, item in enumerate(itens)
     ]
 

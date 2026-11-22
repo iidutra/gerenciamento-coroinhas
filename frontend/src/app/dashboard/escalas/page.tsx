@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Calendar, CalendarRange, Download, Pencil, Plus, Shuffle, Trash2 } from "lucide-react";
 import { EscalaMesCronologico } from "@/components/EscalaMesCronologico";
 import { EscalaRemanejamentoKanban } from "@/components/EscalaRemanejamentoKanban";
+import { CoroinhaSelecaoLista } from "@/components/CoroinhaSelecaoLista";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import { GruposMensaisPanel } from "@/components/GruposMensaisPanel";
 import { StaffLayout, useStaffAuth, podeGerenciarCoroinhas, ReadOnlyGestorBanner } from "@/components/StaffLayout";
@@ -552,18 +553,11 @@ export default function EscalasPage() {
                 </p>
               )}
               {modo === "SelecaoManual" && (
-                <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-2 space-y-1">
-                  {coroinhas.map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selecionados.includes(c.id)}
-                        onChange={() => toggleCoroinha(c.id)}
-                      />
-                      {c.nome}
-                    </label>
-                  ))}
-                </div>
+                <CoroinhaSelecaoLista
+                  coroinhas={coroinhas}
+                  selecionados={selecionados}
+                  onToggle={toggleCoroinha}
+                />
               )}
               <FuncoesEscalaForm
                 coroinhas={coroinhas}

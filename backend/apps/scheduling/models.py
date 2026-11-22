@@ -204,8 +204,9 @@ class EscalaItem(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["escala", "funcao"],
-                condition=models.Q(funcao__isnull=False),
-                name="escala_funcao_unica",
+                condition=models.Q(funcao__isnull=False)
+                & ~models.Q(funcao=FuncaoEscala.ENTRE_OS_DOIS),
+                name="escala_funcao_unica_exceto_entre_os_dois",
             ),
         ]
 

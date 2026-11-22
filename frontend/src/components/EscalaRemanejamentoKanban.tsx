@@ -27,7 +27,7 @@ import {
   type KanbanDragItem,
   type KanbanDropTarget,
 } from "@/lib/escala-kanban";
-import type { FuncaoEscala } from "@/lib/scheduling";
+import type { FuncoesEscalaState } from "@/lib/scheduling";
 import type { Coroinha, Escala, EscalaMensal } from "@/types";
 
 function DraggableCoroinhaCard({ item, compact }: { item: KanbanDragItem; compact?: boolean }) {
@@ -116,7 +116,7 @@ interface EscalaRemanejamentoKanbanProps {
   editandoMembrosId: number | null;
   editandoFuncoesId: number | null;
   membrosEdicao: number[];
-  funcoesEdicao: Record<FuncaoEscala, number | "">;
+  funcoesEdicao: FuncoesEscalaState;
   notificandoId: number | null;
   excluindoEscalaId: number | null;
   onAbrirEdicaoMembros: (escala: Escala) => void;
@@ -128,7 +128,7 @@ interface EscalaRemanejamentoKanbanProps {
   onSalvarFuncoes: (escalaId: number) => void;
   onNotificar: (escalaId: number) => void;
   onExcluir: (escalaId: number) => void;
-  onFuncoesChange: (valores: Record<FuncaoEscala, number | "">) => void;
+  onFuncoesChange: (valores: FuncoesEscalaState) => void;
 }
 
 export function EscalaRemanejamentoKanban({

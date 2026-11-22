@@ -39,6 +39,15 @@ describe("scheduling helpers", () => {
     expect(map.Cruz).toBe(2);
   });
 
+  it("funcoesFromItens mapeia até dois Entre os dois", () => {
+    const map = funcoesFromItens([
+      { coroinha_id: 10, funcao: "EntreOsDois" },
+      { coroinha_id: 11, funcao: "EntreOsDois" },
+    ]);
+    expect(map.entreOsDoisIds).toEqual([10, 11]);
+    expect(funcoesParaPayload(map)).toEqual({ EntreOsDois: [10, 11] });
+  });
+
   it("funcoesParaPayload ignora vazios", () => {
     const base = funcoesVazias();
     base.Vela1 = 5;

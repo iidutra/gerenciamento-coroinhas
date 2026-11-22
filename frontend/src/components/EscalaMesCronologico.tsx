@@ -3,6 +3,8 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Send, Trash2, UserCog, Users } from "lucide-react";
+import { CoroinhaSelecaoLista } from "@/components/CoroinhaSelecaoLista";
+import { FuncaoEscalaTag } from "@/components/FuncaoEscalaTag";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
   ORIENTACOES_GERAIS_V6,
@@ -15,7 +17,7 @@ import {
   type DiaEscalas,
 } from "@/lib/escala-layout";
 import { kanbanDragId, kanbanDropId, type KanbanDragItem } from "@/lib/escala-kanban";
-import type { FuncaoEscala } from "@/lib/scheduling";
+import type { FuncoesEscalaState } from "@/lib/scheduling";
 import type { Coroinha, Escala } from "@/types";
 
 interface EscalaMesCronologicoProps {
@@ -28,7 +30,7 @@ interface EscalaMesCronologicoProps {
   editandoMembrosId: number | null;
   editandoFuncoesId: number | null;
   membrosEdicao: number[];
-  funcoesEdicao: Record<FuncaoEscala, number | "">;
+  funcoesEdicao: FuncoesEscalaState;
   notificandoId: number | null;
   excluindoEscalaId: number | null;
   onAbrirEdicaoMembros: (escala: Escala) => void;
@@ -40,7 +42,7 @@ interface EscalaMesCronologicoProps {
   onSalvarFuncoes: (escalaId: number) => void;
   onNotificar: (escalaId: number) => void;
   onExcluir: (escalaId: number) => void;
-  onFuncoesChange: (valores: Record<FuncaoEscala, number | "">) => void;
+  onFuncoesChange: (valores: FuncoesEscalaState) => void;
 }
 
 function BadgeTag({ escala }: { escala: Escala }) {
@@ -69,15 +71,6 @@ function BadgeTag({ escala }: { escala: Escala }) {
     );
   }
   return null;
-}
-
-function AssessorTag({ funcao }: { funcao?: string | null }) {
-  if (funcao !== "Assessor") return null;
-  return (
-    <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 bg-blue-500/15 text-blue-800 dark:text-blue-300">
-      Assessor
-    </span>
-  );
 }
 
 function DraggableCoroinhaLinha({
@@ -119,7 +112,7 @@ function DraggableCoroinhaLinha({
         <GripVertical className="size-3.5" aria-hidden />
       </button>
       {linha}
-      <AssessorTag funcao={funcao} />
+      <FuncaoEscalaTag funcao={funcao} />
     </li>
   );
 }
@@ -307,7 +300,7 @@ function EscalaCelebracaoCard({
                     className="text-sm text-foreground font-mono tabular-nums flex items-center gap-1.5"
                   >
                     {linhaCoroinhaV6(item, idx)}
-                    <AssessorTag funcao={item.funcao} />
+                    <FuncaoEscalaTag funcao={item.funcao} />
                   </li>
                 ))}
         </ul>
@@ -315,22 +308,11 @@ function EscalaCelebracaoCard({
         {editandoMembros && (
           <div className="mt-4 rounded-lg border border-border bg-muted/20 p-4">
             <p className="text-sm font-medium mb-2">Selecione os coroinhas desta escala</p>
-            <div className="max-h-56 overflow-y-auto border border-border rounded-lg bg-card p-2 grid sm:grid-cols-2 gap-1">
-              {coroinhas.map((c) => (
-                <label
-                  key={c.id}
-                  className="flex items-center gap-2 text-sm cursor-pointer px-2 py-1.5 rounded hover:bg-muted/50"
-                >
-                  <input
-                    type="checkbox"
-                    className="accent-[var(--burgundy)] size-4"
-                    checked={membrosEdicao.includes(c.id)}
-                    onChange={() => onToggleMembro(c.id)}
-                  />
-                  {c.nome}
-                </label>
-              ))}
-            </div>
+            <CoroinhaSelecaoLista
+              coroinhas={coroinhas}
+              selecionados={membrosEdicao}
+              onToggle={onToggleMembro}
+            />
             <div className="flex gap-2 mt-3">
               <button type="button" onClick={() => onSalvarMembros(escala.id)} className="btn-primary text-sm">
                 Salvar coroinhas
