@@ -8,7 +8,7 @@ import { FuncaoEscalaTags } from "@/components/FuncaoEscalaTag";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
   OBS_OFERTORIO_ASSESSOR,
-  observacoesCelebracao,
+  observacaoCelebracao,
   ORIENTACOES_GERAIS_V6,
   TITULO_SOLENIDADE_DIA_13,
   diaTemSolenidade,
@@ -247,9 +247,9 @@ function EscalaCelebracaoCard({
             </div>
             <div className="text-xs text-muted-foreground italic mt-1 space-y-0.5">
               <p>{OBS_OFERTORIO_ASSESSOR}</p>
-              {observacoesCelebracao(escala).map((texto) => (
-                <p key={texto}>{texto}</p>
-              ))}
+              {observacaoCelebracao(escala) ? (
+                <p>{observacaoCelebracao(escala)}</p>
+              ) : null}
             </div>
           </div>
 
