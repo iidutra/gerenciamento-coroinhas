@@ -109,6 +109,19 @@ class TestEscalaService:
         )
         assert sorted(entre) == sorted([coroinha.id, coroinha2.id])
 
+    def test_marcar_todos_coroinhas(self, coordenador, missa_domingo, coroinha):
+        escala = EscalaService.montar(
+            data=date(2026, 6, 23),
+            missa_id=missa_domingo.id,
+            modo="SorteioAutomatico",
+            quantidade=1,
+            usuario=coordenador,
+        )
+        EscalaService.marcar_todos_coroinhas(escala)
+        escala.refresh_from_db()
+        assert escala.todos_coroinhas is True
+        assert escala.itens.filter(coroinha_id=coroinha.id).exists()
+
     def test_mesmo_coroinha_duas_funcoes_na_missa(self, coordenador, missa_domingo, coroinha):
         escala = EscalaService.montar(
             data=date(2026, 6, 22),

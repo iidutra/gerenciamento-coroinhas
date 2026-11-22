@@ -166,6 +166,10 @@ class Escala(models.Model):
     grupo_numero = models.PositiveSmallIntegerField(null=True, blank=True)
     observacao = models.TextField(blank=True)
     voluntarios = models.BooleanField(default=False)
+    todos_coroinhas = models.BooleanField(
+        default=False,
+        help_text="Todos os coroinhas elegíveis participam; funções litúrgicas aparecem em destaque.",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     criado_por = models.ForeignKey(
         "identity.Usuario",

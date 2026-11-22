@@ -140,6 +140,7 @@ class EscalaSerializer(serializers.ModelSerializer):
             "grupo_numero",
             "observacao",
             "voluntarios",
+            "todos_coroinhas",
         )
 
     def get_notificacao_enviada(self, obj):
@@ -184,7 +185,21 @@ class AtribuirFuncoesSerializer(serializers.Serializer):
 
 
 class DefinirMembrosSerializer(serializers.Serializer):
-    coroinha_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=True)
+    coroinha_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=True,
+        required=False,
+    )
+    todos_coroinhas = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if attrs.get("todos_coroinhas"):
+            return attrs
+        if "coroinha_ids" not in attrs:
+            raise serializers.ValidationError(
+                {"coroinha_ids": "Informe os coroinhas ou todos_coroinhas."}
+            )
+        return attrs
 
 
 class RemanejarGrupoSerializer(serializers.Serializer):

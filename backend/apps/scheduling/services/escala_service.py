@@ -120,8 +120,25 @@ class EscalaService:
         mensagem = NotificacaoEscalaService.notificar_se_habilitado(escala, usuario, notificar=notificar)
         return escala, mensagem
 
+    @classmethod
+    def ids_coroinhas_elegiveis(cls) -> list[int]:
+        return [c.id for c in cls.candidatos_elegiveis()]
+
+    @classmethod
+    def marcar_todos_coroinhas(cls, escala: Escala) -> Escala:
+        ids = cls.ids_coroinhas_elegiveis()
+        if not ids:
+            raise ValueError("Nenhum coroinha elegível para escalar.")
+        cls.definir_membros(escala, ids, todos_coroinhas=True)
+        return escala
+
     @staticmethod
-    def definir_membros(escala: Escala, coroinha_ids: list[int]) -> Escala:
+    def definir_membros(
+        escala: Escala,
+        coroinha_ids: list[int],
+        *,
+        todos_coroinhas: bool | None = None,
+    ) -> Escala:
         """Reconcilia os coroinhas da escala: adiciona os novos e remove os
         que saíram, preservando as funções de quem permanece."""
         novos = list(dict.fromkeys(coroinha_ids))  # remove duplicados mantendo ordem
@@ -151,6 +168,15 @@ class EscalaService:
                     item.save(update_fields=["ordem"])
             else:
                 EscalaItem.objects.create(escala=escala, coroinha_id=cid, ordem=ordem)
+
+        if todos_coroinhas is True:
+            escala.todos_coroinhas = True
+        elif todos_coroinhas is False:
+            escala.todos_coroinhas = False
+        else:
+            todos_ids = set(EscalaService.ids_coroinhas_elegiveis())
+            escala.todos_coroinhas = todos_ids and set(novos) == todos_ids
+        escala.save(update_fields=["todos_coroinhas"])
 
         return escala
 

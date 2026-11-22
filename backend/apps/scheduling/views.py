@@ -56,8 +56,16 @@ class EscalaViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         escala = self.get_object()
         serializer = DefinirMembrosSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         try:
-            EscalaService.definir_membros(escala, serializer.validated_data["coroinha_ids"])
+            if data.get("todos_coroinhas"):
+                EscalaService.marcar_todos_coroinhas(escala)
+            else:
+                EscalaService.definir_membros(
+                    escala,
+                    data["coroinha_ids"],
+                    todos_coroinhas=data.get("todos_coroinhas"),
+                )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         escala = Escala.objects.prefetch_related("itens__coroinha").get(pk=escala.pk)

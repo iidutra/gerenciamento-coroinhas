@@ -301,6 +301,18 @@ def linhas_coroinhas_v6(escala: Escala) -> list[str]:
     itens = list(escala.itens.all())
     if not itens:
         return ["—"]
+    if escala.todos_coroinhas:
+        linhas = ["01 TODOS OS COROINHAS"]
+        ordem = 1
+        for item in itens:
+            if not item.funcoes_validas():
+                continue
+            ordem += 1
+            linhas.append(
+                f"{ordem:02d} {item.coroinha.nome}"
+                + "".join(tag_funcao_pdf_html(c) for c in item.funcoes_validas())
+            )
+        return linhas
     return [
         f"{idx + 1:02d} {item.coroinha.nome}"
         + "".join(tag_funcao_pdf_html(c) for c in item.funcoes_validas())

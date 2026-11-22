@@ -409,6 +409,7 @@ class RelatorioEscalaService:
                     "tipo_slot": escala.missa.tipo_slot,
                     "grupo_numero": escala.grupo_numero,
                     "voluntarios": escala.voluntarios,
+                    "todos_coroinhas": escala.todos_coroinhas,
                     "funcoes": funcoes_label,
                     "coroinhas": [item.coroinha.nome for item in itens],
                 }

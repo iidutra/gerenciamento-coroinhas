@@ -125,6 +125,7 @@ interface EscalaRemanejamentoKanbanProps {
   onFecharEdicaoFuncoes: () => void;
   onToggleMembro: (id: number) => void;
   onSalvarMembros: (escalaId: number) => void;
+  onMarcarTodosCoroinhas: (escalaId: number) => void;
   onSalvarFuncoes: (escalaId: number) => void;
   onNotificar: (escalaId: number) => void;
   onExcluir: (escalaId: number) => void;

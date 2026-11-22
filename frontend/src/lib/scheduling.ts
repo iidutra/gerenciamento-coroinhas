@@ -72,6 +72,18 @@ export function funcoesFromItens(
 
 export type FuncoesEscalaPayload = Record<string, number | number[]>;
 
+/** Todas as funções litúrgicas usuais preenchidas (exceto ofertório, opcional). */
+export function funcoesEscalaCompletas(map: FuncoesEscalaState): boolean {
+  for (const f of FUNCOES_ESCALA) {
+    if ("multi" in f && f.multi) continue;
+    if (f.value === "Ofertorio") continue;
+    if (!map[f.value]) return false;
+  }
+  if (!map.entreOsDoisIds.length) return false;
+  if (!map.assessorIds.length) return false;
+  return true;
+}
+
 export function funcoesParaPayload(map: FuncoesEscalaState): FuncoesEscalaPayload {
   const out: FuncoesEscalaPayload = {};
   const assessorIds = map.assessorIds.filter((id) => id > 0);
