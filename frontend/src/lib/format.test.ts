@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { formatarCpf, pareceEmail } from "./format";
 import {
   funcaoEscalaLabel,
+  funcoesEscalaCompletas,
   funcoesFromItens,
   funcoesParaPayload,
   funcoesVazias,
 } from "./scheduling";
+import { escalaTodosDestaqueVermelho } from "./escala-layout";
+import type { Escala } from "@/types";
 
 describe("formatarCpf", () => {
   it("aplica máscara progressiva", () => {
@@ -70,6 +73,31 @@ describe("scheduling helpers", () => {
     base.Vela1 = 5;
     base.Cruz = 3;
     expect(funcoesParaPayload(base)).toEqual({ Vela1: 5, Cruz: 3 });
+  });
+
+  it("funcoesEscalaCompletas exige todos os papéis principais", () => {
+    const parcial = funcoesVazias();
+    parcial.Cruz = 1;
+    expect(funcoesEscalaCompletas(parcial)).toBe(false);
+    const completa = funcoesFromItens([
+      { coroinha_id: 1, funcao: "Cruz" },
+      { coroinha_id: 2, funcao: "Vela1" },
+      { coroinha_id: 3, funcao: "Vela2" },
+      { coroinha_id: 4, funcao: "Turibulo" },
+      { coroinha_id: 5, funcao: "Naveta" },
+      { coroinha_id: 6, funcao: "Missal" },
+      { coroinha_id: 7, funcao: "EntreOsDois" },
+      { coroinha_id: 8, funcao: "Assessor" },
+    ]);
+    expect(funcoesEscalaCompletas(completa)).toBe(true);
+  });
+
+  it("escalaTodosDestaqueVermelho quando todos sem funções completas", () => {
+    const escala = {
+      todos_coroinhas: true,
+      itens: [{ coroinha_id: 1, coroinha_nome: "João", id: 1, ordem: 1 }],
+    } as Escala;
+    expect(escalaTodosDestaqueVermelho(escala)).toBe(true);
   });
 
   it("funcaoEscalaLabel traduz valores", () => {

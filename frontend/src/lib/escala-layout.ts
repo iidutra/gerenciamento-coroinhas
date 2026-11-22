@@ -1,4 +1,5 @@
 import type { Escala, EscalaItem } from "@/types";
+import { funcoesDoItem, funcoesEscalaCompletas, funcoesFromItens } from "./scheduling";
 
 const LOCAIS_CELEBRACAO: Record<string, string> = {
   Santuario: "N. Sra. de Fátima",
@@ -229,7 +230,27 @@ export function linhaCoroinhaV6(item: EscalaItem, idx: number): string {
 export function linhasCoroinhasV6(escala: Escala): string[] {
   if (escala.voluntarios) return ["01 Participação aberta — Voluntários"];
   if (escala.itens.length === 0) return ["—"];
-  return escala.itens.map(linhaCoroinhaV6);
+  if (escala.todos_coroinhas) {
+    const linhas = ["01 TODOS OS COROINHAS"];
+    let ordem = 1;
+    for (const item of escala.itens) {
+      if (!funcoesDoItem(item).length) continue;
+      ordem += 1;
+      linhas.push(`${String(ordem).padStart(2, "0")} ${item.coroinha_nome}`);
+    }
+    return linhas;
+  }
+  return escala.itens.map((item, idx) => linhaCoroinhaV6(item, idx));
+}
+
+export function itensComFuncaoNaEscala(escala: Escala) {
+  return escala.itens.filter((item) => funcoesDoItem(item).length > 0);
+}
+
+/** Vermelho: modo “todos” com funções litúrgicas ainda incompletas. */
+export function escalaTodosDestaqueVermelho(escala: Escala): boolean {
+  if (!escala.todos_coroinhas) return false;
+  return !funcoesEscalaCompletas(funcoesFromItens(escala.itens));
 }
 
 export interface DiaEscalas {

@@ -89,6 +89,7 @@ export interface Escala {
   grupo_numero?: number | null;
   observacao?: string;
   voluntarios?: boolean;
+  todos_coroinhas?: boolean;
 }
 
 export interface GrupoMensalMembro {

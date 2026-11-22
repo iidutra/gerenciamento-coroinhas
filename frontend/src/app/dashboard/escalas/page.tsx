@@ -276,6 +276,20 @@ export default function EscalasPage() {
     }
   }
 
+  async function marcarTodosCoroinhas(escalaId: number) {
+    setErro("");
+    try {
+      await apiFetch(`/escalas/${escalaId}/membros/`, {
+        method: "PATCH",
+        body: JSON.stringify({ todos_coroinhas: true }),
+      });
+      setEditandoMembrosId(null);
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao adicionar todos os coroinhas");
+    }
+  }
+
   async function gerarEscalaMes(ev: FormEvent) {
     ev.preventDefault();
     setErro("");
@@ -773,6 +787,7 @@ export default function EscalasPage() {
             onFecharEdicaoFuncoes={() => setEditandoFuncoesId(null)}
             onToggleMembro={toggleMembro}
             onSalvarMembros={salvarMembros}
+            onMarcarTodosCoroinhas={marcarTodosCoroinhas}
             onSalvarFuncoes={salvarFuncoes}
             onNotificar={notificarEscala}
             onExcluir={excluirEscala}
@@ -797,6 +812,7 @@ export default function EscalasPage() {
             onFecharEdicaoFuncoes={() => setEditandoFuncoesId(null)}
             onToggleMembro={toggleMembro}
             onSalvarMembros={salvarMembros}
+            onMarcarTodosCoroinhas={marcarTodosCoroinhas}
             onSalvarFuncoes={salvarFuncoes}
             onNotificar={notificarEscala}
             onExcluir={excluirEscala}

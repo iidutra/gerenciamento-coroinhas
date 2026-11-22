@@ -11,6 +11,8 @@ import {
   ORIENTACOES_GERAIS_V6,
   TITULO_SOLENIDADE_DIA_13,
   diaTemSolenidade,
+  escalaTodosDestaqueVermelho,
+  itensComFuncaoNaEscala,
   linhaCoroinhaV6,
   linhaTituloV6,
   linhasCoroinhasV6,
@@ -18,7 +20,7 @@ import {
   type DiaEscalas,
 } from "@/lib/escala-layout";
 import { kanbanDragId, kanbanDropId, type KanbanDragItem } from "@/lib/escala-kanban";
-import type { FuncoesEscalaState } from "@/lib/scheduling";
+import { funcoesDoItem, type FuncoesEscalaState } from "@/lib/scheduling";
 import type { Coroinha, Escala } from "@/types";
 
 interface EscalaMesCronologicoProps {
@@ -40,6 +42,7 @@ interface EscalaMesCronologicoProps {
   onFecharEdicaoFuncoes: () => void;
   onToggleMembro: (id: number) => void;
   onSalvarMembros: (escalaId: number) => void;
+  onMarcarTodosCoroinhas: (escalaId: number) => void;
   onSalvarFuncoes: (escalaId: number) => void;
   onNotificar: (escalaId: number) => void;
   onExcluir: (escalaId: number) => void;
@@ -47,6 +50,13 @@ interface EscalaMesCronologicoProps {
 }
 
 function BadgeTag({ escala }: { escala: Escala }) {
+  if (escala.todos_coroinhas) {
+    return (
+      <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 bg-slate-500/15 text-slate-800 dark:text-slate-200">
+        Todos
+      </span>
+    );
+  }
   if (escala.voluntarios) {
     return (
       <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 bg-amber-500/15 text-amber-800 dark:text-amber-300">
@@ -167,6 +177,7 @@ function EscalaCelebracaoCard({
   onFecharEdicaoFuncoes,
   onToggleMembro,
   onSalvarMembros,
+  onMarcarTodosCoroinhas,
   onSalvarFuncoes,
   onNotificar,
   onExcluir,
@@ -185,10 +196,17 @@ function EscalaCelebracaoCard({
   "dias" | "mes" | "ano" | "kanbanMode" | "editandoMembrosId" | "editandoFuncoesId"
 >) {
   const nomes = linhasCoroinhasV6(escala);
-  const itensArrastaveis = !escala.voluntarios && escala.itens.length > 0;
+  const destaqueVermelho = escalaTodosDestaqueVermelho(escala);
+  const itensDestaque = itensComFuncaoNaEscala(escala);
+  const itensArrastaveis =
+    !escala.voluntarios && !escala.todos_coroinhas && escala.itens.length > 0;
 
   return (
-    <div className="flex gap-3 sm:gap-4 border-b border-border/60 last:border-b-0 py-4 first:pt-0">
+    <div
+      className={`flex gap-3 sm:gap-4 border-b border-border/60 last:border-b-0 py-4 first:pt-0 ${
+        destaqueVermelho ? "rounded-lg border border-red-500/60 bg-red-500/5 px-2 sm:px-3 -mx-2 sm:-mx-3 my-1" : ""
+      }`}
+    >
       <div className="w-12 sm:w-14 shrink-0 text-center">
         {mostrarDia ? (
           <>
@@ -209,7 +227,11 @@ function EscalaCelebracaoCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-display font-semibold text-burgundy text-sm sm:text-base leading-snug">
+              <h4
+                className={`font-display font-semibold text-sm sm:text-base leading-snug ${
+                  destaqueVermelho ? "text-red-700 dark:text-red-400" : "text-burgundy"
+                }`}
+              >
                 {linhaTituloV6(escala)}
               </h4>
               <BadgeTag escala={escala} />
@@ -299,15 +321,39 @@ function EscalaCelebracaoCard({
                     {linha}
                   </li>
                 ))
-              : escala.itens.map((item, idx) => (
-                  <li
-                    key={item.id}
-                    className="text-sm text-foreground font-mono tabular-nums flex items-center gap-1.5"
-                  >
-                    {linhaCoroinhaV6(item, idx)}
-                    <FuncaoEscalaTags funcao={item.funcao} funcoes={item.funcoes} />
-                  </li>
-                ))}
+              : escala.todos_coroinhas
+                ? (
+                    <>
+                      <li className="text-sm text-muted-foreground font-mono tabular-nums font-semibold uppercase tracking-wide">
+                        01 TODOS OS COROINHAS
+                      </li>
+                      {itensDestaque.map((item, idx) => (
+                        <li
+                          key={item.id}
+                          className="text-sm text-foreground font-mono tabular-nums flex items-center gap-1.5 font-semibold"
+                        >
+                          {linhaCoroinhaV6(item, idx + 1)}
+                          <FuncaoEscalaTags funcao={item.funcao} funcoes={item.funcoes} />
+                        </li>
+                      ))}
+                      {itensDestaque.length === 0 && destaqueVermelho ? (
+                        <li className="text-xs text-red-600 dark:text-red-400 italic">
+                          Defina as funções litúrgicas desta celebração.
+                        </li>
+                      ) : null}
+                    </>
+                  )
+                : escala.itens.map((item, idx) => (
+                    <li
+                      key={item.id}
+                      className={`text-sm font-mono tabular-nums flex items-center gap-1.5 ${
+                        funcoesDoItem(item).length ? "text-foreground font-semibold" : "text-foreground"
+                      }`}
+                    >
+                      {linhaCoroinhaV6(item, idx)}
+                      <FuncaoEscalaTags funcao={item.funcao} funcoes={item.funcoes} />
+                    </li>
+                  ))}
         </ul>
 
         {editandoMembros && (
@@ -318,6 +364,13 @@ function EscalaCelebracaoCard({
               selecionados={membrosEdicao}
               onToggle={onToggleMembro}
             />
+            <button
+              type="button"
+              onClick={() => onMarcarTodosCoroinhas(escala.id)}
+              className="mt-3 text-sm text-burgundy hover:underline font-medium"
+            >
+              Adicionar todos os coroinhas
+            </button>
             <div className="flex gap-2 mt-3">
               <button type="button" onClick={() => onSalvarMembros(escala.id)} className="btn-primary text-sm">
                 Salvar coroinhas
@@ -367,7 +420,7 @@ export function EscalaMesCronologico(props: EscalaMesCronologicoProps) {
           </div>
 
           <p className="text-xs text-center text-muted-foreground px-2">
-            Legenda: S. Antônio = comunidade · Solenidade = dia 13 · Novena = quarta voluntários
+            Legenda: S. Antônio = comunidade · Solenidade = dia 13 · Novena = quarta · Todos = participação geral (vermelho = funções pendentes)
           </p>
         </>
       )}
