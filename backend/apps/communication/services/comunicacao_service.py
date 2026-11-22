@@ -122,7 +122,17 @@ class ComunicacaoService:
     def _render_para_coroinha(cls, corpo: str, coroinha, escala: Escala | None = None) -> str:
         if escala:
             item = escala.itens.filter(coroinha=coroinha).first()
-            funcao = item.get_funcao_display() if item and item.funcao else ""
+            funcao = ""
+            if item:
+                from apps.scheduling.models import FuncaoEscala
+
+                labels = []
+                for codigo in item.funcoes_validas():
+                    try:
+                        labels.append(FuncaoEscala(codigo).label)
+                    except ValueError:
+                        labels.append(codigo)
+                funcao = ", ".join(labels)
             data_fmt = escala.data.strftime("%d/%m/%Y")
             horario = escala.missa.horario.strftime("%H:%M")
             # Sem função atribuída: remove a frase "Função: {funcao}" do texto,

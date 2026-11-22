@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from datetime import timedelta
 
 from django.db.models import Count
@@ -155,15 +156,15 @@ class EscalaService:
 
     @staticmethod
     def atribuir_funcoes(escala: Escala, funcoes: dict) -> Escala:
-        escala.itens.update(funcao=None)
+        escala.itens.update(funcao=None, funcoes=[])
 
         pares = expandir_funcoes(funcoes)
-        coroinhas_atribuidas: set[int] = set()
+        por_coroinha: dict[int, list[str]] = defaultdict(list)
         for funcao, coroinha_id in pares:
-            if coroinha_id in coroinhas_atribuidas:
-                raise ValueError("O mesmo coroinha não pode ter duas funções na mesma missa.")
-            coroinhas_atribuidas.add(coroinha_id)
+            if funcao not in por_coroinha[coroinha_id]:
+                por_coroinha[coroinha_id].append(funcao)
 
+        for coroinha_id, lista in por_coroinha.items():
             item = escala.itens.filter(coroinha_id=coroinha_id).first()
             if not item:
                 item = EscalaItem.objects.create(
@@ -171,7 +172,7 @@ class EscalaService:
                     coroinha_id=coroinha_id,
                     ordem=escala.itens.count() + 1,
                 )
-            item.funcao = funcao
-            item.save(update_fields=["funcao"])
+            item.aplicar_funcoes(lista)
+            item.save(update_fields=["funcao", "funcoes"])
 
         return escala

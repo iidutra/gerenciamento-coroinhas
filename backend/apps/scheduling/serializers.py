@@ -72,6 +72,7 @@ class EscalaItemSerializer(serializers.ModelSerializer):
     coroinha_foto_url = serializers.SerializerMethodField()
     presenca_status = serializers.SerializerMethodField()
     funcao_label = serializers.SerializerMethodField()
+    funcoes_labels = serializers.SerializerMethodField()
 
     class Meta:
         model = EscalaItem
@@ -83,11 +84,24 @@ class EscalaItemSerializer(serializers.ModelSerializer):
             "ordem",
             "funcao",
             "funcao_label",
+            "funcoes",
+            "funcoes_labels",
             "presenca_status",
         )
 
     def get_funcao_label(self, obj):
         return obj.get_funcao_display() if obj.funcao else None
+
+    def get_funcoes_labels(self, obj):
+        from apps.scheduling.models import FuncaoEscala
+
+        labels = []
+        for codigo in obj.funcoes_validas():
+            try:
+                labels.append(FuncaoEscala(codigo).label)
+            except ValueError:
+                labels.append(codigo)
+        return labels
 
     def get_coroinha_foto_url(self, obj):
         return build_foto_url(obj.coroinha.foto, self.context.get("request"))

@@ -195,6 +195,12 @@ class EscalaItem(models.Model):
         choices=FuncaoEscala.choices,
         blank=True,
         null=True,
+        help_text="Função principal (compatibilidade e constraint única por slot).",
+    )
+    funcoes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Todas as funções litúrgicas deste coroinha nesta missa.",
     )
 
     class Meta:
@@ -210,6 +216,29 @@ class EscalaItem(models.Model):
             ),
         ]
 
+    def funcoes_validas(self) -> list[str]:
+        if self.funcoes:
+            return list(self.funcoes)
+        if self.funcao:
+            return [self.funcao]
+        return []
+
+    def aplicar_funcoes(self, codigos: list[str]) -> None:
+        validas = {c.value for c in FuncaoEscala}
+        vistos = {c for c in codigos if c in validas}
+        ordem_valores = [f.value for f in FUNCOES_ESCALA_ORDEM]
+        ordenadas = [c for c in ordem_valores if c in vistos]
+        self.funcoes = ordenadas
+        self.funcao = ordenadas[0] if ordenadas else None
+
     def __str__(self):
-        sufixo = f" ({self.get_funcao_display()})" if self.funcao else ""
+        sufixo = ""
+        if self.funcoes_validas():
+            labels = []
+            for codigo in self.funcoes_validas():
+                try:
+                    labels.append(FuncaoEscala(codigo).label)
+                except ValueError:
+                    labels.append(codigo)
+            sufixo = f" ({', '.join(labels)})"
         return f"{self.escala} — {self.coroinha.nome}{sufixo}"

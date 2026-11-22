@@ -302,7 +302,8 @@ def linhas_coroinhas_v6(escala: Escala) -> list[str]:
     if not itens:
         return ["—"]
     return [
-        f"{idx + 1:02d} {item.coroinha.nome}" + tag_funcao_pdf_html(item.funcao)
+        f"{idx + 1:02d} {item.coroinha.nome}"
+        + "".join(tag_funcao_pdf_html(c) for c in item.funcoes_validas())
         for idx, item in enumerate(itens)
     ]
 

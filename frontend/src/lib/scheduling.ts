@@ -36,24 +36,33 @@ export function funcoesVazias(): FuncoesEscalaState {
   return { ...slots, entreOsDoisIds: [], assessorIds: [] };
 }
 
+export function funcoesDoItem(item: {
+  funcao?: string | null;
+  funcoes?: string[] | null;
+}): string[] {
+  if (item.funcoes?.length) return item.funcoes;
+  return item.funcao ? [item.funcao] : [];
+}
+
 export function funcoesFromItens(
-  itens: { coroinha_id: number; funcao?: string | null }[],
+  itens: { coroinha_id: number; funcao?: string | null; funcoes?: string[] | null }[],
 ): FuncoesEscalaState {
   const base = funcoesVazias();
   const entre: number[] = [];
   const assessores: number[] = [];
   for (const item of itens) {
-    if (!item.funcao) continue;
-    if (item.funcao === FUNCAO_ENTRE_OS_DOIS) {
-      entre.push(item.coroinha_id);
-      continue;
-    }
-    if (item.funcao === FUNCAO_ASSESSOR) {
-      assessores.push(item.coroinha_id);
-      continue;
-    }
-    if (item.funcao in base) {
-      base[item.funcao as FuncaoEscala] = item.coroinha_id;
+    for (const funcao of funcoesDoItem(item)) {
+      if (funcao === FUNCAO_ENTRE_OS_DOIS) {
+        if (!entre.includes(item.coroinha_id)) entre.push(item.coroinha_id);
+        continue;
+      }
+      if (funcao === FUNCAO_ASSESSOR) {
+        if (!assessores.includes(item.coroinha_id)) assessores.push(item.coroinha_id);
+        continue;
+      }
+      if (funcao in base) {
+        base[funcao as FuncaoEscala] = item.coroinha_id;
+      }
     }
   }
   base.entreOsDoisIds = entre.slice(0, MAX_COROINHAS_ENTRE_OS_DOIS);

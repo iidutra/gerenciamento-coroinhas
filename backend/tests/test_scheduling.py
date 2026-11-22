@@ -109,7 +109,7 @@ class TestEscalaService:
         )
         assert sorted(entre) == sorted([coroinha.id, coroinha2.id])
 
-    def test_mesmo_coroinha_duas_funcoes_falha(self, coordenador, missa_domingo, coroinha):
+    def test_mesmo_coroinha_duas_funcoes_na_missa(self, coordenador, missa_domingo, coroinha):
         escala = EscalaService.montar(
             data=date(2026, 6, 22),
             missa_id=missa_domingo.id,
@@ -117,11 +117,13 @@ class TestEscalaService:
             quantidade=1,
             usuario=coordenador,
         )
-        with pytest.raises(ValueError, match="duas funções"):
-            EscalaService.atribuir_funcoes(
-                escala,
-                {FuncaoEscala.VELA_1.value: coroinha.id, FuncaoEscala.CRUZ.value: coroinha.id},
-            )
+        EscalaService.atribuir_funcoes(
+            escala,
+            {FuncaoEscala.VELA_1.value: coroinha.id, FuncaoEscala.CRUZ.value: coroinha.id},
+        )
+        item = escala.itens.get(coroinha_id=coroinha.id)
+        assert set(item.funcoes_validas()) == {FuncaoEscala.CRUZ.value, FuncaoEscala.VELA_1.value}
+        assert item.funcao == FuncaoEscala.CRUZ.value
 
 
 class TestEscalaAPI:
