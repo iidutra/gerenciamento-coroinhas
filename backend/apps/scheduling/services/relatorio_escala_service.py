@@ -393,11 +393,14 @@ class RelatorioEscalaService:
         linhas = []
         for escala in escalas:
             itens = list(escala.itens.all())
-            funcoes_label = {
-                FuncaoEscala(item.funcao).label: item.coroinha.nome
-                for item in itens
-                if item.funcao
-            }
+            funcoes_label = {}
+            for item in itens:
+                for codigo in item.funcoes_validas():
+                    try:
+                        label = FuncaoEscala(codigo).label
+                    except ValueError:
+                        continue
+                    funcoes_label[label] = item.coroinha.nome
             linhas.append(
                 {
                     "data": escala.data.isoformat(),

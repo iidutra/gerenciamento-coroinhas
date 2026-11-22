@@ -4,7 +4,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Send, Trash2, UserCog, Users } from "lucide-react";
 import { CoroinhaSelecaoLista } from "@/components/CoroinhaSelecaoLista";
-import { FuncaoEscalaTag } from "@/components/FuncaoEscalaTag";
+import { FuncaoEscalaTags } from "@/components/FuncaoEscalaTag";
 import { FuncoesEscalaForm } from "@/components/FuncoesEscalaForm";
 import {
   OBS_OFERTORIO_ASSESSOR,
@@ -80,12 +80,14 @@ function DraggableCoroinhaLinha({
   coroinhaNome,
   linha,
   funcao,
+  funcoes,
 }: {
   escala: Escala;
   coroinhaId: number;
   coroinhaNome: string;
   linha: string;
   funcao?: string | null;
+  funcoes?: string[] | null;
 }) {
   const item: KanbanDragItem = {
     coroinhaId,
@@ -113,7 +115,7 @@ function DraggableCoroinhaLinha({
         <GripVertical className="size-3.5" aria-hidden />
       </button>
       {linha}
-      <FuncaoEscalaTag funcao={funcao} />
+      <FuncaoEscalaTags funcao={funcao} funcoes={funcoes} />
     </li>
   );
 }
@@ -288,6 +290,7 @@ function EscalaCelebracaoCard({
                   coroinhaNome={item.coroinha_nome}
                   linha={linhaCoroinhaV6(item, idx)}
                   funcao={item.funcao}
+                  funcoes={item.funcoes}
                 />
               ))
             : escala.voluntarios || escala.itens.length === 0
@@ -302,7 +305,7 @@ function EscalaCelebracaoCard({
                     className="text-sm text-foreground font-mono tabular-nums flex items-center gap-1.5"
                   >
                     {linhaCoroinhaV6(item, idx)}
-                    <FuncaoEscalaTag funcao={item.funcao} />
+                    <FuncaoEscalaTags funcao={item.funcao} funcoes={item.funcoes} />
                   </li>
                 ))}
         </ul>

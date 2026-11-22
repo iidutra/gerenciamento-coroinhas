@@ -58,6 +58,13 @@ describe("scheduling helpers", () => {
     expect(funcoesParaPayload(map)).toEqual({ Assessor: [20, 21] });
   });
 
+  it("funcoesFromItens aceita duas funções no mesmo coroinha", () => {
+    const map = funcoesFromItens([{ coroinha_id: 5, funcoes: ["Cruz", "Assessor"] }]);
+    expect(map.Cruz).toBe(5);
+    expect(map.assessorIds).toEqual([5]);
+    expect(funcoesParaPayload(map)).toEqual({ Cruz: 5, Assessor: [5] });
+  });
+
   it("funcoesParaPayload ignora vazios", () => {
     const base = funcoesVazias();
     base.Vela1 = 5;

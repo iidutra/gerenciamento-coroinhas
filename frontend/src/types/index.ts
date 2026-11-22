@@ -68,6 +68,8 @@ export interface EscalaItem {
   ordem: number;
   funcao?: string | null;
   funcao_label?: string | null;
+  funcoes?: string[];
+  funcoes_labels?: string[];
   presenca_status: string | null;
 }
 

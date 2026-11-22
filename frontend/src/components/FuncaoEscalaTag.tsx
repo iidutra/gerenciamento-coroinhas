@@ -9,3 +9,22 @@ export function FuncaoEscalaTag({ funcao }: { funcao?: string | null }) {
   if (!label) return null;
   return <span className={TAG_FUNC_CLASS}>{label}</span>;
 }
+
+export function FuncaoEscalaTags({
+  funcao,
+  funcoes,
+}: {
+  funcao?: string | null;
+  funcoes?: string[] | null;
+}) {
+  const lista =
+    funcoes?.length ? funcoes : funcao ? [funcao] : [];
+  if (!lista.length) return null;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      {lista.map((f) => (
+        <FuncaoEscalaTag key={f} funcao={f} />
+      ))}
+    </span>
+  );
+}
