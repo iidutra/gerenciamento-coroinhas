@@ -36,21 +36,18 @@ export function limparObservacaoEscala(texto: string): string {
   return texto.replace(FRASE_MOMENTO_ESPECIAL_REMOVIDA, "").trim();
 }
 
-const SLOTS_SEM_OBS_OFERTORIO = new Set(["ComunidadeDomingo"]);
+const SLOTS_SEM_OBS_OFERTORIO = new Set([
+  "SextaAdoracao",
+  "QuartaVoluntarios",
+  "ComunidadeDomingo",
+]);
 
-const SLOTS_SEM_OBSERVACAO_EXTRA = new Set(["SextaAdoracao", "QuartaVoluntarios"]);
-
-/** Observação fixa do ofertório (oculta na comunidade). */
+/** Observação fixa do ofertório (quarta, sexta e comunidade usam só o texto da escala). */
 export function exibirObservacaoOfertorioAssessor(escala: Escala): boolean {
   const slot = slotDaEscala(escala);
   if (SLOTS_SEM_OBS_OFERTORIO.has(slot)) return false;
   if (escala.missa_local === "Comunidade") return false;
   return true;
-}
-
-/** Texto gravado na escala (oculto na quarta e na sexta — ex.: Adoração, Voluntários). */
-export function exibirObservacaoExtraEscala(escala: Escala): boolean {
-  return !SLOTS_SEM_OBSERVACAO_EXTRA.has(slotDaEscala(escala));
 }
 
 /** @deprecated use exibirObservacaoOfertorioAssessor */
@@ -60,7 +57,6 @@ export function exibirObservacoesCelebracao(escala: Escala): boolean {
 
 /** Texto de observação da escala (sem a frase descontinuada do dia 11). */
 export function observacaoCelebracao(escala: Escala): string | null {
-  if (!exibirObservacaoExtraEscala(escala)) return null;
   if (!escala.observacao?.trim()) return null;
   const limpo = limparObservacaoEscala(escala.observacao);
   return limpo || null;
