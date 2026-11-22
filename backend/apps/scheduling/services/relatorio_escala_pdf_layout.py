@@ -200,6 +200,8 @@ ORDEM_SLOT_CRONO = {
 
 LEGENDA_CATEGORIAS_V6 = ["Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "S. Antônio", "Solenidade", "Novena"]
 
+OBS_OFERTORIO_ASSESSOR = "Observação: quem irá organizar o ofertório é o assessor."
+
 ORIENTACOES_GERAIS_V6 = [
     "Chegada com 30 minutos de antecedência em todas as celebrações.",
     "Meninas: cabelos presos e trajes adequados ao ambiente da sacristia.",

@@ -40,7 +40,7 @@ describe("scheduling helpers", () => {
     expect(map.Cruz).toBe(2);
   });
 
-  it("funcoesFromItens mapeia até dois Entre os dois", () => {
+  it("funcoesFromItens mapeia até dois no Altar", () => {
     const map = funcoesFromItens([
       { coroinha_id: 10, funcao: "EntreOsDois" },
       { coroinha_id: 11, funcao: "EntreOsDois" },
@@ -68,6 +68,7 @@ describe("scheduling helpers", () => {
   it("funcaoEscalaLabel traduz valores", () => {
     expect(funcaoEscalaLabel("Vela1")).toBe("Vela 1");
     expect(funcaoEscalaLabel("Velas")).toBe("Vela 1");
+    expect(funcaoEscalaLabel("EntreOsDois")).toBe("Altar");
     expect(funcaoEscalaLabel(null)).toBe("");
   });
 });

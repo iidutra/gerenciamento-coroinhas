@@ -40,7 +40,7 @@ class FuncaoEscala(models.TextChoices):
     TURIBULO = "Turibulo", "Turíbulo"
     NAVETA = "Naveta", "Naveta"
     MISSAL = "Missal", "Missal"
-    ENTRE_OS_DOIS = "EntreOsDois", "Entre os dois"
+    ENTRE_OS_DOIS = "EntreOsDois", "Altar"
     OFERTORIO = "Ofertorio", "Ofertório"
     ASSESSOR = "Assessor", "Assessor"
 

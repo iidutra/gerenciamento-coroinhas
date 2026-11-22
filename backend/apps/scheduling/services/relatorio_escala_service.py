@@ -17,6 +17,7 @@ from reportlab.platypus import (
 from apps.scheduling.models import FuncaoEscala
 from apps.scheduling.services.relatorio_escala_pdf_layout import (
     MESES_PT,
+    OBS_OFERTORIO_ASSESSOR,
     ORIENTACOES_GERAIS_V6,
     TITULO_SOLENIDADE_DIA_13,
     agrupar_escalas_por_dia,
@@ -133,6 +134,15 @@ class RelatorioEscalaService:
                 leftIndent=0,
                 spaceAfter=1,
             ),
+            "observacao_celebracao": ParagraphStyle(
+                "ObservacaoCelebracao",
+                parent=base["Normal"],
+                fontSize=8,
+                leading=10,
+                textColor=CINZA_CLARO,
+                fontName="Helvetica-Oblique",
+                spaceAfter=4,
+            ),
             "orientacoes_titulo": ParagraphStyle(
                 "OrientacoesTitulo",
                 parent=base["Normal"],
@@ -230,6 +240,9 @@ class RelatorioEscalaService:
                 [Paragraph(TITULO_SOLENIDADE_DIA_13, estilos["solenidade_sub"])]
             )
         linhas_conteudo.append([Paragraph(linha_titulo_v6(escala), estilos["celebracao_titulo"])])
+        linhas_conteudo.append([Paragraph(OBS_OFERTORIO_ASSESSOR, estilos["observacao_celebracao"])])
+        if escala.observacao:
+            linhas_conteudo.append([Paragraph(escala.observacao, estilos["observacao_celebracao"])])
         for nome in linhas_coroinhas_v6(escala):
             linhas_conteudo.append([Paragraph(nome, estilos["nome"])])
         conteudo = Table(linhas_conteudo, colWidths=[140 * mm])
