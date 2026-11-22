@@ -49,6 +49,7 @@ export default function EscalasPage() {
   const [modo, setModo] = useState<"SorteioAutomatico" | "SelecaoManual">("SorteioAutomatico");
   const [quantidade, setQuantidade] = useState(3);
   const [selecionados, setSelecionados] = useState<number[]>([]);
+  const [montarTodosCoroinhas, setMontarTodosCoroinhas] = useState(false);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
   const [mostrarFormMissa, setMostrarFormMissa] = useState(false);
@@ -95,6 +96,16 @@ export default function EscalasPage() {
   const diasAgrupados = useMemo(
     () => agruparEscalasPorDia(escalasDoMes),
     [escalasDoMes],
+  );
+
+  const coroinhasElegiveis = useMemo(
+    () =>
+      coroinhas.filter(
+        (c) =>
+          (c.status === "Ativo" || c.status === "EmFormacao") &&
+          !(c.comunidade_fixa && c.comunidade_fixa.length > 0),
+      ),
+    [coroinhas],
   );
 
   const escalaMensalExibir = escalaMensalView ?? (
@@ -191,24 +202,47 @@ export default function EscalasPage() {
   async function montarEscala(ev: FormEvent) {
     ev.preventDefault();
     setErro("");
+    const todosNaLista =
+      montarTodosCoroinhas ||
+      (modo === "SelecaoManual" &&
+        selecionados.length > 0 &&
+        selecionados.length === coroinhasElegiveis.length);
     try {
       await apiFetch("/escalas/montar/", {
         method: "POST",
         body: JSON.stringify({
           data,
           missa_id: Number(missaId),
-          modo,
-          quantidade,
-          coroinha_ids: modo === "SelecaoManual" ? selecionados : undefined,
+          modo: todosNaLista ? "SelecaoManual" : modo,
+          quantidade: todosNaLista
+            ? coroinhasElegiveis.length
+            : modo === "SelecaoManual"
+              ? Math.max(selecionados.length, 1)
+              : quantidade,
+          todos_coroinhas: todosNaLista,
+          coroinha_ids:
+            modo === "SelecaoManual" || todosNaLista
+              ? todosNaLista
+                ? coroinhasElegiveis.map((c) => c.id)
+                : selecionados
+              : undefined,
           funcoes: funcoesParaPayload(funcoesMontar),
           notificar: notificarEscalados,
         }),
       });
       setFuncoesMontar(funcoesVazias());
+      setMontarTodosCoroinhas(false);
+      setSelecionados([]);
       load();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao montar escala");
     }
+  }
+
+  function selecionarTodosMontar() {
+    setModo("SelecaoManual");
+    setMontarTodosCoroinhas(true);
+    setSelecionados(coroinhasElegiveis.map((c) => c.id));
   }
 
   function toggleCoroinha(id: number) {
@@ -567,29 +601,63 @@ export default function EscalasPage() {
                 <option value="SorteioAutomatico">Sorteio automático</option>
                 <option value="SelecaoManual">Seleção manual</option>
               </select>
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={quantidade}
-                onChange={(e) => setQuantidade(Number(e.target.value))}
-                className="input-field"
-                placeholder="Quantidade de coroinhas"
-              />
+              {modo === "SorteioAutomatico" && !montarTodosCoroinhas && (
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(Number(e.target.value))}
+                  className="input-field"
+                  placeholder="Quantidade de coroinhas"
+                />
+              )}
               {modo === "SorteioAutomatico" && (
                 <p className="text-xs text-muted-foreground">
                   O sistema distribui de forma equilibrada, evitando repetir o mesmo coroinha.
                 </p>
               )}
-              {modo === "SelecaoManual" && (
-                <CoroinhaSelecaoLista
-                  coroinhas={coroinhas}
-                  selecionados={selecionados}
-                  onToggle={toggleCoroinha}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={montarTodosCoroinhas}
+                  onChange={(e) => {
+                    const ativo = e.target.checked;
+                    setMontarTodosCoroinhas(ativo);
+                    if (ativo) {
+                      setModo("SelecaoManual");
+                      setSelecionados(coroinhasElegiveis.map((c) => c.id));
+                    } else {
+                      setSelecionados([]);
+                    }
+                  }}
                 />
+                Incluir todos os coroinhas elegíveis ({coroinhasElegiveis.length})
+              </label>
+              {modo === "SelecaoManual" && (
+                <>
+                  <CoroinhaSelecaoLista
+                    coroinhas={coroinhasElegiveis}
+                    selecionados={selecionados}
+                    onToggle={(id) => {
+                      setMontarTodosCoroinhas(false);
+                      toggleCoroinha(id);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={selecionarTodosMontar}
+                    className="text-sm text-burgundy hover:underline font-medium"
+                  >
+                    Selecionar todos
+                  </button>
+                  <p className="text-xs text-muted-foreground">
+                    Na seleção manual, todos os marcados entram na escala (não há limite de 20).
+                  </p>
+                </>
               )}
               <FuncoesEscalaForm
-                coroinhas={coroinhas}
+                coroinhas={coroinhasElegiveis}
                 valores={funcoesMontar}
                 onChange={setFuncoesMontar}
               />
@@ -601,7 +669,9 @@ export default function EscalasPage() {
                 />
                 Notificar escalados automaticamente (WhatsApp/e-mail)
               </label>
-              <button type="submit" className="btn-primary w-full">Sortear coroinhas</button>
+              <button type="submit" className="btn-primary w-full">
+                {modo === "SelecaoManual" || montarTodosCoroinhas ? "Criar escala" : "Sortear coroinhas"}
+              </button>
               </form>
 
               <div className="card-liturgical p-6">

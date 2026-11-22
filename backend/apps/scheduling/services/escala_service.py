@@ -51,7 +51,7 @@ class SelecaoManualStrategy(EscalaStrategy):
 
     def selecionar(self, candidatos: list[Coroinha], quantidade: int, escala: Escala) -> list[Coroinha]:
         candidatos_map = {c.id: c for c in candidatos}
-        selecionados = [candidatos_map[cid] for cid in self.coroinha_ids if cid in candidatos_map][:quantidade]
+        selecionados = [candidatos_map[cid] for cid in self.coroinha_ids if cid in candidatos_map]
         GemeosService.validar_conjunto([c.id for c in selecionados])
         return GemeosService.completar_selecao(selecionados, candidatos)
 
@@ -76,6 +76,8 @@ class EscalaService:
         usuario,
         coroinha_ids: list[int] | None = None,
         funcoes: dict[str, int] | None = None,
+        *,
+        todos_coroinhas: bool = False,
     ) -> Escala:
         from apps.scheduling.models import Missa
 
@@ -84,14 +86,30 @@ class EscalaService:
             raise ValueError("Já existe escala para esta data e missa.")
 
         candidatos = cls.candidatos_elegiveis()
-        if modo == ModoEscala.SELECAO_MANUAL:
+        marcar_todos = todos_coroinhas
+        if marcar_todos:
+            coroinha_ids = cls.ids_coroinhas_elegiveis()
+            if not coroinha_ids:
+                raise ValueError("Nenhum coroinha elegível para escalar.")
+            modo = ModoEscala.SELECAO_MANUAL
+            quantidade = len(coroinha_ids)
+        elif modo == ModoEscala.SELECAO_MANUAL:
             if not coroinha_ids:
                 raise ValueError("Informe os coroinhas para seleção manual.")
-            strategy: EscalaStrategy = SelecaoManualStrategy(coroinha_ids)
+            quantidade = len(coroinha_ids)
+
+        if modo == ModoEscala.SELECAO_MANUAL:
+            strategy: EscalaStrategy = SelecaoManualStrategy(coroinha_ids or [])
         else:
             strategy = SorteioEquilibradoStrategy()
 
-        escala = Escala.objects.create(data=data, missa=missa, modo=modo, criado_por=usuario)
+        escala = Escala.objects.create(
+            data=data,
+            missa=missa,
+            modo=modo,
+            criado_por=usuario,
+            todos_coroinhas=marcar_todos,
+        )
         selecionados = strategy.selecionar(candidatos, quantidade, escala)
 
         if not selecionados:
