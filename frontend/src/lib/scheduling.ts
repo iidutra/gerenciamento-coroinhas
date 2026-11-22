@@ -27,13 +27,11 @@ export function funcaoEscalaLabel(funcao: string | null | undefined): string {
 }
 
 export function funcoesVazias(): FuncoesEscalaState {
-  return FUNCOES_ESCALA.reduce(
-    (acc, f) => {
-      acc[f.value] = "";
-      return acc;
-    },
-    { entreOsDoisIds: [] } as FuncoesEscalaState,
-  );
+  const slots = {} as Record<FuncaoEscala, number | "">;
+  for (const f of FUNCOES_ESCALA) {
+    slots[f.value] = "";
+  }
+  return { ...slots, entreOsDoisIds: [] };
 }
 
 export function funcoesFromItens(
