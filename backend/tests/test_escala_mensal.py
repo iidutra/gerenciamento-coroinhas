@@ -13,7 +13,10 @@ from apps.scheduling.models import (
     Missa,
     TipoSlotMissa,
 )
-from apps.scheduling.services.gerador_escala_mensal_service import GeradorEscalaMensalService
+from apps.scheduling.services.gerador_escala_mensal_service import (
+    GeradorEscalaMensalService,
+    observacao_sexta,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -105,6 +108,10 @@ class TestGeradorEscalaMensal:
             assert escala.voluntarios is True
             assert escala.itens.count() == 0
             assert "Voluntários" in escala.observacao
+
+    def test_observacao_sexta_dia_11(self):
+        assert "momento especial" in observacao_sexta(date(2026, 9, 11)).lower()
+        assert "momento especial" not in observacao_sexta(date(2026, 9, 4)).lower()
 
     def test_dia_13_nao_gerado(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)

@@ -109,6 +109,19 @@ class TestEscalaService:
         )
         assert sorted(entre) == sorted([coroinha.id, coroinha2.id])
 
+    def test_remover_todos_membros(self, coordenador, missa_domingo, coroinha):
+        escala = EscalaService.montar(
+            data=date(2026, 6, 24),
+            missa_id=missa_domingo.id,
+            modo="SorteioAutomatico",
+            quantidade=1,
+            usuario=coordenador,
+        )
+        EscalaService.remover_todos_membros(escala)
+        escala.refresh_from_db()
+        assert escala.todos_coroinhas is False
+        assert escala.itens.count() == 0
+
     def test_marcar_todos_coroinhas(self, coordenador, missa_domingo, coroinha):
         escala = EscalaService.montar(
             data=date(2026, 6, 23),

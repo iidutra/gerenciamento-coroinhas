@@ -30,6 +30,28 @@ export const LEGENDA_CATEGORIAS_V6 = [
 export const OBS_OFERTORIO_ASSESSOR =
   "Observação: quem irá organizar o ofertório é o assessor." as const;
 
+export const OBS_SEXTA_DIA_11 = "Após a adoração teremos um momento especial." as const;
+
+function diaDoCalendario(dataIso: string): number {
+  const parte = dataIso.slice(0, 10);
+  const dia = parseInt(parte.split("-")[2] ?? "", 10);
+  return Number.isNaN(dia) ? 0 : dia;
+}
+
+/** Linhas de observação exibidas na celebração (escala + regras fixas do dia 11). */
+export function observacoesCelebracao(escala: Escala): string[] {
+  const linhas: string[] = [];
+  if (escala.observacao?.trim()) linhas.push(escala.observacao.trim());
+  if (
+    escala.missa_tipo_slot === "SextaAdoracao" &&
+    diaDoCalendario(escala.data) === 11 &&
+    !linhas.some((l) => l.toLowerCase().includes("momento especial"))
+  ) {
+    linhas.push(OBS_SEXTA_DIA_11);
+  }
+  return linhas;
+}
+
 export const ORIENTACOES_GERAIS_V6 = [
   "Chegada com 30 minutos de antecedência em todas as celebrações.",
   "Meninas: cabelos presos e trajes adequados ao ambiente da sacristia.",

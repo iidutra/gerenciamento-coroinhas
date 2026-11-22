@@ -191,13 +191,14 @@ class DefinirMembrosSerializer(serializers.Serializer):
         required=False,
     )
     todos_coroinhas = serializers.BooleanField(required=False)
+    remover_todos = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
-        if attrs.get("todos_coroinhas"):
+        if attrs.get("remover_todos") or attrs.get("todos_coroinhas"):
             return attrs
         if "coroinha_ids" not in attrs:
             raise serializers.ValidationError(
-                {"coroinha_ids": "Informe os coroinhas ou todos_coroinhas."}
+                {"coroinha_ids": "Informe os coroinhas, todos_coroinhas ou remover_todos."}
             )
         return attrs
 
