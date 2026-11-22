@@ -104,7 +104,7 @@ class TestGeradorEscalaMensal:
         for escala in quartas:
             assert escala.voluntarios is True
             assert escala.itens.count() == 0
-            assert not escala.observacao
+            assert "Voluntários" in escala.observacao
 
     def test_dia_13_nao_gerado(self, coordenador, missas_mensais, coroinhas_grupo):
         GeradorEscalaMensalService.gerar(ano=2026, mes=7, usuario=coordenador, tamanho_grupo=9)

@@ -36,22 +36,27 @@ export function limparObservacaoEscala(texto: string): string {
   return texto.replace(FRASE_MOMENTO_ESPECIAL_REMOVIDA, "").trim();
 }
 
-const SLOTS_SEM_OBSERVACOES = new Set([
+const SLOTS_SEM_OBS_OFERTORIO = new Set([
   "SextaAdoracao",
   "QuartaVoluntarios",
   "ComunidadeDomingo",
 ]);
 
-export function exibirObservacoesCelebracao(escala: Escala): boolean {
+/** Observação fixa do ofertório (não exibir na quarta, sexta e comunidade). */
+export function exibirObservacaoOfertorioAssessor(escala: Escala): boolean {
   const slot = slotDaEscala(escala);
-  if (SLOTS_SEM_OBSERVACOES.has(slot)) return false;
+  if (SLOTS_SEM_OBS_OFERTORIO.has(slot)) return false;
   if (escala.missa_local === "Comunidade") return false;
   return true;
 }
 
+/** @deprecated use exibirObservacaoOfertorioAssessor */
+export function exibirObservacoesCelebracao(escala: Escala): boolean {
+  return exibirObservacaoOfertorioAssessor(escala);
+}
+
 /** Texto de observação da escala (sem a frase descontinuada do dia 11). */
 export function observacaoCelebracao(escala: Escala): string | null {
-  if (!exibirObservacoesCelebracao(escala)) return null;
   if (!escala.observacao?.trim()) return null;
   const limpo = limparObservacaoEscala(escala.observacao);
   return limpo || null;
