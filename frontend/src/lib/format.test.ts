@@ -9,6 +9,7 @@ import {
 } from "./scheduling";
 import {
   escalaTodosDestaqueVermelho,
+  exibirObservacoesCelebracao,
   limparObservacaoEscala,
   linhaTituloV6,
   observacaoCelebracao,
@@ -107,6 +108,22 @@ describe("scheduling helpers", () => {
       itens: [],
     } as Escala;
     expect(linhaTituloV6(escala)).toBe(`19h ${TITULO_NATAL}`);
+  });
+
+  it("exibirObservacoesCelebracao desliga sexta, quarta e comunidade", () => {
+    const sexta = {
+      missa_tipo_slot: "SextaAdoracao",
+      itens: [],
+    } as Escala;
+    const comunidade = {
+      missa_tipo_slot: "ComunidadeDomingo",
+      missa_local: "Comunidade",
+      itens: [],
+    } as Escala;
+    const domingo = { missa_tipo_slot: "DomingoManha", itens: [] } as Escala;
+    expect(exibirObservacoesCelebracao(sexta)).toBe(false);
+    expect(exibirObservacoesCelebracao(comunidade)).toBe(false);
+    expect(exibirObservacoesCelebracao(domingo)).toBe(true);
   });
 
   it("limparObservacaoEscala remove frase descontinuada", () => {

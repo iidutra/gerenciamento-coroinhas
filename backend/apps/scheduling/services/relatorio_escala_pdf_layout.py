@@ -142,6 +142,21 @@ def slot_da_escala(escala: Escala) -> str:
     return escala.missa.tipo_slot or TipoSlotMissa.OUTRO
 
 
+SLOTS_SEM_OBSERVACOES = {
+    TipoSlotMissa.SEXTA_ADORACAO,
+    TipoSlotMissa.QUARTA_VOLUNTARIOS,
+    TipoSlotMissa.COMUNIDADE_DOMINGO,
+}
+
+
+def exibir_observacoes_celebracao(escala: Escala) -> bool:
+    if slot_da_escala(escala) in SLOTS_SEM_OBSERVACOES:
+        return False
+    if escala.missa.local == LocalCelebracao.COMUNIDADE:
+        return False
+    return True
+
+
 def chave_fim_de_semana(data: date) -> date:
     """Sábado de referência do bloco sexta–sábado–domingo."""
     wd = data.weekday()
