@@ -27,7 +27,8 @@ describe("scheduling helpers", () => {
     const vazias = funcoesVazias();
     expect(vazias.Vela1).toBe("");
     expect(vazias.Vela2).toBe("");
-    expect(Object.keys(vazias)).toHaveLength(9);
+    expect(vazias.entreOsDoisIds).toEqual([]);
+    expect(vazias.assessorIds).toEqual([]);
   });
 
   it("funcoesFromItens mapeia funções dos itens", () => {
@@ -46,6 +47,15 @@ describe("scheduling helpers", () => {
     ]);
     expect(map.entreOsDoisIds).toEqual([10, 11]);
     expect(funcoesParaPayload(map)).toEqual({ EntreOsDois: [10, 11] });
+  });
+
+  it("funcoesFromItens mapeia vários assessores", () => {
+    const map = funcoesFromItens([
+      { coroinha_id: 20, funcao: "Assessor" },
+      { coroinha_id: 21, funcao: "Assessor" },
+    ]);
+    expect(map.assessorIds).toEqual([20, 21]);
+    expect(funcoesParaPayload(map)).toEqual({ Assessor: [20, 21] });
   });
 
   it("funcoesParaPayload ignora vazios", () => {
